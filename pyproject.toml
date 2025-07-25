@@ -1,0 +1,25 @@
+[project]
+name = "benchmarkdown"
+version = "0.1.0"
+description = "Benchmark for text extracion from documents to Markdown format"
+readme = "README.md"
+authors = [
+    { name = "Janos Tolgyesi", email = "janos.tolgyesi@gmail.com" }
+]
+requires-python = "~=3.11"
+dependencies = [
+    "ipykernel>=6.29.5",
+]
+
+[build-system]
+requires = ["uv_build~=0.7.3"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[dependency-groups]
+aws = [
+    "amazon-textract-textractor>=1.9.2",
+    "boto3>=1.39.12",
+]
