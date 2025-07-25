@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from textractor import Textractor
 from textractor.data.constants import TextractFeatures
 
-class TextractMarkdownExtractor:
+class TextractExtractor:
     """
     A class that implements the MarkdownExtractor protocol for extracting markdown content.
     """
@@ -29,7 +29,7 @@ class TextractMarkdownExtractor:
         Returns:
             str: The extracted markdown content.
         """
-        def blocking_get_text(filename):
+        def blocking_extract_markdown(filename):
             """
             Blocking function to get text from the document.
             """
@@ -42,6 +42,6 @@ class TextractMarkdownExtractor:
             return document.to_markdown()
 
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, blocking_get_text, filename)
+        result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
         return result
 
