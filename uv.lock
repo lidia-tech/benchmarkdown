@@ -72,7 +72,7 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-aws = [
+textract = [
     { name = "amazon-textract-textractor" },
     { name = "boto3" },
 ]
@@ -81,7 +81,7 @@ aws = [
 requires-dist = [{ name = "ipykernel", specifier = ">=6.29.5" }]
 
 [package.metadata.requires-dev]
-aws = [
+textract = [
     { name = "amazon-textract-textractor", specifier = ">=1.9.2" },
     { name = "boto3", specifier = ">=1.39.12" },
 ]
