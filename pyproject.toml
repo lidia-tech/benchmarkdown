@@ -19,6 +19,9 @@ build-backend = "uv_build"
 module-root = ""
 
 [dependency-groups]
+docling = [
+    "docling>=2.42.2",
+]
 textract = [
     "amazon-textract-textractor>=1.9.2",
     "boto3>=1.39.12",
