@@ -10,8 +10,8 @@ class DoclingExtractor:
     - The `docling` library installed (`pip install docling`).
     """
 
-    def __init__(self):
-        self.converter = DocumentConverter()
+    def __init__(self, **kwargs):
+        self.converter = DocumentConverter(**kwargs)
 
     async def extract_markdown(self, filename: os.PathLike) -> str:
         """Extracts markdown content from the given text file.

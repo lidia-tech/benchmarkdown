@@ -15,7 +15,7 @@ Create a copy of `.env.template` as `.env` and fill out your credentials.
 ### uv (recommended)
 
 1. [Get uv](https://github.com/astral-sh/uv).
-2. `uv venv && uv sync`
+2. `uv venv && uv sync --all-extras --all-groups`
 3. Open the notebooks and set the kernel to the newly created `.venv/bin/python` interpreter.
 4. Follow on the notebook for test and demo usage.
 
