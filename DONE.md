@@ -113,11 +113,12 @@ The main UI: the user is presented a list of the name of extractor tasks. They c
 - Individual task deletion with confirmation
 
 **Task Editor progressive disclosure:**
-1. Engine selector dropdown (always visible when editor open)
+1. Engine selector dropdown + Task name input (always visible when editor open)
 2. Profile management section (appears when engine selected)
    - Load existing profile dropdown
    - Buttons: Load, Save, Delete, "Create New Profile"
    - When profile loaded: user can directly save task OR edit config
+   - Note: Task name is used both for the queue and when saving as a profile
 3. Configuration options (accordion/collapsible, shown for new profile or edit)
    - Basic Options (always visible)
    - Advanced Options (accordion, collapsed by default)
@@ -202,7 +203,7 @@ The main UI: the user is presented a list of the name of extractor tasks. They c
    - Results View (full-width, hidden by default) with Back button
 
    **Task Editor Sections:**
-   - Section 1: Engine selector + Configuration name
+   - Section 1: Engine selector + Task name
    - Section 2: Profile Management (visible after engine selected)
      - Profile dropdown, refresh button
      - Load/Save/Delete/Create New buttons

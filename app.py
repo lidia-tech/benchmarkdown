@@ -115,8 +115,9 @@ def create_app():
                     )
 
                     config_name_input = gr.Textbox(
-                        label="Configuration Name",
+                        label="Task Name",
                         placeholder="e.g., 'Fast Mode', 'High Quality', etc.",
+                        info="Used to identify this task in the queue and when saving as a profile",
                         value=""
                     )
 
@@ -335,7 +336,7 @@ def create_app():
                 return (
                     generate_task_list_html(),
                     gr.update(visible=True),  # keep editor open
-                    "❌ Please enter a configuration name",
+                    "❌ Please enter a task name",
                     gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
                 )
 
@@ -523,7 +524,7 @@ def create_app():
         def save_profile_handler(engine, config_name, *config_values):
             """Save current configuration as a profile."""
             if not config_name:
-                return gr.update(visible=True, value="❌ Please enter a configuration name"), gr.update()
+                return gr.update(visible=True, value="❌ Please enter a task name to save as profile"), gr.update()
 
             try:
                 if engine == "Docling":
