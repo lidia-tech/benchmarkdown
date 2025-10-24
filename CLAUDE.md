@@ -178,23 +178,54 @@ AWS credentials via standard AWS SDK methods (`~/.aws/credentials` or environmen
 
 ## Testing
 
-### Unit/Integration Testing
+All tests are located in the `tests/` directory. See `tests/README.md` for comprehensive documentation.
 
-`test_ui.py` provides integration test:
-- Finds first DOCX in `data/input/lidia-anon/`
-- Processes with Docling extractor
-- Validates metrics (timing, character/word counts)
-- Prints first 200 chars of extracted markdown
+### Quick Test Suite
 
-Run after UI changes to verify extraction pipeline integrity.
+Run core tests without starting the app:
+```bash
+uv run python tests/test_config_ui.py           # Configuration UI generation
+uv run python tests/test_config_extraction.py   # Config-based extraction
+uv run python tests/test_integrated_app.py      # Dynamic registration
+uv run python tests/test_redesigned_workflow.py # Queue workflow
+```
 
-### Smoke Tests and Functional Testing
+### API/Browser Tests
 
-Browser tools can be used for smoke tests and functional tests of the Gradio UI:
-- Launch the app with `uv run python app.py`
-- Use browser automation to verify UI loads, file uploads work, extraction completes, and results display correctly
-- Test both tabbed and side-by-side comparison views
-- Validate download functionality (ZIP and HTML report generation)
+Require running app:
+```bash
+uv run python app.py &
+sleep 5
+uv run python tests/test_workflow_api.py  # Automated workflow via API
+uv run python tests/test_browser.py       # Manual checklist + connectivity
+```
+
+### Test Categories
+
+**Configuration Tests:**
+- `test_config_ui.py` - Pydantic → Gradio component mapping
+- `test_config_extraction.py` - End-to-end with custom configs
+- `test_multiple_configs.py` - Multiple extractor instances
+
+**Integration Tests:**
+- `test_ui.py` - Basic UI with single extractor
+- `test_integrated_app.py` - Dynamic extractor registration
+- `test_redesigned_workflow.py` - Queue-based workflow
+
+**Browser/API Tests:**
+- `test_browser.py` - Manual test checklist, connectivity
+- `test_workflow_api.py` - Automated workflow testing
+
+### Test Data
+
+Tests use documents from `data/input/lidia-anon/`. Tests gracefully skip if no documents found.
+
+### Continuous Integration
+
+All tests are CI-ready:
+- Self-contained with clear pass/fail
+- No external dependencies beyond requirements
+- Emoji indicators for output (✅ ❌ ⏳ ⚠️)
 
 ## Development Notes
 
