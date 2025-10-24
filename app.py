@@ -80,16 +80,17 @@ def create_app():
                     value="<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
                 )
 
-                # Task controls
+                # Task controls - shown when tasks exist
                 with gr.Group(visible=False) as task_controls:
+                    gr.Markdown("**Manage Tasks:**")
                     task_selector = gr.Dropdown(
-                        label="Select Task",
+                        label="Select a task to edit or delete",
                         choices=[],
                         interactive=True
                     )
                     with gr.Row():
-                        edit_task_btn = gr.Button("✏️ Edit", size="sm", variant="secondary")
-                        delete_task_btn = gr.Button("🗑️ Delete", size="sm", variant="stop")
+                        edit_task_btn = gr.Button("✏️ Edit Selected Task", size="sm", variant="secondary", scale=1)
+                        delete_task_btn = gr.Button("🗑️ Delete Selected Task", size="sm", variant="stop", scale=1)
 
             # RIGHT COLUMN: Task Editor (hidden by default)
             with gr.Column(scale=2, visible=False) as task_editor_column:
