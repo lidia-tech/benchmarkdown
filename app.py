@@ -873,11 +873,20 @@ def create_app():
         # ============================================================
 
         # Page Load Event - refresh display on page load
-        demo.load(
-            fn=lambda: (
+        def reload_page():
+            """Reload queue from disk and update display."""
+            # Clear current queue and reload from disk to ensure consistency
+            extractor_queue.clear()
+            ui.extractors.clear()
+            load_queue_from_disk()
+
+            return (
                 gr.update(value=generate_task_list_html()),
                 gr.update(visible=bool(extractor_queue))
-            ),
+            )
+
+        demo.load(
+            fn=reload_page,
             outputs=[task_list_display, delete_controls]
         )
 

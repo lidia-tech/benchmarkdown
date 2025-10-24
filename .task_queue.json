@@ -23,7 +23,7 @@
   },
   {
     "engine": "Docling",
-    "config_name": "accurate",
+    "config_name": "no-ocr",
     "cost": null,
     "config_dict": {
       "do_ocr": false,
