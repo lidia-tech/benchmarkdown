@@ -310,3 +310,42 @@ The main UI: the user is presented a list of the name of extractor tasks. They c
 - Clean separation between configuration and results
 - Follows all 7 UI design principles
 - Easy to understand mental model
+
+## Improvement: delete a task from task list with an inline button
+
+In the task list, next to each task name, there should be a small "delete" (or "X") button that removes the task from the list. The current solution that the user has to find the task ordinal, enter it to a text box and click "delete" is too complex UX.
+
+### Clarifications
+
+The current implementation (app.py:118-138) generates HTML for the task list display. Delete functionality (app.py:160-169) uses a separate number input and delete button. The goal is to add an inline delete button directly in each task card for better UX.
+
+### Thoughts, proposed solution
+
+Gradio's HTML component is display-only and cannot directly trigger Python callbacks. However, I can use JavaScript embedded in the HTML to interact with Gradio components:
+
+1. Add a hidden textbox to store the task index to delete
+2. Add a hidden button that will be programmatically triggered by JavaScript
+3. Generate delete buttons in the HTML with onclick handlers that:
+   - Set the hidden textbox value to the task index
+   - Trigger a click on the hidden delete button via JavaScript
+4. Wire the hidden button to the existing delete_task_handler function
+
+This approach provides inline delete buttons while working within Gradio's architecture. I'll also keep the "Clear All" button as it's useful for bulk deletion.
+
+### What was implemented
+
+Successfully implemented inline delete buttons for each task in the task list with the following changes in app.py:
+
+1. **Modified generate_task_list_html()** (lines 118-147): Added inline delete button HTML within each task card with onclick="deleteTask(taskNumber)" handler and hover effects
+
+2. **Added JavaScript in Blocks head** (lines 149-184): Injected global JavaScript function via gr.Blocks `head` parameter to handle delete button clicks and communicate with Gradio components
+
+3. **Added hidden communication components** (lines 192-209): Created CSS-hidden (but DOM-present) Number input and Button components with elem_ids for JavaScript access
+
+4. **Updated delete handlers** (lines 643-676): Simplified delete_task_handler to only return task_list_display and delete_controls (removed task_number_input)
+
+5. **Removed old UI controls** (lines 211-213): Replaced complex number input + delete button with single "Clear All" button
+
+6. **Updated event wiring** (lines 1010-1019): Connected hidden_delete_trigger to delete_task_handler
+
+The implementation uses CSS to hide the bridge components (#hidden-delete-controls with display: none) while keeping them in the DOM for JavaScript access. Testing confirmed successful deletion with automatic task renumbering and proper UI updates.

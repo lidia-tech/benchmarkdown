@@ -116,7 +116,7 @@ def create_app():
     editing_task_index = [None]  # Use list to make it mutable in closures
 
     def generate_task_list_html():
-        """Generate HTML for the task list display."""
+        """Generate HTML for the task list display with inline delete buttons."""
         if not extractor_queue:
             return "<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
 
@@ -132,12 +132,56 @@ def create_app():
                     <br>
                     <span style='color: #666; font-size: 0.9em;'>{task['config_name']}</span>
                 </div>
+                <button
+                    onclick='deleteTask({i+1})'
+                    style='background: #f44336; color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 0.9em; margin-left: 8px; flex-shrink: 0;'
+                    onmouseover='this.style.background="#d32f2f"'
+                    onmouseout='this.style.background="#f44336"'
+                    title='Delete this task'
+                >
+                    🗑️ Delete
+                </button>
             </div>
             """
         html += "</div>"
         return html
 
-    with gr.Blocks(title="Benchmarkdown - Document Extraction Comparison") as demo:
+    with gr.Blocks(
+        title="Benchmarkdown - Document Extraction Comparison",
+        head="""
+        <style>
+        #hidden-delete-controls {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+        </style>
+        <script>
+        function deleteTask(taskNumber) {
+            // Find the hidden input by elem_id
+            const hiddenInput = document.querySelector('#hidden-task-index input[type="number"]');
+            const hiddenButton = document.querySelector('#hidden-delete-trigger');
+
+            if (hiddenInput && hiddenButton) {
+                // Set the value and trigger the input event
+                hiddenInput.value = taskNumber;
+                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+                // Small delay to ensure Gradio processes the input change
+                setTimeout(() => {
+                    hiddenButton.click();
+                }, 100);
+            } else {
+                console.error('Could not find hidden components for task deletion', {
+                    inputFound: !!hiddenInput,
+                    buttonFound: !!hiddenButton
+                });
+            }
+        }
+        </script>
+        """
+    ) as demo:
         gr.Markdown("# 📄 Benchmarkdown - Document Extraction Comparison")
 
         # ============================================================
@@ -156,17 +200,28 @@ def create_app():
                     value=generate_task_list_html()
                 )
 
-                # Simple delete control - shown when tasks exist
-                with gr.Row(visible=bool(extractor_queue)) as delete_controls:
-                    task_number_input = gr.Number(
-                        label="Delete task #",
-                        minimum=1,
-                        step=1,
-                        precision=0,
-                        scale=1
+                # Hidden components for JavaScript communication (visible but styled as hidden)
+                with gr.Row(visible=True, elem_id="hidden-delete-controls") as hidden_controls:
+                    hidden_task_index = gr.Number(
+                        label="",
+                        value=0,
+                        elem_id="hidden-task-index",
+                        container=False,
+                        show_label=False,
+                        scale=0,
+                        min_width=1
                     )
-                    delete_task_btn = gr.Button("🗑️ Delete", size="sm", variant="stop", scale=0, min_width=100)
-                    clear_all_btn = gr.Button("🗑️ Clear All", size="sm", variant="stop", scale=0, min_width=100)
+                    hidden_delete_trigger = gr.Button(
+                        "",
+                        elem_id="hidden-delete-trigger",
+                        size="sm",
+                        scale=0,
+                        min_width=1
+                    )
+
+                # Clear All button - shown when tasks exist
+                with gr.Row(visible=bool(extractor_queue)) as delete_controls:
+                    clear_all_btn = gr.Button("🗑️ Clear All", size="sm", variant="stop", min_width=120)
 
             # RIGHT COLUMN: Task Editor (hidden by default)
             with gr.Column(scale=2, visible=False) as task_editor_column:
@@ -596,8 +651,7 @@ def create_app():
             if task_number is None or not extractor_queue:
                 return (
                     gr.update(value=generate_task_list_html()),
-                    gr.update(visible=bool(extractor_queue)),
-                    gr.update(value=None)  # Clear the input
+                    gr.update(visible=bool(extractor_queue))
                 )
 
             try:
@@ -617,16 +671,14 @@ def create_app():
 
                     return (
                         gr.update(value=generate_task_list_html()),
-                        gr.update(visible=bool(extractor_queue)),  # Hide if queue is now empty
-                        gr.update(value=None)  # Clear the input
+                        gr.update(visible=bool(extractor_queue))  # Hide if queue is now empty
                     )
             except (ValueError, IndexError):
                 pass
 
             return (
                 gr.update(value=generate_task_list_html()),
-                gr.update(visible=bool(extractor_queue)),
-                gr.update(value=None)
+                gr.update(visible=bool(extractor_queue))
             )
 
         def clear_all_tasks_handler():
@@ -641,8 +693,7 @@ def create_app():
 
             return (
                 gr.update(value=generate_task_list_html()),
-                gr.update(visible=False),  # Hide delete controls
-                gr.update(value=None)  # Clear the input
+                gr.update(visible=False)  # Hide delete controls
             )
 
         def edit_task_handler(selected_task):
@@ -962,15 +1013,15 @@ def create_app():
             outputs=[task_editor_column]
         )
 
-        delete_task_btn.click(
+        hidden_delete_trigger.click(
             fn=delete_task_handler,
-            inputs=[task_number_input],
-            outputs=[task_list_display, delete_controls, task_number_input]
+            inputs=[hidden_task_index],
+            outputs=[task_list_display, delete_controls]
         )
 
         clear_all_btn.click(
             fn=clear_all_tasks_handler,
-            outputs=[task_list_display, delete_controls, task_number_input]
+            outputs=[task_list_display, delete_controls]
         )
 
         # Results View Events

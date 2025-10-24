@@ -1,9 +1,5 @@
 # Task list
 
-## Improvement: delete a task from task list with an inline button
-
-In the task list, next to each task name, there should be a small "delete" (or "X") button that removes the task from the list. The current solution that the user has to find the task ordinal, enter it to a text box and click "delete" is too complex UX.
-
 ## Clean and refactor code base
 
 There are different versions of the app commited to the codebase (app_old.py, app_with_config.py) as well as it is not clear where the app UI is implemented (in app.py, benchmarkdown/ui.py or benchmarkdown/config_ui.py). Clean unused old versions, and refactor the UI codebase breaking down into function components. A single monolithic 1000 lines of code file is difficult to maintain. You can move components to the benchmarkdown folder and module, creating a new ui submodule.
