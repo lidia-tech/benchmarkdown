@@ -31,16 +31,18 @@ def create_gradio_component_from_field(
     # Get field metadata
     description = field_info.description or field_name
     default_value = field_info.default
+    is_optional = False
 
     # Handle None defaults for Optional types
     if default_value is None:
         origin = get_origin(field_type)
         if origin is not None:  # Optional types
+            is_optional = True
             args = get_args(field_type)
             if len(args) > 0:
                 # Get the non-None type
                 field_type = next((arg for arg in args if arg is not type(None)), args[0])
-                # Try to get a sensible default
+                # Try to get a sensible default for UI
                 if field_type == float:
                     default_value = 0.0
                 elif field_type == int:
@@ -91,34 +93,56 @@ def create_gradio_component_from_field(
         # Check for min/max constraints
         ge = getattr(field_info, 'ge', None)
         le = getattr(field_info, 'le', None)
-        minimum = ge if ge is not None else 0
-        maximum = le if le is not None else 100
 
-        component = gr.Slider(
-            minimum=minimum,
-            maximum=maximum,
-            value=default_value,
-            step=1,
-            label=field_name.replace('_', ' ').title(),
-            info=description
-        )
+        # For optional fields, use Number input; for required, use Slider
+        if is_optional:
+            info_text = f"{description} (Leave at 0 or empty for no limit)" if description else "Leave at 0 for no limit"
+            component = gr.Number(
+                value=default_value,
+                label=field_name.replace('_', ' ').title(),
+                info=info_text,
+                minimum=ge if ge is not None else 0,
+                maximum=le if le is not None else None
+            )
+        else:
+            minimum = ge if ge is not None else 0
+            maximum = le if le is not None else 100
+            component = gr.Slider(
+                minimum=minimum,
+                maximum=maximum,
+                value=default_value,
+                step=1,
+                label=field_name.replace('_', ' ').title(),
+                info=description
+            )
         return component, field_name
 
     elif field_type == float:
         # Check for min/max constraints
         ge = getattr(field_info, 'ge', None)
         le = getattr(field_info, 'le', None)
-        minimum = ge if ge is not None else 0.0
-        maximum = le if le is not None else 2.0
 
-        component = gr.Slider(
-            minimum=minimum,
-            maximum=maximum,
-            value=default_value if default_value is not None else 1.0,
-            step=0.1,
-            label=field_name.replace('_', ' ').title(),
-            info=description
-        )
+        # For optional fields, use Number input; for required, use Slider
+        if is_optional:
+            info_text = f"{description} (Leave at 0 or empty for no limit)" if description else "Leave at 0 for no limit"
+            component = gr.Number(
+                value=default_value if default_value is not None else 0.0,
+                label=field_name.replace('_', ' ').title(),
+                info=info_text,
+                minimum=ge if ge is not None else 0.0,
+                maximum=le if le is not None else None
+            )
+        else:
+            minimum = ge if ge is not None else 0.0
+            maximum = le if le is not None else 2.0
+            component = gr.Slider(
+                minimum=minimum,
+                maximum=maximum,
+                value=default_value if default_value is not None else 1.0,
+                step=0.1,
+                label=field_name.replace('_', ' ').title(),
+                info=description
+            )
         return component, field_name
 
     elif field_type == str or origin is None:
@@ -212,13 +236,30 @@ def build_config_from_ui_values(
     clean_values = {}
     for field_name, value in values.items():
         if field_name in config_class.model_fields:
-            # Handle empty strings for optional numeric fields
+            field_info = config_class.model_fields[field_name]
+            field_type = field_info.annotation
+            origin = get_origin(field_type)
+
+            # Check if this is an Optional type
+            is_optional = origin is not None
+
+            # Handle empty/None values for optional fields
             if value == "" or value is None:
-                field_info = config_class.model_fields[field_name]
-                field_type = field_info.annotation
-                origin = get_origin(field_type)
-                if origin is not None:  # Optional type
+                if is_optional:
                     clean_values[field_name] = None
+                else:
+                    clean_values[field_name] = value
+            # Handle 0 for optional numeric fields (treat as None)
+            elif value == 0 and is_optional:
+                # Check if it's a numeric type
+                args = get_args(field_type)
+                if args:
+                    non_none_type = next((arg for arg in args if arg is not type(None)), None)
+                    if non_none_type in (int, float):
+                        # For optional numeric fields, 0 means "not set" (None)
+                        clean_values[field_name] = None
+                    else:
+                        clean_values[field_name] = value
                 else:
                     clean_values[field_name] = value
             else:
