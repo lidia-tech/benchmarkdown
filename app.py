@@ -268,17 +268,19 @@ def create_app():
             if not extractor_queue:
                 return (
                     "<p style='color: red;'>❌ No extractors in queue. Please configure at least one extractor.</p>",
-                    gr.update(visible=False),
-                    gr.update(visible=False),
-                    ""
+                    gr.update(visible=False),  # results_controls
+                    gr.update(visible=False),  # download_row
+                    "",  # comparison_view
+                    gr.update(choices=[], value=None)  # document_selector
                 )
 
             if not files:
                 return (
                     "<p style='color: red;'>❌ No files uploaded.</p>",
-                    gr.update(visible=False),
-                    gr.update(visible=False),
-                    ""
+                    gr.update(visible=False),  # results_controls
+                    gr.update(visible=False),  # download_row
+                    "",  # comparison_view
+                    gr.update(choices=[], value=None)  # document_selector
                 )
 
             # Get all extractor names from queue
@@ -298,9 +300,10 @@ def create_app():
 
             return (
                 result[0],  # results_table
-                gr.update(visible=True, choices=filenames, value=first_filename),  # results_controls
+                gr.update(visible=True),  # results_controls
                 gr.update(visible=True),  # download_row
-                comparison  # comparison_view
+                comparison,  # comparison_view
+                gr.update(choices=filenames, value=first_filename)  # document_selector
             )
 
         def update_comparison(filename, view_mode_val):
@@ -333,7 +336,7 @@ def create_app():
         extract_btn.click(
             fn=sync_process_documents,
             inputs=[file_upload],
-            outputs=[results_table, results_controls, download_row, comparison_view]
+            outputs=[results_table, results_controls, download_row, comparison_view, document_selector]
         )
 
         document_selector.change(
