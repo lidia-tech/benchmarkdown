@@ -118,19 +118,19 @@ def create_app():
     def generate_task_list_html():
         """Generate HTML for the task list display with inline delete buttons."""
         if not extractor_queue:
-            return "<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
+            return "<p style='opacity: 0.6; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
 
-        html = "<div style='font-family: system-ui, sans-serif;'>"
+        html = "<div class='task-list-container' style='font-family: system-ui, sans-serif;'>"
         for i, task in enumerate(extractor_queue):
             html += f"""
-            <div style='border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9; display: flex; align-items: center;'>
+            <div class='task-card' style='border: 1px solid rgba(128, 128, 128, 0.3); padding: 12px; margin: 8px 0; border-radius: 6px; background: rgba(128, 128, 128, 0.1); display: flex; align-items: center;'>
                 <div style='background: #4CAF50; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold; flex-shrink: 0;'>
                     {i+1}
                 </div>
                 <div style='flex-grow: 1;'>
-                    <strong style='font-size: 1.1em;'>{task['engine']}</strong>
+                    <strong style='font-size: 1.1em; color: var(--body-text-color, inherit);'>{task['engine']}</strong>
                     <br>
-                    <span style='color: #666; font-size: 0.9em;'>{task['config_name']}</span>
+                    <span style='opacity: 0.7; font-size: 0.9em;'>{task['config_name']}</span>
                 </div>
                 <button
                     onclick='deleteTask({i+1})'
