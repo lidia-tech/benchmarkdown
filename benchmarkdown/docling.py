@@ -8,9 +8,31 @@ class DoclingExtractor:
 
     Ensure you have:
     - The `docling` library installed (`pip install docling`).
+
+    Configuration:
+        You can create multiple instances with different configurations by passing
+        parameters to __init__. All parameters are forwarded to DocumentConverter.
+
+        Common configuration options:
+        - allowed_formats: List of InputFormat enums to restrict processing
+        - format_options: Dict mapping InputFormat to FormatOption for format-specific settings
+
+    Example:
+        # Default instance
+        extractor_default = DoclingExtractor()
+
+        # Custom instance with specific formats
+        from docling.datamodel.base_models import InputFormat
+        extractor_pdf_only = DoclingExtractor(allowed_formats=[InputFormat.PDF])
     """
 
     def __init__(self, **kwargs):
+        """Initialize the Docling extractor.
+
+        Args:
+            **kwargs: Configuration parameters passed to DocumentConverter.
+                     See DocumentConverter documentation for available options.
+        """
         self.converter = DocumentConverter(**kwargs)
 
     async def extract_markdown(self, filename: os.PathLike) -> str:
