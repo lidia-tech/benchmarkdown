@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
 """
-Main application file for Benchmarkdown Gradio UI.
+Benchmarkdown - Redesigned UI with clearer workflow.
 
-This script initializes the extractors and launches the Gradio interface with
-configuration support for Docling extractors.
-
-Users can:
-1. Use pre-configured extractors (default Docling and Textract if available)
-2. Create custom Docling configurations through the Configuration tab
-3. Compare different extractor configurations side-by-side
+Workflow:
+1. Select extractor engine (Docling, Textract, etc.)
+2. Configure settings (load profile or customize)
+3. Add to extraction queue
+4. Upload documents and run all configured extractors
+5. Compare results
 """
 
 import os
+import asyncio
 import gradio as gr
 from benchmarkdown.ui import BenchmarkUI
+from benchmarkdown.docling import DoclingExtractor
+from benchmarkdown.config import DoclingConfig
+from benchmarkdown.config_ui import (
+    create_gradio_component_from_field,
+    build_config_from_ui_values,
+    DOCLING_BASIC_FIELDS,
+    DOCLING_ADVANCED_FIELDS
+)
 
 # Check available extractors
 has_docling = False
@@ -21,18 +29,10 @@ has_textract = False
 
 try:
     from benchmarkdown.docling import DoclingExtractor
-    from benchmarkdown.config import DoclingConfig
-    from benchmarkdown.config_ui import (
-        create_gradio_component_from_field,
-        build_config_from_ui_values,
-        DOCLING_BASIC_FIELDS,
-        DOCLING_ADVANCED_FIELDS
-    )
     has_docling = True
     print("✓ Docling extractor available")
 except ImportError as e:
     print(f"⚠️  Docling not available: {e}")
-    print("   Install with: uv sync --group docling")
 
 try:
     from benchmarkdown.textract import TextractExtractor
@@ -42,270 +42,349 @@ try:
         has_textract = True
         print("✓ AWS Textract extractor available")
     else:
-        print("⚠️  AWS Textract available but not configured")
-        print("   Set TEXTRACT_S3_BUCKET environment variable")
-except ImportError as e:
-    print(f"⚠️  AWS Textract not available: {e}")
-    print("   Install with: uv sync --group textract")
+        print("⚠️  AWS Textract not configured (set TEXTRACT_S3_BUCKET)")
+except ImportError:
+    print("⚠️  AWS Textract not available")
 
 if not has_docling and not has_textract:
-    print("\n❌ No extractors available! Please install at least one:")
-    print("   - Docling: uv sync --group docling")
-    print("   - Textract: uv sync --group textract")
+    print("\n❌ No extractors available! Install with: uv sync --group docling")
     exit(1)
 
 
-def create_enhanced_ui():
-    """Create the enhanced UI with configuration support."""
+def create_app():
+    """Create the redesigned Gradio interface."""
     ui = BenchmarkUI()
 
-    # Register default extractors
-    if has_docling:
-        default_extractor = DoclingExtractor()
-        ui.register_extractor("Docling (Default)", default_extractor, cost_per_page=None)
-        print("  → Registered: Docling (Default)")
-
-    if has_textract:
-        s3_path = f"s3://{s3_bucket}/textract-temp/"
-        textract_extractor = TextractExtractor(
-            s3_upload_path=s3_path,
-            features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES]
-        )
-        ui.register_extractor("Textract (Layout+Tables)", textract_extractor, cost_per_page=0.05)
-        print("  → Registered: Textract (Layout+Tables)")
+    # State for extractor queue
+    extractor_queue = []  # List of (name, extractor) tuples
 
     with gr.Blocks(title="Benchmarkdown - Document Extraction Comparison") as demo:
         gr.Markdown("# 📄 Benchmarkdown - Document Extraction Comparison")
-        gr.Markdown("Configure extractors, upload documents, and compare results.")
+        gr.Markdown("Configure extractors, run comparisons, analyze results.")
 
-        with gr.Tabs():
-            # Tab 1: Configuration (only if Docling is available)
+        # ============================================================
+        # SECTION 1: Configure Extractors
+        # ============================================================
+        with gr.Group():
+            gr.Markdown("## 1️⃣ Configure Extractors")
+
+            # Step 1: Select Engine
+            extractor_engines = []
             if has_docling:
-                with gr.Tab("⚙️ Configuration"):
-                    gr.Markdown("## Configure Docling Extractors")
-                    gr.Markdown("Create custom Docling configurations to compare different settings.")
+                extractor_engines.append("Docling")
+            if has_textract:
+                extractor_engines.append("AWS Textract")
 
-                    # Configuration name input
-                    with gr.Row():
-                        config_name_input = gr.Textbox(
-                            label="Configuration Name",
-                            placeholder="e.g., 'Fast Mode' or 'No OCR'",
-                            value=""
+            with gr.Row():
+                engine_selector = gr.Dropdown(
+                    choices=extractor_engines,
+                    label="Select Extractor Engine",
+                    value=extractor_engines[0] if extractor_engines else None,
+                    interactive=True
+                )
+                config_name_input = gr.Textbox(
+                    label="Configuration Name",
+                    placeholder="e.g., 'Fast Mode', 'High Quality', etc.",
+                    value=""
+                )
+
+            # Configuration area (changes based on selected engine)
+            with gr.Column(visible=has_docling) as docling_config_area:
+                gr.Markdown("### Docling Configuration")
+
+                # Generate Docling config UI
+                docling_components = []
+
+                with gr.Group():
+                    gr.Markdown("#### Basic Options")
+                    for field_name in DOCLING_BASIC_FIELDS:
+                        if field_name not in DoclingConfig.model_fields:
+                            continue
+                        field_info = DoclingConfig.model_fields[field_name]
+                        field_type = field_info.annotation
+                        component, _ = create_gradio_component_from_field(
+                            field_name, field_info, field_type
                         )
+                        docling_components.append(component)
 
-                    # Generate configuration UI
-                    config_components = []
-
-                    # Basic options
-                    with gr.Group():
-                        gr.Markdown("### Basic Options")
-                        for field_name in DOCLING_BASIC_FIELDS:
-                            if field_name not in DoclingConfig.model_fields:
-                                continue
-                            field_info = DoclingConfig.model_fields[field_name]
-                            field_type = field_info.annotation
-                            component, comp_id = create_gradio_component_from_field(
-                                field_name, field_info, field_type
-                            )
-                            config_components.append(component)
-
-                    # Advanced options
-                    with gr.Accordion("Advanced Options", open=False):
-                        for field_name in DOCLING_ADVANCED_FIELDS:
-                            if field_name not in DoclingConfig.model_fields:
-                                continue
-                            field_info = DoclingConfig.model_fields[field_name]
-                            field_type = field_info.annotation
-                            component, comp_id = create_gradio_component_from_field(
-                                field_name, field_info, field_type
-                            )
-                            config_components.append(component)
-
-                    # Save configuration button
-                    with gr.Row():
-                        save_config_btn = gr.Button("💾 Save Configuration", variant="primary", size="lg")
-                        config_status = gr.Textbox(
-                            label="Status",
-                            interactive=False,
-                            value="Configure settings above and click Save"
+                with gr.Accordion("Advanced Options", open=False):
+                    for field_name in DOCLING_ADVANCED_FIELDS:
+                        if field_name not in DoclingConfig.model_fields:
+                            continue
+                        field_info = DoclingConfig.model_fields[field_name]
+                        field_type = field_info.annotation
+                        component, _ = create_gradio_component_from_field(
+                            field_name, field_info, field_type
                         )
+                        docling_components.append(component)
 
-                    def save_configuration(config_name, *config_values):
-                        """Save a new Docling configuration."""
-                        if not config_name:
-                            return "❌ Please enter a configuration name"
+            with gr.Column(visible=False) as textract_config_area:
+                gr.Markdown("### AWS Textract Configuration")
+                gr.Markdown("*Configuration options coming soon*")
 
-                        # Build config from UI values
-                        all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
-                        ui_values = {field: value for field, value in zip(all_fields, config_values)}
-                        config = build_config_from_ui_values(DoclingConfig, ui_values)
-
-                        # Create extractor with this config
-                        extractor = DoclingExtractor(config=config)
-
-                        # Register with UI
-                        full_name = f"Docling ({config_name})"
-                        ui.register_extractor(full_name, extractor, cost_per_page=None)
-
-                        return f"✓ Saved configuration: {full_name}\n  OCR={config.do_ocr}, Tables={config.do_table_structure}, Mode={config.table_structure_mode}, Threads={config.num_threads}"
-
-                    save_config_btn.click(
-                        fn=save_configuration,
-                        inputs=[config_name_input] + config_components,
-                        outputs=config_status
-                    )
-
-            # Tab 2: Extract & Compare (main workflow)
-            with gr.Tab("🚀 Extract & Compare"):
-                gr.Markdown("## 📄 Upload Documents")
-                file_upload = gr.File(
-                    label="Upload PDF, DOCX, or other documents",
-                    file_count="multiple",
-                    file_types=[".pdf", ".docx", ".doc", ".txt"]
+            # Add to queue button
+            with gr.Row():
+                add_to_queue_btn = gr.Button(
+                    "➕ Add to Extraction Queue",
+                    variant="primary",
+                    size="lg"
+                )
+                queue_status = gr.Textbox(
+                    label="Status",
+                    value="Select engine and configure settings above",
+                    interactive=False
                 )
 
-                gr.Markdown("## ✓ Select Extractors")
-                extractor_choices = gr.CheckboxGroup(
-                    choices=list(ui.extractors.keys()),
-                    label="Choose which extractors to test",
-                    value=list(ui.extractors.keys())  # All selected by default
+        # ============================================================
+        # SECTION 2: Extraction Queue
+        # ============================================================
+        with gr.Group():
+            gr.Markdown("## 2️⃣ Extraction Queue")
+            gr.Markdown("Configured extractors that will be used for comparison:")
+
+            queue_display = gr.HTML(
+                value="<p style='color: #666;'>No extractors configured yet. Add one above.</p>"
+            )
+
+            with gr.Row():
+                clear_queue_btn = gr.Button("🗑️ Clear Queue", size="sm")
+
+        # ============================================================
+        # SECTION 3: Extract Documents
+        # ============================================================
+        with gr.Group():
+            gr.Markdown("## 3️⃣ Extract & Compare")
+
+            file_upload = gr.File(
+                label="Upload Documents (PDF, DOCX, etc.)",
+                file_count="multiple",
+                file_types=[".pdf", ".docx", ".doc", ".txt"]
+            )
+
+            with gr.Row():
+                extract_btn = gr.Button(
+                    "🚀 Run Extraction",
+                    variant="primary",
+                    size="lg"
+                )
+                clear_results_btn = gr.Button("🗑️ Clear Results", size="lg")
+
+            results_table = gr.HTML(
+                value="<p>Upload documents and click 'Run Extraction' to begin.</p>"
+            )
+
+            # Results controls (hidden initially)
+            with gr.Row(visible=False) as results_controls:
+                document_selector = gr.Dropdown(
+                    label="Select Document to View",
+                    choices=[],
+                    interactive=True
+                )
+                view_mode = gr.Radio(
+                    choices=["Tabbed", "Side-by-Side"],
+                    value="Tabbed",
+                    label="View Mode"
                 )
 
-                with gr.Row():
-                    extract_btn = gr.Button("🚀 Extract All", variant="primary", size="lg")
-                    clear_btn = gr.Button("🗑️ Clear", size="lg")
+            # Download buttons
+            with gr.Row(visible=False) as download_row:
+                download_zip_btn = gr.Button("📦 Download All (ZIP)", size="sm")
+                download_report_btn = gr.Button("📊 Generate Report (HTML)", size="sm")
 
-                # Results section
-                gr.Markdown("## 📋 Processing Results")
-                results_table = gr.HTML(value="<p>No results yet. Upload documents and click 'Extract All' to begin.</p>")
+            download_zip_file = gr.File(label="ZIP Download", visible=False)
+            download_report_file = gr.File(label="Report Download", visible=False)
 
-                # Document selector and view controls (initially hidden)
-                with gr.Row(visible=False) as controls_row:
-                    document_selector = gr.Dropdown(
-                        label="Select Document to View",
-                        choices=[],
-                        value=None,
-                        interactive=True
-                    )
-                    view_mode = gr.Radio(
-                        choices=["Tabbed", "Side-by-Side"],
-                        value="Tabbed",
-                        label="View Mode"
-                    )
+            # Comparison view
+            comparison_view = gr.HTML(value="")
 
-                # Download buttons
-                with gr.Row(visible=False) as download_row:
-                    download_zip_btn = gr.Button("📦 Download All (ZIP)", size="sm")
-                    download_report_btn = gr.Button("📊 Generate Report (HTML)", size="sm")
+        # ============================================================
+        # Event Handlers
+        # ============================================================
 
-                download_zip_file = gr.File(label="ZIP Download", visible=False)
-                download_report_file = gr.File(label="Report Download", visible=False)
+        def toggle_config_area(engine):
+            """Show/hide config areas based on selected engine."""
+            if engine == "Docling":
+                return gr.update(visible=True), gr.update(visible=False)
+            elif engine == "AWS Textract":
+                return gr.update(visible=False), gr.update(visible=True)
+            else:
+                return gr.update(visible=False), gr.update(visible=False)
 
-                # Visual Comparison
-                comparison_view = gr.HTML(value="")
+        def add_to_queue(engine, config_name, *config_values):
+            """Add configured extractor to queue."""
+            if not config_name:
+                return "❌ Please enter a configuration name", generate_queue_html()
 
-                # Event handlers
-                import asyncio
+            if engine == "Docling":
+                # Build config
+                all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
+                ui_values = {field: value for field, value in zip(all_fields, config_values)}
+                config = build_config_from_ui_values(DoclingConfig, ui_values)
 
-                def sync_process_documents(files, selected_extractors):
-                    """Synchronous wrapper for async processing."""
-                    result = asyncio.run(ui.process_documents(files, selected_extractors))
+                # Create extractor
+                extractor = DoclingExtractor(config=config)
+                full_name = f"Docling ({config_name})"
 
-                    # Get list of filenames for dropdown
-                    filenames = list(ui.results.keys()) if ui.results else []
-                    first_filename = filenames[0] if filenames else None
+                # Add to queue
+                extractor_queue.append((full_name, extractor, None))  # (name, instance, cost)
+                ui.register_extractor(full_name, extractor, cost_per_page=None)
 
-                    # Generate initial comparison view
-                    comparison = ""
-                    if first_filename:
-                        comparison = ui.generate_comparison_view_tabbed(first_filename)
+                status = f"✓ Added: {full_name}\n  Settings: OCR={config.do_ocr}, Tables={config.do_table_structure}, Mode={config.table_structure_mode}"
+            elif engine == "AWS Textract":
+                # TODO: Implement Textract configuration
+                return "⚠️  Textract configuration not yet implemented", generate_queue_html()
+            else:
+                return "❌ Unknown engine", generate_queue_html()
 
-                    # Return results + show controls
-                    return (
-                        result[0],  # results_table
-                        gr.update(visible=True, choices=filenames, value=first_filename),  # document_selector
-                        gr.update(visible=True),  # controls_row
-                        gr.update(visible=True),  # download_row
-                        comparison,  # comparison_view
-                        gr.update(choices=list(ui.extractors.keys()), value=list(ui.extractors.keys()))  # extractor_choices
-                    )
+            return status, generate_queue_html()
 
-                def update_comparison_view(filename, view_mode_val):
-                    """Update comparison view based on selected document and view mode."""
-                    if not filename:
-                        return ""
-                    if view_mode_val == "Side-by-Side":
-                        return ui.generate_comparison_view_sidebyside(filename)
-                    else:
-                        return ui.generate_comparison_view_tabbed(filename)
+        def generate_queue_html():
+            """Generate HTML for the queue display."""
+            if not extractor_queue:
+                return "<p style='color: #666;'>No extractors configured yet. Add one above.</p>"
 
-                def download_zip():
-                    """Generate and return ZIP file."""
-                    zip_path = ui.get_download_zip()
-                    return gr.update(value=zip_path, visible=True) if zip_path else None
+            html = "<div style='font-family: system-ui, sans-serif;'>"
+            for i, (name, extractor, cost) in enumerate(extractor_queue):
+                html += f"""
+                <div style='border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 4px; background: #f9f9f9;'>
+                    <strong>{i+1}. {name}</strong>
+                </div>
+                """
+            html += "</div>"
+            return html
 
-                def download_report():
-                    """Generate and return HTML report."""
-                    report_path = ui.get_comparison_report()
-                    return gr.update(value=report_path, visible=True) if report_path else None
+        def clear_queue():
+            """Clear the extraction queue."""
+            extractor_queue.clear()
+            # Clear UI registry but keep it functional
+            ui.extractors.clear()
+            return (
+                generate_queue_html(),
+                "Queue cleared"
+            )
 
-                extract_btn.click(
-                    fn=sync_process_documents,
-                    inputs=[file_upload, extractor_choices],
-                    outputs=[results_table, document_selector, controls_row, download_row, comparison_view, extractor_choices],
+        def sync_process_documents(files):
+            """Process documents with all queued extractors."""
+            if not extractor_queue:
+                return (
+                    "<p style='color: red;'>❌ No extractors in queue. Please configure at least one extractor.</p>",
+                    gr.update(visible=False),
+                    gr.update(visible=False),
+                    ""
                 )
 
-                document_selector.change(
-                    fn=update_comparison_view,
-                    inputs=[document_selector, view_mode],
-                    outputs=[comparison_view]
+            if not files:
+                return (
+                    "<p style='color: red;'>❌ No files uploaded.</p>",
+                    gr.update(visible=False),
+                    gr.update(visible=False),
+                    ""
                 )
 
-                view_mode.change(
-                    fn=update_comparison_view,
-                    inputs=[document_selector, view_mode],
-                    outputs=[comparison_view]
-                )
+            # Get all extractor names from queue
+            extractor_names = [name for name, _, _ in extractor_queue]
 
-                download_zip_btn.click(
-                    fn=download_zip,
-                    outputs=[download_zip_file]
-                )
+            # Process documents
+            result = asyncio.run(ui.process_documents(files, extractor_names))
 
-                download_report_btn.click(
-                    fn=download_report,
-                    outputs=[download_report_file]
-                )
+            # Get filenames for dropdown
+            filenames = list(ui.results.keys()) if ui.results else []
+            first_filename = filenames[0] if filenames else None
 
-                clear_btn.click(
-                    fn=lambda: (
-                        None,  # file_upload
-                        "<p>No results yet.</p>",  # results_table
-                        "",  # comparison_view
-                        gr.update(visible=False, choices=[], value=None),  # document_selector
-                        gr.update(visible=False),  # controls_row
-                        gr.update(visible=False),  # download_row
-                        gr.update(visible=False),  # download_zip_file
-                        gr.update(visible=False),  # download_report_file
-                    ),
-                    outputs=[
-                        file_upload,
-                        results_table,
-                        comparison_view,
-                        document_selector,
-                        controls_row,
-                        download_row,
-                        download_zip_file,
-                        download_report_file
-                    ]
-                )
+            # Generate comparison view
+            comparison = ""
+            if first_filename:
+                comparison = ui.generate_comparison_view_tabbed(first_filename)
 
-        return demo
+            return (
+                result[0],  # results_table
+                gr.update(visible=True, choices=filenames, value=first_filename),  # results_controls
+                gr.update(visible=True),  # download_row
+                comparison  # comparison_view
+            )
 
-print(f"\n🚀 Starting Benchmarkdown UI...")
-demo = create_enhanced_ui()
+        def update_comparison(filename, view_mode_val):
+            """Update comparison view."""
+            if not filename:
+                return ""
+            if view_mode_val == "Side-by-Side":
+                return ui.generate_comparison_view_sidebyside(filename)
+            else:
+                return ui.generate_comparison_view_tabbed(filename)
+
+        # Wire up events
+        engine_selector.change(
+            fn=toggle_config_area,
+            inputs=[engine_selector],
+            outputs=[docling_config_area, textract_config_area]
+        )
+
+        add_to_queue_btn.click(
+            fn=add_to_queue,
+            inputs=[engine_selector, config_name_input] + docling_components,
+            outputs=[queue_status, queue_display]
+        )
+
+        clear_queue_btn.click(
+            fn=clear_queue,
+            outputs=[queue_display, queue_status]
+        )
+
+        extract_btn.click(
+            fn=sync_process_documents,
+            inputs=[file_upload],
+            outputs=[results_table, results_controls, download_row, comparison_view]
+        )
+
+        document_selector.change(
+            fn=update_comparison,
+            inputs=[document_selector, view_mode],
+            outputs=[comparison_view]
+        )
+
+        view_mode.change(
+            fn=update_comparison,
+            inputs=[document_selector, view_mode],
+            outputs=[comparison_view]
+        )
+
+        download_zip_btn.click(
+            fn=lambda: gr.update(value=ui.get_download_zip(), visible=True) if ui.get_download_zip() else None,
+            outputs=[download_zip_file]
+        )
+
+        download_report_btn.click(
+            fn=lambda: gr.update(value=ui.get_comparison_report(), visible=True) if ui.get_comparison_report() else None,
+            outputs=[download_report_file]
+        )
+
+        clear_results_btn.click(
+            fn=lambda: (
+                None,  # file_upload
+                "<p>Upload documents and click 'Run Extraction' to begin.</p>",  # results_table
+                "",  # comparison_view
+                gr.update(visible=False, choices=[], value=None),  # results_controls
+                gr.update(visible=False),  # download_row
+                gr.update(visible=False),  # download_zip_file
+                gr.update(visible=False),  # download_report_file
+            ),
+            outputs=[
+                file_upload,
+                results_table,
+                comparison_view,
+                results_controls,
+                download_row,
+                download_zip_file,
+                download_report_file
+            ]
+        )
+
+    return demo
+
 
 if __name__ == "__main__":
+    print("\n🚀 Starting Benchmarkdown UI (Redesigned)...")
+    demo = create_app()
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
