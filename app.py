@@ -9,6 +9,7 @@ Layout:
 """
 
 import os
+import json
 import asyncio
 import gradio as gr
 from benchmarkdown.ui import BenchmarkUI
@@ -58,8 +59,83 @@ def create_app():
     # State for extractor queue - list of dicts with keys: engine, config_name, extractor, cost
     extractor_queue = []
 
+    # Queue persistence file
+    QUEUE_FILE = ".task_queue.json"
+
+    # Load existing queue from disk if it exists
+    def load_queue_from_disk():
+        """Load task queue from disk."""
+        if os.path.exists(QUEUE_FILE):
+            try:
+                with open(QUEUE_FILE, 'r') as f:
+                    saved_queue = json.load(f)
+                    for task_data in saved_queue:
+                        # Recreate extractor from config
+                        engine = task_data['engine']
+                        config_name = task_data['config_name']
+                        config_dict = task_data['config_dict']
+
+                        if engine == "Docling":
+                            config = build_config_from_ui_values(DoclingConfig, config_dict)
+                            extractor = DoclingExtractor(config=config)
+                            full_name = f"Docling ({config_name})"
+
+                            task = {
+                                'engine': engine,
+                                'config_name': config_name,
+                                'extractor': extractor,
+                                'cost': None,
+                                'config_dict': config_dict
+                            }
+                            extractor_queue.append(task)
+                            ui.extractors[full_name] = extractor
+                print(f"✓ Loaded {len(extractor_queue)} tasks from disk")
+            except Exception as e:
+                print(f"⚠️  Failed to load queue: {e}")
+
+    def save_queue_to_disk():
+        """Save task queue to disk (without extractor objects)."""
+        try:
+            saved_queue = []
+            for task in extractor_queue:
+                saved_queue.append({
+                    'engine': task['engine'],
+                    'config_name': task['config_name'],
+                    'cost': task['cost'],
+                    'config_dict': task['config_dict']
+                })
+            with open(QUEUE_FILE, 'w') as f:
+                json.dump(saved_queue, f, indent=2)
+        except Exception as e:
+            print(f"⚠️  Failed to save queue: {e}")
+
+    # Load queue on app creation
+    load_queue_from_disk()
+
     # State for editing - None or index of task being edited
     editing_task_index = [None]  # Use list to make it mutable in closures
+
+    def generate_task_list_html():
+        """Generate HTML for the task list display."""
+        if not extractor_queue:
+            return "<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
+
+        html = "<div style='font-family: system-ui, sans-serif;'>"
+        for i, task in enumerate(extractor_queue):
+            html += f"""
+            <div style='border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9; display: flex; align-items: center;'>
+                <div style='background: #4CAF50; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold; flex-shrink: 0;'>
+                    {i+1}
+                </div>
+                <div style='flex-grow: 1;'>
+                    <strong style='font-size: 1.1em;'>{task['engine']}</strong>
+                    <br>
+                    <span style='color: #666; font-size: 0.9em;'>{task['config_name']}</span>
+                </div>
+            </div>
+            """
+        html += "</div>"
+        return html
 
     with gr.Blocks(title="Benchmarkdown - Document Extraction Comparison") as demo:
         gr.Markdown("# 📄 Benchmarkdown - Document Extraction Comparison")
@@ -77,11 +153,11 @@ def create_app():
                     launch_btn = gr.Button("🚀 Launch Extraction", variant="secondary", size="sm")
 
                 task_list_display = gr.HTML(
-                    value="<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
+                    value=generate_task_list_html()
                 )
 
                 # Simple delete control - shown when tasks exist
-                with gr.Row(visible=False) as delete_controls:
+                with gr.Row(visible=bool(extractor_queue)) as delete_controls:
                     task_number_input = gr.Number(
                         label="Delete task #",
                         minimum=1,
@@ -245,28 +321,6 @@ def create_app():
         # ============================================================
         # Event Handlers
         # ============================================================
-
-        def generate_task_list_html():
-            """Generate HTML for the task list display."""
-            if not extractor_queue:
-                return "<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
-
-            html = "<div style='font-family: system-ui, sans-serif;'>"
-            for i, task in enumerate(extractor_queue):
-                html += f"""
-                <div style='border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9; display: flex; align-items: center;'>
-                    <div style='background: #4CAF50; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold; flex-shrink: 0;'>
-                        {i+1}
-                    </div>
-                    <div style='flex-grow: 1;'>
-                        <strong style='font-size: 1.1em;'>{task['engine']}</strong>
-                        <br>
-                        <span style='color: #666; font-size: 0.9em;'>{task['config_name']}</span>
-                    </div>
-                </div>
-                """
-            html += "</div>"
-            return html
 
         def get_task_choices():
             """Get task choices for dropdown."""
@@ -508,6 +562,9 @@ def create_app():
                     ui.register_extractor(full_name, extractor, cost_per_page=None)
                     message = f"✓ Added task: {selected_profile}"
 
+                # Save queue to disk
+                save_queue_to_disk()
+
                 editing_task_index[0] = None
                 current_profile_data[0] = None
 
@@ -555,6 +612,9 @@ def create_app():
                     if full_name in ui.extractors:
                         del ui.extractors[full_name]
 
+                    # Save queue to disk
+                    save_queue_to_disk()
+
                     return (
                         gr.update(value=generate_task_list_html()),
                         gr.update(visible=bool(extractor_queue)),  # Hide if queue is now empty
@@ -575,6 +635,9 @@ def create_app():
             extractor_queue.clear()
             # Clear UI registry
             ui.extractors.clear()
+
+            # Save queue to disk
+            save_queue_to_disk()
 
             return (
                 gr.update(value=generate_task_list_html()),

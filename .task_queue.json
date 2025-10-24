@@ -1,0 +1,46 @@
+[
+  {
+    "engine": "Docling",
+    "config_name": "accurate",
+    "cost": null,
+    "config_dict": {
+      "do_ocr": false,
+      "do_table_structure": true,
+      "table_structure_mode": "accurate",
+      "num_threads": 16,
+      "force_backend_text": false,
+      "do_cell_matching": true,
+      "do_code_enrichment": false,
+      "do_formula_enrichment": false,
+      "do_picture_classification": false,
+      "do_picture_description": false,
+      "generate_page_images": false,
+      "generate_picture_images": false,
+      "images_scale": 1,
+      "accelerator_device": "auto",
+      "document_timeout": 0
+    }
+  },
+  {
+    "engine": "Docling",
+    "config_name": "accurate",
+    "cost": null,
+    "config_dict": {
+      "do_ocr": false,
+      "do_table_structure": true,
+      "table_structure_mode": "accurate",
+      "num_threads": 16,
+      "force_backend_text": false,
+      "do_cell_matching": true,
+      "do_code_enrichment": false,
+      "do_formula_enrichment": false,
+      "do_picture_classification": false,
+      "do_picture_description": false,
+      "generate_page_images": false,
+      "generate_picture_images": false,
+      "images_scale": 1,
+      "accelerator_device": "auto",
+      "document_timeout": 0
+    }
+  }
+]

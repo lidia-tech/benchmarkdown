@@ -24,6 +24,9 @@ module-root = ""
 docling = [
     "docling>=2.42.2",
 ]
+pymupdf = [
+    "pymupdf>=1.26.5",
+]
 textract = [
     "amazon-textract-textractor>=1.9.2",
     "boto3>=1.39.12",
