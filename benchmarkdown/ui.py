@@ -139,8 +139,8 @@ class BenchmarkUI:
         # Generate comparison view for first document
         if files:
             first_filename = os.path.basename(files[0].name)
-            comparison_tabs = self.generate_comparison_view(first_filename)
-            return results_table, comparison_tabs, self.generate_download_options()
+            comparison_tabs = self.generate_comparison_view_tabbed(first_filename)
+            return results_table, comparison_tabs, ""
 
         return results_table, "", ""
 
