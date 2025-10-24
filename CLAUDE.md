@@ -147,3 +147,4 @@ Browser tools can be used for smoke tests and functional tests of the Gradio UI:
 - UI uses `asyncio.run()` wrapper for Gradio compatibility (Gradio is sync)
 - Temp files stored in `tempfile.mkdtemp()` for downloads/reports
 - Cost estimation is rough (3000 chars = 1 page) - adjust in `ui.py` if needed
+- If you want to update the python libraries in the virtual environment, use `uv sync --all-extras --all-groups`.
