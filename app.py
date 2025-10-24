@@ -195,22 +195,26 @@ def create_app():
             with gr.Row():
                 back_to_tasks_btn = gr.Button("← Back to Tasks", size="sm")
 
-            gr.Markdown("## 🚀 Extraction Results")
+            gr.Markdown("## 📤 Upload Documents")
+            gr.Markdown("Upload the documents you want to extract with the configured tasks.")
 
             file_upload = gr.File(
-                label="Upload Documents (PDF, DOCX, etc.)",
+                label="Select Documents",
                 file_count="multiple",
                 file_types=[".pdf", ".docx", ".doc", ".txt"]
             )
 
             run_extraction_btn = gr.Button(
-                "▶️ Run Extraction on Uploaded Documents",
+                "▶️ Run Extraction",
                 variant="primary",
                 size="lg"
             )
 
+            gr.Markdown("---")
+            gr.Markdown("## 📊 Extraction Results")
+
             results_table = gr.HTML(
-                value="<p>Upload documents and click 'Run Extraction' to begin.</p>"
+                value="<p style='color: #666;'>Results will appear here after extraction completes.</p>"
             )
 
             # Results controls (hidden initially)
