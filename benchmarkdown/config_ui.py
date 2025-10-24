@@ -289,3 +289,24 @@ DOCLING_ADVANCED_FIELDS = [
     "accelerator_device",
     "document_timeout",
 ]
+
+# Define field groupings for TextractConfig
+TEXTRACT_BASIC_FIELDS = [
+    "s3_upload_path",
+    "features",
+    "hide_header_layout",
+    "hide_footer_layout",
+]
+
+TEXTRACT_ADVANCED_FIELDS = [
+    "hide_figure_layout",
+    "hide_table_layout",
+    "hide_key_value_layout",
+    "hide_page_num_layout",
+    "table_remove_column_headers",
+    "table_add_title_as_caption",
+    "table_add_footer_as_paragraph",
+    "max_number_of_consecutive_new_lines",
+    "title_prefix",
+    "section_header_prefix",
+]

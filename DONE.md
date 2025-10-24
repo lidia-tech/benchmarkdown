@@ -349,3 +349,98 @@ Successfully implemented inline delete buttons for each task in the task list wi
 6. **Updated event wiring** (lines 1010-1019): Connected hidden_delete_trigger to delete_task_handler
 
 The implementation uses CSS to hide the bridge components (#hidden-delete-controls with display: none) while keeping them in the DOM for JavaScript access. Testing confirmed successful deletion with automatic task renumbering and proper UI updates.
+
+## Check what's missing for TextractEngine
+
+Priority: 1
+
+... And test it.
+
+### Clarifications
+
+After analyzing the codebase, here's what's missing for TextractEngine:
+
+1. **Config Integration**: TextractExtractor doesn't accept TextractConfig object (unlike DoclingExtractor which accepts DoclingConfig)
+2. **Config Conversion Method**: TextractConfig lacks a conversion method like `to_textract_options()`
+3. **UI Field Definitions**: Missing TEXTRACT_BASIC_FIELDS and TEXTRACT_ADVANCED_FIELDS in config_ui.py
+4. **UI Integration**: app.py only shows placeholder for Textract configuration (line 308)
+5. **S3 Configuration**: TextractConfig doesn't include s3_upload_path (required parameter)
+6. **Feature Mapping**: TextractConfig uses custom TextractFeaturesEnum but needs to map to textractor library's TextractFeatures
+7. **No Tests**: No test files exist for TextractEngine
+8. **Missing Config Fields**: TextractConfig is too simple, missing many textractor options
+
+### Thoughts, proposed solution
+
+**Implementation approach:**
+
+1. **Enhance TextractConfig** in config.py:
+   - Add s3_upload_path field
+   - Add more configuration options from MarkdownLinearizationConfig
+   - Add to_textract_options() method to convert to native textractor format
+   - Map TextractFeaturesEnum values to textractor.TextractFeatures
+
+2. **Update TextractExtractor** in textract.py:
+   - Modify __init__ to accept optional TextractConfig parameter
+   - If config provided, use config.to_textract_options()
+   - Maintain backward compatibility with raw kwargs
+
+3. **Add UI Integration** in config_ui.py:
+   - Define TEXTRACT_BASIC_FIELDS and TEXTRACT_ADVANCED_FIELDS
+   - Follow the same pattern as DOCLING fields
+
+4. **Update app.py**:
+   - Add Textract configuration UI similar to Docling
+   - Replace placeholder with actual config components
+
+5. **Create Tests**:
+   - Basic extraction test with TextractConfig
+   - Test config conversion method
+   - Test UI integration
+
+### What was implemented
+
+Completed full integration of TextractEngine configuration system:
+
+1. **Enhanced TextractConfig** (benchmarkdown/config.py):
+   - Added s3_upload_path field (required for Textract)
+   - Added markdown output configuration fields (hide_header_layout, hide_footer_layout, hide_figure_layout, etc.)
+   - Added table configuration options (table_remove_column_headers, table_add_title_as_caption, etc.)
+   - Added text formatting options (max_number_of_consecutive_new_lines, title_prefix, section_header_prefix)
+   - Implemented to_textract_options() method to convert config to native Textractor format
+   - Proper mapping of TextractFeaturesEnum to textractor.TextractFeatures
+
+2. **Updated TextractExtractor** (benchmarkdown/textract.py):
+   - Modified __init__ to accept optional TextractConfig parameter
+   - Config takes precedence when provided
+   - Maintained backward compatibility with raw parameters (s3_upload_path, features, markdown_config)
+   - Updated docstrings with usage examples
+
+3. **Added UI Integration** (benchmarkdown/config_ui.py):
+   - Defined TEXTRACT_BASIC_FIELDS: s3_upload_path, features, hide_header_layout, hide_footer_layout
+   - Defined TEXTRACT_ADVANCED_FIELDS: hide_figure_layout, hide_table_layout, table options, formatting options
+   - Fields automatically generate appropriate Gradio UI components
+
+4. **Updated app.py**:
+   - Imported TextractConfig and field definitions
+   - Created textract_components list with auto-generated UI components
+   - Replaced placeholder Textract config area with full configuration UI
+   - Updated all handler functions to support Textract (edit_profile_handler, new_profile_handler, save_task, save_profile_handler)
+   - Updated load_queue_from_disk to recreate Textract extractors from saved configs
+   - Updated event wiring to include textract_components in inputs/outputs
+
+5. **Created Comprehensive Test Suite** (tests/test_textract_config.py):
+   - Test 1: Config creation with default and custom parameters
+   - Test 2: Config to native options conversion
+   - Test 3: Extractor creation with config
+   - Test 4: Backward compatibility with raw parameters
+   - Test 5: Optional end-to-end extraction (requires AWS credentials)
+   - All tests passed successfully
+
+**Testing Results:**
+- ✅ TextractConfig creation and validation working
+- ✅ Config to Textractor native format conversion working
+- ✅ TextractExtractor initialization with config working
+- ✅ Backward compatibility maintained
+- ✅ UI integration ready (requires running app to test fully)
+
+**Note:** AWS credentials required for actual extraction. Set TEXTRACT_S3_BUCKET environment variable for end-to-end testing.

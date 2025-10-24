@@ -14,10 +14,6 @@ The config strucutres should be put behind a similar unified interface, if it ma
 
 The ultimate goal of this task is to be able to add engine implementations as plugins to the framework, where the framework can dynamically explore the available engines and their config structures.
 
-## Check what's missing for TextractEngine
-
-... And test it.
-
 ## Implement LlamaParse extractor engine
 
 https://developers.llamaindex.ai/python/cloud/llamaparse/getting_started

@@ -1,5 +1,6 @@
 import os
 import asyncio
+from typing import Optional
 from concurrent.futures import ThreadPoolExecutor
 
 from textractor import Textractor
@@ -15,42 +16,44 @@ class TextractExtractor:
     - The `textractor` library installed (`pip install textractor`).
 
     Configuration:
-        You can create multiple instances with different configurations to compare
-        different Textract settings.
+        You can create multiple instances with different configurations:
 
-        Key configuration options:
-        - s3_upload_path: S3 path for temporary document uploads (required)
-        - features: List of TextractFeatures (LAYOUT, TABLES, FORMS, etc.)
-        - markdown_config: MarkdownLinearizationConfig for output formatting
-        - **kwargs: Additional parameters passed to Textractor constructor
+        1. Using TextractConfig (recommended for UI integration):
+            from benchmarkdown.config import TextractConfig, TextractFeaturesEnum
+
+            config = TextractConfig(
+                s3_upload_path="s3://my-bucket/temp/",
+                features=[TextractFeaturesEnum.LAYOUT, TextractFeaturesEnum.TABLES],
+                hide_header_layout=True
+            )
+            extractor = TextractExtractor(config=config)
+
+        2. Using raw kwargs (for advanced use):
+            extractor = TextractExtractor(
+                s3_upload_path="s3://bucket/temp/",
+                features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES]
+            )
 
     Example:
-        # Instance with layout only
-        extractor_layout = TextractExtractor(
-            s3_upload_path="s3://bucket/temp/",
-            features=[TextractFeatures.LAYOUT]
-        )
+        # Default instance with config
+        from benchmarkdown.config import TextractConfig
 
-        # Instance with tables and forms
-        extractor_full = TextractExtractor(
-            s3_upload_path="s3://bucket/temp/",
-            features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES, TextractFeatures.FORMS]
-        )
+        config = TextractConfig(s3_upload_path="s3://my-bucket/temp/")
+        extractor_default = TextractExtractor(config=config)
 
-        # Instance with custom markdown config
-        custom_config = MarkdownLinearizationConfig(
+        # Custom instance with modified config
+        config_custom = TextractConfig(
+            s3_upload_path="s3://my-bucket/temp/",
             hide_header_layout=False,
             hide_footer_layout=False
         )
-        extractor_custom = TextractExtractor(
-            s3_upload_path="s3://bucket/temp/",
-            markdown_config=custom_config
-        )
+        extractor_custom = TextractExtractor(config=config_custom)
     """
 
     def __init__(
         self,
-        s3_upload_path: str,
+        config: Optional['TextractConfig'] = None,
+        s3_upload_path: str = None,
         features: list = None,
         markdown_config: MarkdownLinearizationConfig = None,
         **kwargs
@@ -58,27 +61,41 @@ class TextractExtractor:
         """Initializes the TextractExtractor with configuration.
 
         Args:
-            s3_upload_path (str): The S3 path where documents will be temporarily uploaded for processing.
-            features (list, optional): List of TextractFeatures to enable. Defaults to [LAYOUT, TABLES].
-            markdown_config (MarkdownLinearizationConfig, optional): Configuration for markdown output.
-                Defaults to hiding headers and footers.
+            config: TextractConfig instance with typed configuration parameters.
+                   If provided, this takes precedence over other parameters.
+            s3_upload_path (str, optional): The S3 path for document uploads. Used only if config is None.
+            features (list, optional): List of TextractFeatures to enable. Used only if config is None.
+            markdown_config (MarkdownLinearizationConfig, optional): Markdown output configuration.
+                Used only if config is None.
             **kwargs: Additional keyword arguments to pass to the Textractor constructor.
         """
-        self.s3_upload_path = s3_upload_path
-        self.extractor = Textractor(**kwargs)
+        if config is not None:
+            # Use the config object to build Textractor options
+            features_list, markdown_config, s3_path = config.to_textract_options()
+            self.s3_upload_path = s3_path
+            self.features = features_list
+            self.config = markdown_config
+            self.extractor = Textractor(**kwargs)
+        else:
+            # Fallback to raw parameters for backward compatibility
+            if s3_upload_path is None:
+                raise ValueError("Either config or s3_upload_path must be provided")
 
-        # Default features if not specified
-        if features is None:
-            features = [TextractFeatures.LAYOUT, TextractFeatures.TABLES]
-        self.features = features
+            self.s3_upload_path = s3_upload_path
+            self.extractor = Textractor(**kwargs)
 
-        # Default markdown config if not specified
-        if markdown_config is None:
-            markdown_config = MarkdownLinearizationConfig(
-                hide_header_layout=True,
-                hide_footer_layout=True,
-            )
-        self.config = markdown_config
+            # Default features if not specified
+            if features is None:
+                features = [TextractFeatures.LAYOUT, TextractFeatures.TABLES]
+            self.features = features
+
+            # Default markdown config if not specified
+            if markdown_config is None:
+                markdown_config = MarkdownLinearizationConfig(
+                    hide_header_layout=True,
+                    hide_footer_layout=True,
+                )
+            self.config = markdown_config
 
 
     async def extract_markdown(self, filename: os.PathLike) -> str:

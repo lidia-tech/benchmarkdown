@@ -14,12 +14,14 @@ import asyncio
 import gradio as gr
 from benchmarkdown.ui import BenchmarkUI
 from benchmarkdown.docling import DoclingExtractor
-from benchmarkdown.config import DoclingConfig
+from benchmarkdown.config import DoclingConfig, TextractConfig
 from benchmarkdown.config_ui import (
     create_gradio_component_from_field,
     build_config_from_ui_values,
     DOCLING_BASIC_FIELDS,
-    DOCLING_ADVANCED_FIELDS
+    DOCLING_ADVANCED_FIELDS,
+    TEXTRACT_BASIC_FIELDS,
+    TEXTRACT_ADVANCED_FIELDS
 )
 from benchmarkdown.profile_manager import ProfileManager
 
@@ -89,6 +91,23 @@ def create_app():
                             }
                             extractor_queue.append(task)
                             ui.extractors[full_name] = extractor
+
+                        elif engine == "AWS Textract":
+                            config = build_config_from_ui_values(TextractConfig, config_dict)
+                            from benchmarkdown.textract import TextractExtractor
+                            extractor = TextractExtractor(config=config)
+                            full_name = f"AWS Textract ({config_name})"
+
+                            task = {
+                                'engine': engine,
+                                'config_name': config_name,
+                                'extractor': extractor,
+                                'cost': task_data.get('cost', 0.05),
+                                'config_dict': config_dict
+                            }
+                            extractor_queue.append(task)
+                            ui.extractors[full_name] = extractor
+
                 print(f"✓ Loaded {len(extractor_queue)} tasks from disk")
             except Exception as e:
                 print(f"⚠️  Failed to load queue: {e}")
@@ -303,9 +322,32 @@ def create_app():
                                 )
                                 docling_components.append(component)
 
-                    # Textract configuration options (placeholder)
+                    # Textract configuration options
                     with gr.Column(visible=False) as textract_config_area:
-                        gr.Markdown("*AWS Textract configuration options coming soon*")
+                        textract_components = []
+
+                        with gr.Group():
+                            gr.Markdown("#### Basic Options")
+                            for field_name in TEXTRACT_BASIC_FIELDS:
+                                if field_name not in TextractConfig.model_fields:
+                                    continue
+                                field_info = TextractConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                textract_components.append(component)
+
+                        with gr.Accordion("Advanced Options", open=False):
+                            for field_name in TEXTRACT_ADVANCED_FIELDS:
+                                if field_name not in TextractConfig.model_fields:
+                                    continue
+                                field_info = TextractConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                textract_components.append(component)
 
                     # Configuration editor action buttons
                     with gr.Row():
@@ -470,14 +512,15 @@ def create_app():
 
         def edit_profile_handler(engine, selected_profile):
             """Open config editor to edit the selected profile."""
+            max_components = max(len(docling_components), len(textract_components))
             if not selected_profile:
-                return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+                return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
 
             try:
                 profile = profile_manager.load_profile(selected_profile)
 
                 if profile["engine"] != engine:
-                    return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+                    return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
 
                 config_data = profile["config_data"]
                 current_profile_data[0] = config_data
@@ -501,22 +544,34 @@ def create_app():
                             updates.append(gr.update(value=config_data[field_name]))
                         else:
                             updates.append(gr.update())
-                else:
+                    # Pad with empty updates for textract components
+                    updates.extend([gr.update()] * len(textract_components))
+
+                elif engine == "AWS Textract":
                     updates.extend([
                         gr.update(visible=False),  # docling_config_area
                         gr.update(visible=True),  # textract_config_area
                     ])
+                    # Pad with empty updates for docling components
                     updates.extend([gr.update()] * len(docling_components))
+
+                    all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
+                    for field_name in all_fields:
+                        if field_name in config_data:
+                            updates.append(gr.update(value=config_data[field_name]))
+                        else:
+                            updates.append(gr.update())
 
                 return updates
 
             except Exception as e:
-                return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+                return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
 
         def new_profile_handler(engine):
             """Open config editor for creating a new profile."""
+            max_components = max(len(docling_components), len(textract_components))
             if not engine:
-                return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+                return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
 
             current_profile_data[0] = None  # Clear current profile
 
@@ -541,12 +596,25 @@ def create_app():
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
-            else:
+                # Pad with empty updates for textract components
+                updates.extend([gr.update()] * len(textract_components))
+
+            elif engine == "AWS Textract":
                 updates.extend([
                     gr.update(visible=False),  # docling_config_area
                     gr.update(visible=True),  # textract_config_area
                 ])
+                # Pad with empty updates for docling components
                 updates.extend([gr.update()] * len(docling_components))
+
+                # Load default values for all Textract fields
+                all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
+                for field_name in all_fields:
+                    if field_name in TextractConfig.model_fields:
+                        default_value = TextractConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
 
             return updates
 
@@ -629,11 +697,50 @@ def create_app():
                 )
 
             elif engine == "AWS Textract":
+                # Build config from current profile data
+                config = build_config_from_ui_values(TextractConfig, current_profile_data[0])
+
+                # Create extractor
+                from benchmarkdown.textract import TextractExtractor
+                extractor = TextractExtractor(config=config)
+                full_name = f"AWS Textract ({selected_profile})"
+
+                task_data = {
+                    'engine': 'AWS Textract',
+                    'config_name': selected_profile,
+                    'extractor': extractor,
+                    'cost': 0.05,  # Approximate cost per page
+                    'config_dict': current_profile_data[0]
+                }
+
+                # Add or update task
+                if editing_task_index[0] is not None:
+                    # Update existing task
+                    old_name = extractor_queue[editing_task_index[0]]['config_name']
+                    extractor_queue[editing_task_index[0]] = task_data
+                    # Update UI registry
+                    old_full_name = f"AWS Textract ({old_name})"
+                    if old_full_name in ui.extractors:
+                        del ui.extractors[old_full_name]
+                    ui.register_extractor(full_name, extractor, cost_per_page=0.05)
+                    message = f"✓ Updated task: {selected_profile}"
+                else:
+                    # Add new task
+                    extractor_queue.append(task_data)
+                    ui.register_extractor(full_name, extractor, cost_per_page=0.05)
+                    message = f"✓ Added task: {selected_profile}"
+
+                # Save queue to disk
+                save_queue_to_disk()
+
+                editing_task_index[0] = None
+                current_profile_data[0] = None
+
                 return (
                     gr.update(value=generate_task_list_html()),
-                    gr.update(visible=True),
-                    "⚠️  Textract configuration not yet implemented",
-                    gr.update(visible=bool(extractor_queue))
+                    gr.update(visible=False),  # hide editor
+                    message,
+                    gr.update(visible=True)  # show delete_controls
                 )
 
             return (
@@ -790,7 +897,8 @@ def create_app():
             try:
                 if engine == "Docling":
                     all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
-                    config_data = {field: value for field, value in zip(all_fields, config_values)}
+                    # Only take values for docling components
+                    config_data = {field: value for field, value in zip(all_fields, config_values[:len(all_fields)])}
 
                     # Save profile
                     filepath = profile_manager.save_profile(
@@ -811,6 +919,33 @@ def create_app():
                         gr.update(value=f"✅ Saved profile: **{config_name}** - Ready to add to queue", visible=True),  # profile_status
                         gr.update(choices=profile_names, value=config_name)  # profile_selector with new profile selected
                     )
+
+                elif engine == "AWS Textract":
+                    all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
+                    # Skip docling components, take textract values
+                    textract_values = config_values[len(docling_components):]
+                    config_data = {field: value for field, value in zip(all_fields, textract_values[:len(all_fields)])}
+
+                    # Save profile
+                    filepath = profile_manager.save_profile(
+                        engine=engine,
+                        profile_name=config_name,
+                        config_data=config_data
+                    )
+
+                    # Update current profile data
+                    current_profile_data[0] = config_data
+
+                    # Refresh profile list
+                    profiles = profile_manager.list_profiles(engine=engine)
+                    profile_names = [p["profile_name"] for p in profiles]
+
+                    return (
+                        gr.update(visible=False),  # Close config_editor
+                        gr.update(value=f"✅ Saved profile: **{config_name}** - Ready to add to queue", visible=True),  # profile_status
+                        gr.update(choices=profile_names, value=config_name)  # profile_selector with new profile selected
+                    )
+
                 else:
                     return (
                         gr.update(visible=True),  # Keep editor open
@@ -973,18 +1108,18 @@ def create_app():
         edit_profile_btn.click(
             fn=edit_profile_handler,
             inputs=[engine_selector, profile_selector],
-            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components
+            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components + textract_components
         )
 
         new_profile_btn.click(
             fn=new_profile_handler,
             inputs=[engine_selector],
-            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components
+            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components + textract_components
         )
 
         save_profile_btn.click(
             fn=save_profile_handler,
-            inputs=[engine_selector, config_name_input] + docling_components,
+            inputs=[engine_selector, config_name_input] + docling_components + textract_components,
             outputs=[config_editor, profile_status, profile_selector]
         )
 
