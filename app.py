@@ -451,7 +451,7 @@ def create_app():
             """Add current task (from loaded profile) to queue."""
             if not engine:
                 return (
-                    generate_task_list_html(),
+                    gr.update(value=generate_task_list_html()),
                     gr.update(visible=False),  # hide editor
                     "❌ Please select an extractor engine",
                     gr.update(visible=bool(extractor_queue))
@@ -460,7 +460,7 @@ def create_app():
             # Use currently loaded profile data or ask user to select
             if current_profile_data[0] is None:
                 return (
-                    generate_task_list_html(),
+                    gr.update(value=generate_task_list_html()),
                     gr.update(visible=True),  # keep editor open
                     "❌ Please select a profile or create a new one",
                     gr.update(visible=bool(extractor_queue))
@@ -468,7 +468,7 @@ def create_app():
 
             if not selected_profile:
                 return (
-                    generate_task_list_html(),
+                    gr.update(value=generate_task_list_html()),
                     gr.update(visible=True),  # keep editor open
                     "❌ Please select a profile",
                     gr.update(visible=bool(extractor_queue))
@@ -512,7 +512,7 @@ def create_app():
 
                 # Show delete controls if we have tasks
                 return (
-                    generate_task_list_html(),
+                    gr.update(value=generate_task_list_html()),
                     gr.update(visible=False),  # hide editor
                     message,
                     gr.update(visible=True)  # show delete_controls
@@ -520,14 +520,14 @@ def create_app():
 
             elif engine == "AWS Textract":
                 return (
-                    generate_task_list_html(),
+                    gr.update(value=generate_task_list_html()),
                     gr.update(visible=True),
                     "⚠️  Textract configuration not yet implemented",
                     gr.update(visible=bool(extractor_queue))
                 )
 
             return (
-                generate_task_list_html(),
+                gr.update(value=generate_task_list_html()),
                 gr.update(visible=True),
                 "❌ Unknown engine",
                 gr.update(visible=bool(extractor_queue))
@@ -537,7 +537,7 @@ def create_app():
             """Delete a task from the queue by its number."""
             if task_number is None or not extractor_queue:
                 return (
-                    generate_task_list_html(),
+                    gr.update(value=generate_task_list_html()),
                     gr.update(visible=bool(extractor_queue)),
                     gr.update(value=None)  # Clear the input
                 )
@@ -555,7 +555,7 @@ def create_app():
                         del ui.extractors[full_name]
 
                     return (
-                        generate_task_list_html(),
+                        gr.update(value=generate_task_list_html()),
                         gr.update(visible=bool(extractor_queue)),  # Hide if queue is now empty
                         gr.update(value=None)  # Clear the input
                     )
@@ -563,7 +563,7 @@ def create_app():
                 pass
 
             return (
-                generate_task_list_html(),
+                gr.update(value=generate_task_list_html()),
                 gr.update(visible=bool(extractor_queue)),
                 gr.update(value=None)
             )
