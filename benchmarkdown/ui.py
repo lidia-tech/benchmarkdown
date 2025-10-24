@@ -12,6 +12,7 @@ from typing import Optional
 import tempfile
 
 import gradio as gr
+import markdown
 
 
 @dataclass
@@ -202,7 +203,8 @@ class BenchmarkUI:
             # Rendered markdown preview
             html += "<div style='margin: 10px 0;'>"
             html += "<strong>Rendered Markdown:</strong>"
-            html += f"<div style='border: 1px solid #ddd; padding: 15px; background: white; border-radius: 4px; max-height: 400px; overflow-y: auto;'>{result.markdown}</div>"
+            rendered_html = markdown.markdown(result.markdown, extensions=['extra', 'nl2br', 'sane_lists'])
+            html += f"<div style='border: 1px solid #ddd; padding: 15px; background: white; border-radius: 4px; max-height: 400px; overflow-y: auto;'>{rendered_html}</div>"
             html += "</div>"
 
             # Raw markdown
@@ -252,7 +254,9 @@ class BenchmarkUI:
                 html += "</div>"
 
                 # Rendered preview
-                html += f"<div style='border: 1px solid #ddd; padding: 10px; background: white; border-radius: 4px; max-height: 500px; overflow-y: auto; font-size: 0.9em;'>{result.markdown[:2000]}{'...' if len(result.markdown) > 2000 else ''}</div>"
+                markdown_preview = result.markdown[:2000] + ('...' if len(result.markdown) > 2000 else '')
+                rendered_preview = markdown.markdown(markdown_preview, extensions=['extra', 'nl2br', 'sane_lists'])
+                html += f"<div style='border: 1px solid #ddd; padding: 10px; background: white; border-radius: 4px; max-height: 500px; overflow-y: auto; font-size: 0.9em;'>{rendered_preview}</div>"
 
             html += "</div>"
 
@@ -353,7 +357,8 @@ class BenchmarkUI:
                 if result.error:
                     html += f"<div class='error'>Error: {result.error}</div>"
                 else:
-                    html += f"<div class='markdown-preview'>{result.markdown}</div>"
+                    rendered_markdown = markdown.markdown(result.markdown, extensions=['extra', 'nl2br', 'sane_lists'])
+                    html += f"<div class='markdown-preview'>{rendered_markdown}</div>"
                 html += "</div>"
 
         html += "</body></html>"
