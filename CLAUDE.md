@@ -46,6 +46,28 @@ async def extract_markdown(self, filename: os.PathLike) -> str
 
 All extractors implement this protocol, allowing the UI to work with any extraction tool without tight coupling.
 
+### Configuration System
+
+**Pydantic-based configuration** enables type-safe, UI-driven extractor configuration:
+
+**`benchmarkdown/config.py`**: Pydantic models for extractor configuration
+- `DoclingConfig`: 15 parameters (OCR, tables, enrichment, threading, etc.)
+- Field metadata includes descriptions, constraints, defaults
+- `to_docling_options()` converts to native Docling format
+- Extensible pattern for other extractors (TextractConfig stub included)
+
+**`benchmarkdown/config_ui.py`**: Automatic Gradio UI generation
+- Maps Pydantic fields to Gradio components based on type
+- Two-tier layout: Basic options + Advanced accordion
+- `build_config_from_ui_values()` constructs validated configs
+
+**`app.py`**: Main application with Configuration tab
+- Users create named configurations through UI
+- Configurations dynamically register as extractors
+- No code changes needed to compare different settings
+
+See `CONFIG_UI_README.md` for user guide and configuration patterns.
+
 ### Extractor Implementations
 
 **`benchmarkdown/docling.py`**:
@@ -83,6 +105,8 @@ Auto-detects available extractors by attempting imports:
 
 ## Adding New Extractors
 
+### Basic Implementation
+
 1. Create class in `benchmarkdown/` implementing `MarkdownExtractor` protocol
 2. Implement `async def extract_markdown(self, filename: os.PathLike) -> str`
 3. Use `asyncio.run_in_executor()` if wrapping blocking library
@@ -100,6 +124,37 @@ class MyExtractor:
         # Your synchronous extraction logic
         return markdown_text
 ```
+
+### Adding Configuration Support
+
+To add UI-driven configuration (like Docling has):
+
+1. **Create Pydantic model** in `benchmarkdown/config.py`:
+   ```python
+   class MyExtractorConfig(BaseModel):
+       feature_x: bool = Field(default=True, description="Enable feature X")
+       threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Detection threshold")
+   ```
+
+2. **Update extractor** to accept config:
+   ```python
+   class MyExtractor:
+       def __init__(self, config: Optional[MyExtractorConfig] = None, **kwargs):
+           if config:
+               self.config = config
+           else:
+               # fallback
+   ```
+
+3. **Define field groupings** in `config_ui.py`:
+   ```python
+   MY_EXTRACTOR_BASIC_FIELDS = ["feature_x"]
+   MY_EXTRACTOR_ADVANCED_FIELDS = ["threshold"]
+   ```
+
+4. **Add Configuration tab section** in `app.py` following the Docling pattern
+
+The UI will automatically generate appropriate Gradio components based on field types.
 
 ## Data Organization
 
