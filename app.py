@@ -90,6 +90,7 @@ def create_app():
                         scale=1
                     )
                     delete_task_btn = gr.Button("🗑️ Delete", size="sm", variant="stop", scale=0, min_width=100)
+                    clear_all_btn = gr.Button("🗑️ Clear All", size="sm", variant="stop", scale=0, min_width=100)
 
             # RIGHT COLUMN: Task Editor (hidden by default)
             with gr.Column(scale=2, visible=False) as task_editor_column:
@@ -568,6 +569,19 @@ def create_app():
                 gr.update(value=None)
             )
 
+        def clear_all_tasks_handler():
+            """Clear all tasks from the queue."""
+            # Clear the queue
+            extractor_queue.clear()
+            # Clear UI registry
+            ui.extractors.clear()
+
+            return (
+                gr.update(value=generate_task_list_html()),
+                gr.update(visible=False),  # Hide delete controls
+                gr.update(value=None)  # Clear the input
+            )
+
         def edit_task_handler(selected_task):
             """Open editor to edit an existing task based on dropdown selection."""
             if not selected_task or not extractor_queue:
@@ -795,6 +809,15 @@ def create_app():
         # Wire up events
         # ============================================================
 
+        # Page Load Event - refresh display on page load
+        demo.load(
+            fn=lambda: (
+                gr.update(value=generate_task_list_html()),
+                gr.update(visible=bool(extractor_queue))
+            ),
+            outputs=[task_list_display, delete_controls]
+        )
+
         # Task List Events
         add_task_btn.click(
             fn=open_new_task,
@@ -870,6 +893,11 @@ def create_app():
         delete_task_btn.click(
             fn=delete_task_handler,
             inputs=[task_number_input],
+            outputs=[task_list_display, delete_controls, task_number_input]
+        )
+
+        clear_all_btn.click(
+            fn=clear_all_tasks_handler,
             outputs=[task_list_display, delete_controls, task_number_input]
         )
 
