@@ -124,9 +124,6 @@ def create_app():
         for i, task in enumerate(extractor_queue):
             html += f"""
             <div class='task-card' style='border: 1px solid rgba(128, 128, 128, 0.3); padding: 12px; margin: 8px 0; border-radius: 6px; background: rgba(128, 128, 128, 0.1); display: flex; align-items: center;'>
-                <div style='background: #4CAF50; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold; flex-shrink: 0;'>
-                    {i+1}
-                </div>
                 <div style='flex-grow: 1;'>
                     <strong style='font-size: 1.1em; color: var(--body-text-color, inherit);'>{task['engine']}</strong>
                     <br>
