@@ -22,6 +22,7 @@ from benchmarkdown.config_ui import (
     DOCLING_BASIC_FIELDS,
     DOCLING_ADVANCED_FIELDS
 )
+from benchmarkdown.profile_manager import ProfileManager
 
 # Check available extractors
 has_docling = False
@@ -54,6 +55,7 @@ if not has_docling and not has_textract:
 def create_app():
     """Create the redesigned Gradio interface."""
     ui = BenchmarkUI()
+    profile_manager = ProfileManager()
 
     # State for extractor queue
     extractor_queue = []  # List of (name, extractor) tuples
@@ -86,6 +88,30 @@ def create_app():
                     label="Configuration Name",
                     placeholder="e.g., 'Fast Mode', 'High Quality', etc.",
                     value=""
+                )
+
+            # Profile Management
+            with gr.Group():
+                gr.Markdown("#### Profile Management")
+                with gr.Row():
+                    profile_selector = gr.Dropdown(
+                        label="Saved Profiles",
+                        choices=[],
+                        interactive=True,
+                        scale=2
+                    )
+                    refresh_profiles_btn = gr.Button("🔄", size="sm", scale=0, min_width=50)
+
+                with gr.Row():
+                    load_profile_btn = gr.Button("📂 Load Profile", size="sm")
+                    save_profile_btn = gr.Button("💾 Save Profile", size="sm")
+                    delete_profile_btn = gr.Button("🗑️ Delete Profile", size="sm")
+
+                profile_status = gr.Textbox(
+                    label="Profile Status",
+                    value="",
+                    interactive=False,
+                    visible=False
                 )
 
             # Configuration area (changes based on selected engine)
@@ -200,6 +226,119 @@ def create_app():
         # ============================================================
         # Event Handlers
         # ============================================================
+
+        # Profile Management Handlers
+        def refresh_profile_list(engine):
+            """Refresh the list of available profiles for the selected engine."""
+            if not engine:
+                return gr.update(choices=[])
+
+            profiles = profile_manager.list_profiles(engine=engine)
+            profile_names = [p["profile_name"] for p in profiles]
+            return gr.update(choices=profile_names, value=None)
+
+        def load_profile_handler(engine, selected_profile):
+            """Load a profile and populate configuration UI."""
+            if not selected_profile:
+                return [gr.update(visible=True, value="❌ Please select a profile to load")] + [gr.update()] * len(docling_components) + [gr.update()]
+
+            try:
+                profile = profile_manager.load_profile(selected_profile)
+
+                # Verify engine matches
+                if profile["engine"] != engine:
+                    return [gr.update(visible=True, value=f"❌ Profile is for {profile['engine']}, but {engine} is selected")] + [gr.update()] * len(docling_components) + [gr.update()]
+
+                # Update config name
+                config_name = profile["profile_name"]
+
+                # Prepare updates for all config components
+                updates = [gr.update(visible=True, value=f"✓ Loaded profile: {config_name}")]
+
+                if engine == "Docling":
+                    config_data = profile["config_data"]
+                    all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
+
+                    # Update each component with the loaded value
+                    for field_name in all_fields:
+                        if field_name in config_data:
+                            updates.append(gr.update(value=config_data[field_name]))
+                        else:
+                            # Use default value if not in profile
+                            updates.append(gr.update())
+                else:
+                    # For other engines, just return empty updates
+                    updates.extend([gr.update()] * len(docling_components))
+
+                # Update config name field
+                updates.append(gr.update(value=config_name))
+
+                return updates
+
+            except FileNotFoundError:
+                return [gr.update(visible=True, value=f"❌ Profile '{selected_profile}' not found")] + [gr.update()] * len(docling_components) + [gr.update()]
+            except Exception as e:
+                return [gr.update(visible=True, value=f"❌ Error loading profile: {e}")] + [gr.update()] * len(docling_components) + [gr.update()]
+
+        def save_profile_handler(engine, config_name, *config_values):
+            """Save current configuration as a profile."""
+            if not config_name:
+                return gr.update(visible=True, value="❌ Please enter a configuration name"), gr.update()
+
+            try:
+                if engine == "Docling":
+                    all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
+                    config_data = {field: value for field, value in zip(all_fields, config_values)}
+
+                    # Save profile
+                    filepath = profile_manager.save_profile(
+                        engine=engine,
+                        profile_name=config_name,
+                        config_data=config_data
+                    )
+
+                    # Refresh profile list
+                    profiles = profile_manager.list_profiles(engine=engine)
+                    profile_names = [p["profile_name"] for p in profiles]
+
+                    return (
+                        gr.update(visible=True, value=f"✓ Saved profile: {config_name}"),
+                        gr.update(choices=profile_names, value=config_name)
+                    )
+                else:
+                    return (
+                        gr.update(visible=True, value="⚠️  Profile saving not yet implemented for this engine"),
+                        gr.update()
+                    )
+
+            except Exception as e:
+                return gr.update(visible=True, value=f"❌ Error saving profile: {e}"), gr.update()
+
+        def delete_profile_handler(engine, selected_profile):
+            """Delete a profile."""
+            if not selected_profile:
+                return gr.update(visible=True, value="❌ Please select a profile to delete"), gr.update()
+
+            try:
+                success = profile_manager.delete_profile(selected_profile)
+
+                if success:
+                    # Refresh profile list
+                    profiles = profile_manager.list_profiles(engine=engine)
+                    profile_names = [p["profile_name"] for p in profiles]
+
+                    return (
+                        gr.update(visible=True, value=f"✓ Deleted profile: {selected_profile}"),
+                        gr.update(choices=profile_names, value=None)
+                    )
+                else:
+                    return (
+                        gr.update(visible=True, value=f"❌ Profile '{selected_profile}' not found"),
+                        gr.update()
+                    )
+
+            except Exception as e:
+                return gr.update(visible=True, value=f"❌ Error deleting profile: {e}"), gr.update()
 
         def toggle_config_area(engine):
             """Show/hide config areas based on selected engine."""
@@ -317,9 +456,37 @@ def create_app():
 
         # Wire up events
         engine_selector.change(
-            fn=toggle_config_area,
+            fn=lambda engine: (
+                *toggle_config_area(engine),
+                refresh_profile_list(engine)
+            ),
             inputs=[engine_selector],
-            outputs=[docling_config_area, textract_config_area]
+            outputs=[docling_config_area, textract_config_area, profile_selector]
+        )
+
+        # Profile management events
+        refresh_profiles_btn.click(
+            fn=refresh_profile_list,
+            inputs=[engine_selector],
+            outputs=[profile_selector]
+        )
+
+        load_profile_btn.click(
+            fn=load_profile_handler,
+            inputs=[engine_selector, profile_selector],
+            outputs=[profile_status] + docling_components + [config_name_input]
+        )
+
+        save_profile_btn.click(
+            fn=save_profile_handler,
+            inputs=[engine_selector, config_name_input] + docling_components,
+            outputs=[profile_status, profile_selector]
+        )
+
+        delete_profile_btn.click(
+            fn=delete_profile_handler,
+            inputs=[engine_selector, profile_selector],
+            outputs=[profile_status, profile_selector]
         )
 
         add_to_queue_btn.click(
