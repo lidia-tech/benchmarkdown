@@ -80,17 +80,16 @@ def create_app():
                     value="<p style='color: #666; padding: 20px; text-align: center;'>No tasks configured yet.<br>Click 'Add Task' to begin.</p>"
                 )
 
-                # Task controls - shown when tasks exist
-                with gr.Group(visible=False) as task_controls:
-                    gr.Markdown("**Manage Tasks:**")
-                    task_selector = gr.Dropdown(
-                        label="Select a task to edit or delete",
-                        choices=[],
-                        interactive=True
+                # Simple delete control - shown when tasks exist
+                with gr.Row(visible=False) as delete_controls:
+                    task_number_input = gr.Number(
+                        label="Delete task #",
+                        minimum=1,
+                        step=1,
+                        precision=0,
+                        scale=1
                     )
-                    with gr.Row():
-                        edit_task_btn = gr.Button("✏️ Edit Selected Task", size="sm", variant="secondary", scale=1)
-                        delete_task_btn = gr.Button("🗑️ Delete Selected Task", size="sm", variant="stop", scale=1)
+                    delete_task_btn = gr.Button("🗑️ Delete", size="sm", variant="stop", scale=0, min_width=100)
 
             # RIGHT COLUMN: Task Editor (hidden by default)
             with gr.Column(scale=2, visible=False) as task_editor_column:
@@ -254,10 +253,15 @@ def create_app():
             html = "<div style='font-family: system-ui, sans-serif;'>"
             for i, task in enumerate(extractor_queue):
                 html += f"""
-                <div style='border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9;'>
-                    <strong style='font-size: 1.1em;'>{task['engine']}</strong>
-                    <br>
-                    <span style='color: #666; font-size: 0.9em;'>{task['config_name']}</span>
+                <div style='border: 1px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 6px; background: #f9f9f9; display: flex; align-items: center;'>
+                    <div style='background: #4CAF50; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; margin-right: 12px; font-weight: bold; flex-shrink: 0;'>
+                        {i+1}
+                    </div>
+                    <div style='flex-grow: 1;'>
+                        <strong style='font-size: 1.1em;'>{task['engine']}</strong>
+                        <br>
+                        <span style='color: #666; font-size: 0.9em;'>{task['config_name']}</span>
+                    </div>
                 </div>
                 """
             html += "</div>"
@@ -450,7 +454,7 @@ def create_app():
                     generate_task_list_html(),
                     gr.update(visible=False),  # hide editor
                     "❌ Please select an extractor engine",
-                    gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
+                    gr.update(visible=bool(extractor_queue))
                 )
 
             # Use currently loaded profile data or ask user to select
@@ -459,7 +463,7 @@ def create_app():
                     generate_task_list_html(),
                     gr.update(visible=True),  # keep editor open
                     "❌ Please select a profile or create a new one",
-                    gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
+                    gr.update(visible=bool(extractor_queue))
                 )
 
             if not selected_profile:
@@ -467,7 +471,7 @@ def create_app():
                     generate_task_list_html(),
                     gr.update(visible=True),  # keep editor open
                     "❌ Please select a profile",
-                    gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
+                    gr.update(visible=bool(extractor_queue))
                 )
 
             if engine == "Docling":
@@ -506,13 +510,12 @@ def create_app():
                 editing_task_index[0] = None
                 current_profile_data[0] = None
 
-                # Show task controls if we have tasks
-                task_choices = get_task_choices()
+                # Show delete controls if we have tasks
                 return (
                     generate_task_list_html(),
                     gr.update(visible=False),  # hide editor
                     message,
-                    gr.update(visible=True, choices=task_choices, value=None)  # show task_controls with updated dropdown
+                    gr.update(visible=True)  # show delete_controls
                 )
 
             elif engine == "AWS Textract":
@@ -520,27 +523,27 @@ def create_app():
                     generate_task_list_html(),
                     gr.update(visible=True),
                     "⚠️  Textract configuration not yet implemented",
-                    gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
+                    gr.update(visible=bool(extractor_queue))
                 )
 
             return (
                 generate_task_list_html(),
                 gr.update(visible=True),
                 "❌ Unknown engine",
-                gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
+                gr.update(visible=bool(extractor_queue))
             )
 
-        def delete_task_handler(selected_task):
-            """Delete a task from the queue based on dropdown selection."""
-            if not selected_task or not extractor_queue:
+        def delete_task_handler(task_number):
+            """Delete a task from the queue by its number."""
+            if task_number is None or not extractor_queue:
                 return (
                     generate_task_list_html(),
-                    gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [], value=None)
+                    gr.update(visible=bool(extractor_queue)),
+                    gr.update(value=None)  # Clear the input
                 )
 
             try:
-                # Extract index from dropdown value like "1. Docling - Fast Mode"
-                task_index = int(selected_task.split('.')[0]) - 1
+                task_index = int(task_number) - 1  # Convert to 0-based index
 
                 if 0 <= task_index < len(extractor_queue):
                     task = extractor_queue[task_index]
@@ -551,18 +554,18 @@ def create_app():
                     if full_name in ui.extractors:
                         del ui.extractors[full_name]
 
-                    # Update task choices
-                    task_choices = get_task_choices() if extractor_queue else []
                     return (
                         generate_task_list_html(),
-                        gr.update(visible=bool(extractor_queue), choices=task_choices, value=None)
+                        gr.update(visible=bool(extractor_queue)),  # Hide if queue is now empty
+                        gr.update(value=None)  # Clear the input
                     )
             except (ValueError, IndexError):
                 pass
 
             return (
                 generate_task_list_html(),
-                gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [], value=None)
+                gr.update(visible=bool(extractor_queue)),
+                gr.update(value=None)
             )
 
         def edit_task_handler(selected_task):
@@ -856,7 +859,7 @@ def create_app():
         save_task_btn.click(
             fn=save_task,
             inputs=[engine_selector, profile_selector],
-            outputs=[task_list_display, task_editor_column, editor_status, task_selector]
+            outputs=[task_list_display, task_editor_column, editor_status, delete_controls]
         )
 
         cancel_editor_btn.click(
@@ -864,17 +867,10 @@ def create_app():
             outputs=[task_editor_column]
         )
 
-        edit_task_btn.click(
-            fn=edit_task_handler,
-            inputs=[task_selector],
-            outputs=[task_editor_column, editor_status, engine_selector, profile_group, config_editor, config_name_input,
-                    docling_config_area, textract_config_area] + docling_components
-        )
-
         delete_task_btn.click(
             fn=delete_task_handler,
-            inputs=[task_selector],
-            outputs=[task_list_display, task_selector]
+            inputs=[task_number_input],
+            outputs=[task_list_display, delete_controls, task_number_input]
         )
 
         # Results View Events
