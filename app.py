@@ -95,7 +95,7 @@ def create_app():
             with gr.Column(scale=2, visible=False) as task_editor_column:
                 gr.Markdown("## ⚙️ Task Editor")
 
-                editor_status = gr.Markdown("*Configure a new extraction task*")
+                editor_status = gr.Markdown("*Select an extractor engine and profile*")
 
                 # Step 1: Select Engine
                 with gr.Group():
@@ -114,76 +114,79 @@ def create_app():
                         interactive=True
                     )
 
-                    config_name_input = gr.Textbox(
-                        label="Task Name",
-                        placeholder="e.g., 'Fast Mode', 'High Quality', etc.",
-                        info="Used to identify this task in the queue and when saving as a profile",
-                        value=""
-                    )
-
-                # Step 2: Profile Management (hidden until engine selected)
+                # Step 2: Select Profile (hidden until engine selected)
                 with gr.Group(visible=False) as profile_group:
-                    gr.Markdown("### 2. Profile Management")
+                    gr.Markdown("### 2. Select Profile")
 
                     with gr.Row():
                         profile_selector = gr.Dropdown(
-                            label="Load Existing Profile",
+                            label="Saved Profiles",
                             choices=[],
+                            value=None,
                             interactive=True,
+                            info="Select a profile to load its settings, or create a new one",
                             scale=3
                         )
                         refresh_profiles_btn = gr.Button("🔄", size="sm", scale=0, min_width=50)
 
                     with gr.Row():
-                        load_profile_btn = gr.Button("📂 Load Profile", size="sm")
-                        save_profile_btn = gr.Button("💾 Save Profile", size="sm")
+                        edit_profile_btn = gr.Button("✏️ Edit Profile", size="sm")
+                        new_profile_btn = gr.Button("✨ New Profile", size="sm", variant="primary")
                         delete_profile_btn = gr.Button("🗑️ Delete Profile", size="sm")
-                        create_new_btn = gr.Button("✨ Create New Profile", size="sm", variant="primary")
 
-                    profile_status = gr.Textbox(
-                        label="Profile Status",
+                    profile_status = gr.Markdown("", visible=False)
+
+                # Step 3: Configuration Editor (hidden until Edit or New clicked)
+                with gr.Column(visible=False) as config_editor:
+                    gr.Markdown("### 3. Configure Settings")
+
+                    config_name_input = gr.Textbox(
+                        label="Profile Name",
+                        placeholder="e.g., 'Fast Mode', 'High Quality', etc.",
                         value="",
-                        interactive=False,
-                        visible=False
+                        interactive=True
                     )
 
-                # Step 3: Configuration Options (hidden until needed)
-                with gr.Column(visible=False) as docling_config_area:
-                    gr.Markdown("### 3. Configuration Options")
+                    # Docling configuration options
+                    with gr.Column(visible=False) as docling_config_area:
+                        docling_components = []
 
-                    docling_components = []
+                        with gr.Group():
+                            gr.Markdown("#### Basic Options")
+                            for field_name in DOCLING_BASIC_FIELDS:
+                                if field_name not in DoclingConfig.model_fields:
+                                    continue
+                                field_info = DoclingConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                docling_components.append(component)
 
-                    with gr.Group():
-                        gr.Markdown("#### Basic Options")
-                        for field_name in DOCLING_BASIC_FIELDS:
-                            if field_name not in DoclingConfig.model_fields:
-                                continue
-                            field_info = DoclingConfig.model_fields[field_name]
-                            field_type = field_info.annotation
-                            component, _ = create_gradio_component_from_field(
-                                field_name, field_info, field_type
-                            )
-                            docling_components.append(component)
+                        with gr.Accordion("Advanced Options", open=False):
+                            for field_name in DOCLING_ADVANCED_FIELDS:
+                                if field_name not in DoclingConfig.model_fields:
+                                    continue
+                                field_info = DoclingConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                docling_components.append(component)
 
-                    with gr.Accordion("Advanced Options", open=False):
-                        for field_name in DOCLING_ADVANCED_FIELDS:
-                            if field_name not in DoclingConfig.model_fields:
-                                continue
-                            field_info = DoclingConfig.model_fields[field_name]
-                            field_type = field_info.annotation
-                            component, _ = create_gradio_component_from_field(
-                                field_name, field_info, field_type
-                            )
-                            docling_components.append(component)
+                    # Textract configuration options (placeholder)
+                    with gr.Column(visible=False) as textract_config_area:
+                        gr.Markdown("*AWS Textract configuration options coming soon*")
 
-                with gr.Column(visible=False) as textract_config_area:
-                    gr.Markdown("### 3. Configuration Options")
-                    gr.Markdown("*AWS Textract configuration options coming soon*")
+                    # Configuration editor action buttons
+                    with gr.Row():
+                        save_profile_btn = gr.Button("💾 Save Profile", variant="primary", size="sm")
+                        cancel_config_btn = gr.Button("✖️ Cancel", size="sm")
 
-                # Editor Action Buttons
-                with gr.Row():
-                    save_task_btn = gr.Button("💾 Save Task", variant="primary", size="lg")
-                    cancel_btn = gr.Button("✖️ Cancel", size="lg")
+                # Save Task button (always visible at bottom of editor)
+                gr.Markdown("---")
+                save_task_btn = gr.Button("✅ Add Task to Queue", variant="primary", size="lg")
+                cancel_editor_btn = gr.Button("✖️ Cancel", size="lg")
 
         # ============================================================
         # RESULTS VIEW: Full-width (hidden by default)
@@ -259,23 +262,24 @@ def create_app():
             """Get task choices for dropdown."""
             return [f"{i+1}. {task['engine']} - {task['config_name']}" for i, task in enumerate(extractor_queue)]
 
+        # State for current loaded profile
+        current_profile_data = [None]  # Will hold loaded profile config
+
         def show_task_editor(is_new=True, task_index=None):
             """Show the task editor, optionally loading an existing task."""
             editing_task_index[0] = task_index
 
             if is_new:
-                status = "*Configure a new extraction task*"
+                status = "*Select an extractor engine and profile*"
                 return (
                     gr.update(visible=True),  # task_editor_column
                     status,  # editor_status
                     gr.update(value=None),  # engine_selector
-                    gr.update(value=""),  # config_name_input
                     gr.update(visible=False),  # profile_group
-                    gr.update(visible=False),  # docling_config_area
-                    gr.update(visible=False),  # textract_config_area
+                    gr.update(visible=False),  # config_editor
                 )
             else:
-                # Load existing task for editing
+                # Load existing task for editing - open config editor with task data
                 task = extractor_queue[task_index]
                 status = f"*Editing task: {task['config_name']}*"
 
@@ -284,8 +288,9 @@ def create_app():
                     gr.update(visible=True),  # task_editor_column
                     status,  # editor_status
                     gr.update(value=task['engine']),  # engine_selector
+                    gr.update(visible=True),  # profile_group
+                    gr.update(visible=True),  # config_editor (open for editing)
                     gr.update(value=task['config_name']),  # config_name_input
-                    gr.update(visible=True),  # profile_group (show for selected engine)
                 ]
 
                 # Show/hide config areas based on engine
@@ -303,6 +308,9 @@ def create_app():
                             updates.append(gr.update(value=config_dict[field_name]))
                         else:
                             updates.append(gr.update())
+
+                    # Store in current profile data
+                    current_profile_data[0] = config_dict
                 else:
                     updates.extend([
                         gr.update(visible=False),  # docling_config_area
@@ -316,14 +324,122 @@ def create_app():
         def hide_task_editor():
             """Hide the task editor and reset state."""
             editing_task_index[0] = None
+            current_profile_data[0] = None
             return gr.update(visible=False)
 
         def open_new_task():
             """Open editor for new task."""
             return show_task_editor(is_new=True)
 
-        def save_task(engine, config_name, *config_values):
-            """Save current task (new or edited) to queue."""
+        def profile_selected_handler(engine, selected_profile):
+            """Auto-load profile when selected from dropdown."""
+            if not selected_profile or not engine:
+                current_profile_data[0] = None
+                return gr.update(value="Select a profile or click 'New Profile'", visible=True)
+
+            try:
+                profile = profile_manager.load_profile(selected_profile)
+
+                if profile["engine"] != engine:
+                    return gr.update(value=f"❌ Profile is for {profile['engine']}, but {engine} is selected", visible=True)
+
+                # Store loaded profile data
+                current_profile_data[0] = profile["config_data"]
+
+                return gr.update(value=f"✅ Loaded profile: **{selected_profile}** - Ready to add to queue or click 'Edit Profile' to modify", visible=True)
+
+            except Exception as e:
+                current_profile_data[0] = None
+                return gr.update(value=f"❌ Error loading profile: {e}", visible=True)
+
+        def edit_profile_handler(engine, selected_profile):
+            """Open config editor to edit the selected profile."""
+            if not selected_profile:
+                return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+
+            try:
+                profile = profile_manager.load_profile(selected_profile)
+
+                if profile["engine"] != engine:
+                    return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+
+                config_data = profile["config_data"]
+                current_profile_data[0] = config_data
+
+                # Open config editor with profile data
+                updates = [
+                    gr.update(visible=True),  # config_editor
+                    gr.update(value=selected_profile),  # config_name_input
+                ]
+
+                # Show appropriate config area and load values
+                if engine == "Docling":
+                    updates.extend([
+                        gr.update(visible=True),  # docling_config_area
+                        gr.update(visible=False),  # textract_config_area
+                    ])
+
+                    all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
+                    for field_name in all_fields:
+                        if field_name in config_data:
+                            updates.append(gr.update(value=config_data[field_name]))
+                        else:
+                            updates.append(gr.update())
+                else:
+                    updates.extend([
+                        gr.update(visible=False),  # docling_config_area
+                        gr.update(visible=True),  # textract_config_area
+                    ])
+                    updates.extend([gr.update()] * len(docling_components))
+
+                return updates
+
+            except Exception as e:
+                return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+
+        def new_profile_handler(engine):
+            """Open config editor for creating a new profile."""
+            if not engine:
+                return [gr.update(visible=False)] + [gr.update()] * (2 + len(docling_components))
+
+            current_profile_data[0] = None  # Clear current profile
+
+            # Open config editor with empty/default values
+            updates = [
+                gr.update(visible=True),  # config_editor
+                gr.update(value=""),  # config_name_input (empty for new)
+            ]
+
+            # Show appropriate config area with defaults
+            if engine == "Docling":
+                updates.extend([
+                    gr.update(visible=True),  # docling_config_area
+                    gr.update(visible=False),  # textract_config_area
+                ])
+
+                # Load default values for all fields
+                all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
+                for field_name in all_fields:
+                    if field_name in DoclingConfig.model_fields:
+                        default_value = DoclingConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+            else:
+                updates.extend([
+                    gr.update(visible=False),  # docling_config_area
+                    gr.update(visible=True),  # textract_config_area
+                ])
+                updates.extend([gr.update()] * len(docling_components))
+
+            return updates
+
+        def cancel_config_handler():
+            """Close config editor without saving."""
+            return gr.update(visible=False)  # Hide config_editor
+
+        def save_task(engine, selected_profile):
+            """Add current task (from loaded profile) to queue."""
             if not engine:
                 return (
                     generate_task_list_html(),
@@ -332,30 +448,37 @@ def create_app():
                     gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
                 )
 
-            if not config_name:
+            # Use currently loaded profile data or ask user to select
+            if current_profile_data[0] is None:
                 return (
                     generate_task_list_html(),
                     gr.update(visible=True),  # keep editor open
-                    "❌ Please enter a task name",
+                    "❌ Please select a profile or create a new one",
+                    gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
+                )
+
+            if not selected_profile:
+                return (
+                    generate_task_list_html(),
+                    gr.update(visible=True),  # keep editor open
+                    "❌ Please select a profile",
                     gr.update(visible=bool(extractor_queue), choices=get_task_choices() if extractor_queue else [])
                 )
 
             if engine == "Docling":
-                # Build config
-                all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
-                ui_values = {field: value for field, value in zip(all_fields, config_values)}
-                config = build_config_from_ui_values(DoclingConfig, ui_values)
+                # Build config from current profile data
+                config = build_config_from_ui_values(DoclingConfig, current_profile_data[0])
 
                 # Create extractor
                 extractor = DoclingExtractor(config=config)
-                full_name = f"Docling ({config_name})"
+                full_name = f"Docling ({selected_profile})"
 
                 task_data = {
                     'engine': 'Docling',
-                    'config_name': config_name,
+                    'config_name': selected_profile,
                     'extractor': extractor,
                     'cost': None,
-                    'config_dict': ui_values
+                    'config_dict': current_profile_data[0]
                 }
 
                 # Add or update task
@@ -368,14 +491,15 @@ def create_app():
                     if old_full_name in ui.extractors:
                         del ui.extractors[old_full_name]
                     ui.register_extractor(full_name, extractor, cost_per_page=None)
-                    message = f"✓ Updated task: {config_name}"
+                    message = f"✓ Updated task: {selected_profile}"
                 else:
                     # Add new task
                     extractor_queue.append(task_data)
                     ui.register_extractor(full_name, extractor, cost_per_page=None)
-                    message = f"✓ Added task: {config_name}"
+                    message = f"✓ Added task: {selected_profile}"
 
                 editing_task_index[0] = None
+                current_profile_data[0] = None
 
                 # Show task controls if we have tasks
                 task_choices = get_task_choices()
@@ -522,9 +646,13 @@ def create_app():
                 return [gr.update(visible=True, value=f"❌ Error loading profile: {e}")] + [gr.update()] * len(docling_components) + [gr.update()]
 
         def save_profile_handler(engine, config_name, *config_values):
-            """Save current configuration as a profile."""
+            """Save current configuration as a profile and close config editor."""
             if not config_name:
-                return gr.update(visible=True, value="❌ Please enter a task name to save as profile"), gr.update()
+                return (
+                    gr.update(visible=False),  # Don't close editor yet, show error in status
+                    gr.update(value="❌ Please enter a profile name", visible=True),
+                    gr.update(),  # profile_selector
+                )
 
             try:
                 if engine == "Docling":
@@ -538,22 +666,31 @@ def create_app():
                         config_data=config_data
                     )
 
+                    # Update current profile data
+                    current_profile_data[0] = config_data
+
                     # Refresh profile list
                     profiles = profile_manager.list_profiles(engine=engine)
                     profile_names = [p["profile_name"] for p in profiles]
 
                     return (
-                        gr.update(visible=True, value=f"✓ Saved profile: {config_name}"),
-                        gr.update(choices=profile_names, value=config_name)
+                        gr.update(visible=False),  # Close config_editor
+                        gr.update(value=f"✅ Saved profile: **{config_name}** - Ready to add to queue", visible=True),  # profile_status
+                        gr.update(choices=profile_names, value=config_name)  # profile_selector with new profile selected
                     )
                 else:
                     return (
-                        gr.update(visible=True, value="⚠️  Profile saving not yet implemented for this engine"),
+                        gr.update(visible=True),  # Keep editor open
+                        gr.update(value="⚠️  Profile saving not yet implemented for this engine", visible=True),
                         gr.update()
                     )
 
             except Exception as e:
-                return gr.update(visible=True, value=f"❌ Error saving profile: {e}"), gr.update()
+                return (
+                    gr.update(visible=True),  # Keep editor open
+                    gr.update(value=f"❌ Error saving profile: {e}", visible=True),
+                    gr.update()
+                )
 
         def delete_profile_handler(engine, selected_profile):
             """Delete a profile."""
@@ -653,8 +790,7 @@ def create_app():
         # Task List Events
         add_task_btn.click(
             fn=open_new_task,
-            outputs=[task_editor_column, editor_status, engine_selector, config_name_input,
-                    profile_group, docling_config_area, textract_config_area]
+            outputs=[task_editor_column, editor_status, engine_selector, profile_group, config_editor]
         )
 
         launch_btn.click(
@@ -666,16 +802,15 @@ def create_app():
         engine_selector.change(
             fn=lambda engine: (
                 *toggle_profile_group(engine),
-                *show_config_area(engine)
             ),
             inputs=[engine_selector],
-            outputs=[profile_group, profile_selector, docling_config_area, textract_config_area, profile_status]
+            outputs=[profile_group, profile_selector]
         )
 
-        create_new_btn.click(
-            fn=show_config_area,
-            inputs=[engine_selector],
-            outputs=[docling_config_area, textract_config_area, profile_status]
+        profile_selector.change(
+            fn=profile_selected_handler,
+            inputs=[engine_selector, profile_selector],
+            outputs=[profile_status]
         )
 
         refresh_profiles_btn.click(
@@ -684,16 +819,27 @@ def create_app():
             outputs=[profile_selector]
         )
 
-        load_profile_btn.click(
-            fn=load_profile_handler,
+        edit_profile_btn.click(
+            fn=edit_profile_handler,
             inputs=[engine_selector, profile_selector],
-            outputs=[profile_status] + docling_components + [config_name_input]
+            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components
+        )
+
+        new_profile_btn.click(
+            fn=new_profile_handler,
+            inputs=[engine_selector],
+            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components
         )
 
         save_profile_btn.click(
             fn=save_profile_handler,
             inputs=[engine_selector, config_name_input] + docling_components,
-            outputs=[profile_status, profile_selector]
+            outputs=[config_editor, profile_status, profile_selector]
+        )
+
+        cancel_config_btn.click(
+            fn=cancel_config_handler,
+            outputs=[config_editor]
         )
 
         delete_profile_btn.click(
@@ -704,11 +850,11 @@ def create_app():
 
         save_task_btn.click(
             fn=save_task,
-            inputs=[engine_selector, config_name_input] + docling_components,
+            inputs=[engine_selector, profile_selector],
             outputs=[task_list_display, task_editor_column, editor_status, task_selector]
         )
 
-        cancel_btn.click(
+        cancel_editor_btn.click(
             fn=hide_task_editor,
             outputs=[task_editor_column]
         )
@@ -716,8 +862,8 @@ def create_app():
         edit_task_btn.click(
             fn=edit_task_handler,
             inputs=[task_selector],
-            outputs=[task_editor_column, editor_status, engine_selector, config_name_input,
-                    profile_group, docling_config_area, textract_config_area] + docling_components
+            outputs=[task_editor_column, editor_status, engine_selector, profile_group, config_editor, config_name_input,
+                    docling_config_area, textract_config_area] + docling_components
         )
 
         delete_task_btn.click(
