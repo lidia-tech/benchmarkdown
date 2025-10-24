@@ -123,6 +123,8 @@ AWS credentials via standard AWS SDK methods (`~/.aws/credentials` or environmen
 
 ## Testing
 
+### Unit/Integration Testing
+
 `test_ui.py` provides integration test:
 - Finds first DOCX in `data/input/lidia-anon/`
 - Processes with Docling extractor
@@ -130,6 +132,14 @@ AWS credentials via standard AWS SDK methods (`~/.aws/credentials` or environmen
 - Prints first 200 chars of extracted markdown
 
 Run after UI changes to verify extraction pipeline integrity.
+
+### Smoke Tests and Functional Testing
+
+Browser tools can be used for smoke tests and functional tests of the Gradio UI:
+- Launch the app with `uv run python app.py`
+- Use browser automation to verify UI loads, file uploads work, extraction completes, and results display correctly
+- Test both tabbed and side-by-side comparison views
+- Validate download functionality (ZIP and HTML report generation)
 
 ## Development Notes
 
