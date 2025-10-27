@@ -271,6 +271,7 @@ def build_config_from_ui_values(
 # Define field groupings for DoclingConfig
 DOCLING_BASIC_FIELDS = [
     "do_ocr",
+    "ocr_engine",
     "do_table_structure",
     "table_structure_mode",
     "num_threads",
@@ -288,6 +289,63 @@ DOCLING_ADVANCED_FIELDS = [
     "images_scale",
     "accelerator_device",
     "document_timeout",
+]
+
+# Define field groupings for each OCR engine configuration
+EASYOCR_BASIC_FIELDS = [
+    "lang",
+    "use_gpu",
+    "force_full_page_ocr",
+]
+
+EASYOCR_ADVANCED_FIELDS = [
+    "confidence_threshold",
+    "bitmap_area_threshold",
+    "model_storage_directory",
+]
+
+TESSERACT_BASIC_FIELDS = [
+    "lang",
+    "force_full_page_ocr",
+]
+
+TESSERACT_ADVANCED_FIELDS = [
+    "bitmap_area_threshold",
+    "path",
+]
+
+TESSERACT_CLI_BASIC_FIELDS = [
+    "lang",
+    "force_full_page_ocr",
+]
+
+TESSERACT_CLI_ADVANCED_FIELDS = [
+    "bitmap_area_threshold",
+    "tesseract_cmd",
+    "path",
+]
+
+OCR_MAC_BASIC_FIELDS = [
+    "lang",
+    "force_full_page_ocr",
+]
+
+OCR_MAC_ADVANCED_FIELDS = [
+    "bitmap_area_threshold",
+]
+
+RAPIDOCR_BASIC_FIELDS = [
+    "lang",
+    "force_full_page_ocr",
+    "use_det",
+    "use_rec",
+]
+
+RAPIDOCR_ADVANCED_FIELDS = [
+    "use_cls",
+    "text_score",
+    "bitmap_area_threshold",
+    "print_verbose",
 ]
 
 # Define field groupings for TextractConfig

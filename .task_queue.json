@@ -42,5 +42,28 @@
       "accelerator_device": "auto",
       "document_timeout": 0
     }
+  },
+  {
+    "engine": "AWS Textract",
+    "config_name": "layout-table",
+    "cost": 0.05,
+    "config_dict": {
+      "features": [
+        "LAYOUT",
+        "TABLES"
+      ],
+      "hide_header_layout": true,
+      "hide_footer_layout": true,
+      "hide_figure_layout": false,
+      "hide_table_layout": false,
+      "hide_key_value_layout": false,
+      "hide_page_num_layout": false,
+      "table_remove_column_headers": true,
+      "table_add_title_as_caption": false,
+      "table_add_footer_as_paragraph": false,
+      "max_number_of_consecutive_new_lines": 2,
+      "title_prefix": "# ",
+      "section_header_prefix": "## "
+    }
   }
 ]
