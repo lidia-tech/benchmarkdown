@@ -210,6 +210,7 @@ dependencies = [
     { name = "gradio" },
     { name = "ipykernel" },
     { name = "markdown" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -229,6 +230,7 @@ requires-dist = [
     { name = "gradio", specifier = ">=4.0.0" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "markdown", specifier = ">=3.7" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
 ]
 
 [package.metadata.requires-dev]

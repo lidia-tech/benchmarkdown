@@ -6,6 +6,9 @@ This script detects available extractors and launches the Gradio interface.
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from benchmarkdown.ui import create_app
 
 # Check available extractors
