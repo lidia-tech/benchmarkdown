@@ -156,11 +156,11 @@ async def test_extraction_if_aws_available():
     print("=" * 60)
 
     # Check if AWS credentials are configured
-    s3_workspace = os.environ.get("TEXTRACT_S3_BUCKET")
+    s3_workspace = os.environ.get("TEXTRACT_S3_WORKSPACE")
     if not s3_workspace or not s3_workspace.startswith("s3://"):
         print("⚠️  Test 5 skipped: AWS Textract not configured")
-        print("   Set TEXTRACT_S3_BUCKET environment variable to a full S3 URI")
-        print("   Example: export TEXTRACT_S3_BUCKET=s3://my-bucket/textract-workspace/")
+        print("   Set TEXTRACT_S3_WORKSPACE environment variable to a full S3 URI")
+        print("   Example: export TEXTRACT_S3_WORKSPACE=s3://my-bucket/textract-workspace/")
         print()
         return
 

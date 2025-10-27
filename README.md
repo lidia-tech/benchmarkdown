@@ -84,7 +84,7 @@ See [tests/README.md](tests/README.md) for detailed test documentation.
 ### AWS Textract Setup
 
 ```bash
-export TEXTRACT_S3_BUCKET=s3://your-bucket-name/textract-workspace/
+export TEXTRACT_S3_WORKSPACE=s3://your-bucket-name/textract-workspace/
 # Configure AWS credentials via ~/.aws/credentials or environment variables
 ```
 
