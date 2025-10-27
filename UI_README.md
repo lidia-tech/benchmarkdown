@@ -9,7 +9,7 @@ A web-based interface for comparing document-to-markdown extraction tools.
 - **Flexible comparison views**:
   - Tabbed view - See full details for each extractor separately
   - Side-by-side view - Quick visual comparison across extractors
-- **Rich metrics** - Execution time, character/word counts, cost estimates
+- **Rich metrics** - Execution time, character/word counts
 - **Export options**:
   - Individual markdown downloads
   - Bulk ZIP download
@@ -100,10 +100,7 @@ class MyExtractor:
 2. Register it in `app.py`:
 
 ```python
-extractors["My Extractor"] = {
-    "instance": MyExtractor(),
-    "cost_per_page": 0.10  # Optional cost estimate
-}
+ui.register_extractor("My Extractor", MyExtractor())
 ```
 
 ## Future Features

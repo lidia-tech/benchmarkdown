@@ -35,8 +35,7 @@ async def main():
     docling_default = DoclingExtractor()
     ui.register_extractor(
         name="Docling (Default)",
-        extractor=docling_default,
-        cost_per_page=None
+        extractor=docling_default
     )
     print("✓ Registered Docling (Default)")
 
@@ -45,8 +44,7 @@ async def main():
     docling_custom = DoclingExtractor()  # Add custom params here when defined
     ui.register_extractor(
         name="Docling (Custom)",
-        extractor=docling_custom,
-        cost_per_page=None
+        extractor=docling_custom
     )
     print("✓ Registered Docling (Custom)")
 

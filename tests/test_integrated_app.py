@@ -28,7 +28,7 @@ def test_integrated_workflow():
     print("\n1. Initializing UI with default extractor...")
     ui = BenchmarkUI()
     default_extractor = DoclingExtractor()
-    ui.register_extractor("Docling (Default)", default_extractor, cost_per_page=None)
+    ui.register_extractor("Docling (Default)", default_extractor)
     print(f"   ✓ Registered extractors: {list(ui.extractors.keys())}")
 
     # Step 2: Simulate creating a custom configuration via UI
@@ -63,7 +63,7 @@ def test_integrated_workflow():
     # Step 3: Register the new configuration
     print("\n3. Registering custom configuration as new extractor...")
     custom_extractor = DoclingExtractor(config=config)
-    ui.register_extractor("Docling (Fast Mode)", custom_extractor, cost_per_page=None)
+    ui.register_extractor("Docling (Fast Mode)", custom_extractor)
     print(f"   ✓ Registered extractors: {list(ui.extractors.keys())}")
 
     # Step 4: Verify both extractors exist
@@ -110,7 +110,7 @@ def test_multiple_configs():
     for name, config in configs:
         extractor = DoclingExtractor(config=config)
         full_name = f"Docling ({name})"
-        ui.register_extractor(full_name, extractor, cost_per_page=None)
+        ui.register_extractor(full_name, extractor)
         print(f"✓ Registered: {full_name}")
 
     print(f"\nTotal extractors: {len(ui.extractors)}")

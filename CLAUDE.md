@@ -82,7 +82,6 @@ See `CONFIG_UI_README.md` for user guide and configuration patterns.
 - AWS Textract cloud-based service wrapper
 - S3 workspace URI automatically read from `TEXTRACT_S3_WORKSPACE` environment variable
 - Uses `Textractor` library with Layout and Tables features
-- Cost per page ~$0.05
 - Configuration managed through TextractConfig (s3_upload_path hidden from UI)
 
 ### UI Architecture (`benchmarkdown/ui/`)
@@ -90,7 +89,7 @@ See `CONFIG_UI_README.md` for user guide and configuration patterns.
 The UI is now modularized into separate components for better maintainability:
 
 **`benchmarkdown/ui/core.py`**: Core BenchmarkUI class
-- **Extractor Registry**: Stores extractors with metadata `{name: {instance, cost_per_page}}`
+- **Extractor Registry**: Stores extractors with metadata `{name: {instance}}`
 - **Async Processing Pipeline**:
   - Processes multiple documents × multiple extractors in parallel
   - Uses `asyncio.gather()` for concurrent execution
@@ -265,5 +264,4 @@ All tests are CI-ready:
 - All extractors use async/await pattern via thread pool executors
 - UI uses `asyncio.run()` wrapper for Gradio compatibility (Gradio is sync)
 - Temp files stored in `tempfile.mkdtemp()` for downloads/reports
-- Cost estimation is rough (3000 chars = 1 page) - adjust in `ui.py` if needed
 - If you want to update the python libraries in the virtual environment, use `uv sync --all-extras --all-groups`.

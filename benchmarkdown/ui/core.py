@@ -24,7 +24,6 @@ class ExtractionResult:
     word_count: int
     error: Optional[str] = None
     warnings: list[str] = None
-    cost_estimate: Optional[float] = None
 
     def __post_init__(self):
         if self.warnings is None:
@@ -39,17 +38,15 @@ class BenchmarkUI:
         self.results = {}  # filename -> {extractor_name -> ExtractionResult}
         self.temp_dir = tempfile.mkdtemp()
 
-    def register_extractor(self, name: str, extractor, cost_per_page: Optional[float] = None):
+    def register_extractor(self, name: str, extractor):
         """Register an extractor implementation.
 
         Args:
             name: Display name for the extractor
             extractor: Instance implementing the MarkdownExtractor protocol
-            cost_per_page: Optional cost estimate per page (for cloud services)
         """
         self.extractors[name] = {
-            "instance": extractor,
-            "cost_per_page": cost_per_page
+            "instance": extractor
         }
 
     async def process_document(
@@ -78,13 +75,6 @@ class BenchmarkUI:
         char_count = len(markdown_text)
         word_count = len(markdown_text.split())
 
-        # Estimate cost (simplified - just using a rough page count)
-        cost_estimate = None
-        if extractor_info["cost_per_page"]:
-            # Rough estimate: 3000 chars per page
-            estimated_pages = max(1, char_count // 3000)
-            cost_estimate = estimated_pages * extractor_info["cost_per_page"]
-
         return ExtractionResult(
             extractor_name=extractor_name,
             filename=os.path.basename(file_path),
@@ -94,7 +84,6 @@ class BenchmarkUI:
             word_count=word_count,
             error=error,
             warnings=warnings,
-            cost_estimate=cost_estimate,
         )
 
     async def process_documents(
@@ -207,11 +196,10 @@ class BenchmarkUI:
             html += "<table><tr><th>Extractor</th><th>Time</th><th>Characters</th><th>Words</th><th>Status</th></tr>"
             for extractor_name, result in extractors.items():
                 status = "✓ OK" if not result.error else "✗ Error"
-                cost = f" (~${result.cost_estimate:.3f})" if result.cost_estimate else ""
                 html += f"""
                 <tr>
                     <td>{extractor_name}</td>
-                    <td>{result.execution_time:.1f}s{cost}</td>
+                    <td>{result.execution_time:.1f}s</td>
                     <td>{result.character_count:,}</td>
                     <td>{result.word_count:,}</td>
                     <td>{status}</td>

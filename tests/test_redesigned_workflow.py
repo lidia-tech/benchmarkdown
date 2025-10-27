@@ -87,12 +87,11 @@ def test_two_column_workflow():
         'engine': 'Docling',
         'config_name': config_name,
         'extractor': extractor,
-        'cost': None,
         'config_dict': ui_values
     }
 
     queue.append(task_data)
-    ui.register_extractor(full_name, extractor, cost_per_page=None)
+    ui.register_extractor(full_name, extractor)
     print(f"   ✓ Task added to queue: {config_name}")
     print("   ✓ Task editor closes (hidden)")
     print("   ✓ Task appears in left column task list")
@@ -117,7 +116,6 @@ def test_two_column_workflow():
         'engine': 'Docling',
         'config_name': config_name2,
         'extractor': extractor2,
-        'cost': None,
         'config_dict': {
             'do_ocr': True,
             'table_structure_mode': 'accurate',
@@ -126,7 +124,7 @@ def test_two_column_workflow():
     }
 
     queue.append(task_data2)
-    ui.register_extractor(full_name2, extractor2, cost_per_page=None)
+    ui.register_extractor(full_name2, extractor2)
     print(f"   ✓ Second task added: {config_name2}")
     print(f"   Queue size: {len(queue)}")
 

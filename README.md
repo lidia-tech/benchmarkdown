@@ -8,7 +8,7 @@ A benchmark suite for comparing document-to-markdown extraction technologies wit
 - ⚙️ **Configurable**: UI-driven configuration with 15+ parameters per extractor
 - 📊 **Side-by-Side Comparison**: Visual comparison of extraction results
 - 🚀 **Batch Processing**: Process multiple documents with multiple extractors
-- 📈 **Metrics**: Execution time, character/word counts, cost estimates
+- 📈 **Metrics**: Execution time, character/word counts
 - 💾 **Export**: Download results as ZIP or HTML comparison report
 
 ## Quick Start

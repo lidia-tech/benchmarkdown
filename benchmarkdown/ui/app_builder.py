@@ -551,12 +551,12 @@ def create_app(has_docling=False, has_textract=False):
                     old_full_name = f"Docling ({old_name})"
                     if old_full_name in ui.extractors:
                         del ui.extractors[old_full_name]
-                    ui.register_extractor(full_name, extractor, cost_per_page=None)
+                    ui.register_extractor(full_name, extractor)
                     message = f"✓ Updated task: {selected_profile}"
                 else:
                     # Add new task
                     extractor_queue.append(task_data)
-                    ui.register_extractor(full_name, extractor, cost_per_page=None)
+                    ui.register_extractor(full_name, extractor)
                     message = f"✓ Added task: {selected_profile}"
 
                 # Save queue to disk
@@ -586,7 +586,6 @@ def create_app(has_docling=False, has_textract=False):
                     'engine': 'AWS Textract',
                     'config_name': selected_profile,
                     'extractor': extractor,
-                    'cost': 0.05,  # Approximate cost per page
                     'config_dict': current_profile_data[0]
                 }
 
@@ -599,12 +598,12 @@ def create_app(has_docling=False, has_textract=False):
                     old_full_name = f"AWS Textract ({old_name})"
                     if old_full_name in ui.extractors:
                         del ui.extractors[old_full_name]
-                    ui.register_extractor(full_name, extractor, cost_per_page=0.05)
+                    ui.register_extractor(full_name, extractor)
                     message = f"✓ Updated task: {selected_profile}"
                 else:
                     # Add new task
                     extractor_queue.append(task_data)
-                    ui.register_extractor(full_name, extractor, cost_per_page=0.05)
+                    ui.register_extractor(full_name, extractor)
                     message = f"✓ Added task: {selected_profile}"
 
                 # Save queue to disk
