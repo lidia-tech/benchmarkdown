@@ -548,6 +548,27 @@ def create_app(has_docling=False, has_textract=False):
                 current_profile_data[0] = None
                 return gr.update(value=f"❌ Error loading profile: {e}", visible=True)
 
+        def normalize_list_value(value):
+            """Convert list values to comma-separated strings for UI display.
+
+            Handles:
+            - Actual lists: ["en", "it"] → "en, it"
+            - String representations: "['en', 'it']" → "en, it"
+            - Already converted: "en, it" → "en, it"
+            """
+            if isinstance(value, list):
+                return ", ".join(str(v) for v in value)
+            elif isinstance(value, str) and value.startswith("[") and value.endswith("]"):
+                # Old format: string representation of a Python list
+                try:
+                    import ast
+                    parsed = ast.literal_eval(value)
+                    if isinstance(parsed, list):
+                        return ", ".join(str(v) for v in parsed)
+                except:
+                    pass
+            return value
+
         def edit_profile_handler(engine, selected_profile):
             """Open config editor to edit the selected profile."""
             max_components = max(len(docling_components), len(textract_components))
@@ -586,57 +607,47 @@ def create_app(has_docling=False, has_textract=False):
                     # Load OCR configs (nested)
                     for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
                         if "easyocr_config" in config_data and field_name in config_data["easyocr_config"]:
-                            updates.append(gr.update(value=config_data["easyocr_config"][field_name]))
+                            value = normalize_list_value(config_data["easyocr_config"][field_name])
+                            updates.append(gr.update(value=value))
                         else:
                             default = EasyOcrConfig.model_fields[field_name].default
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                         if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
-                            value = config_data["tesseract_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["tesseract_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = TesseractOcrConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
                         if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
-                            value = config_data["tesseract_cli_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["tesseract_cli_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = TesseractCliOcrConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
                         if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
-                            value = config_data["ocr_mac_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["ocr_mac_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = OcrMacConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
                         if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
-                            value = config_data["rapidocr_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["rapidocr_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = RapidOcrConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     # Load advanced fields
@@ -1044,50 +1055,38 @@ def create_app(has_docling=False, has_textract=False):
 
                     for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                         if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
-                            value = config_data["tesseract_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["tesseract_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = TesseractOcrConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
                         if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
-                            value = config_data["tesseract_cli_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["tesseract_cli_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = TesseractCliOcrConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
                         if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
-                            value = config_data["ocr_mac_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["ocr_mac_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = OcrMacConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
                         if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
-                            value = config_data["rapidocr_config"][field_name]
-                            if isinstance(value, list):
-                                value = ", ".join(str(v) for v in value)
+                            value = normalize_list_value(config_data["rapidocr_config"][field_name])
                             updates.append(gr.update(value=value))
                         else:
                             default = RapidOcrConfig.model_fields[field_name].default
-                            if isinstance(default, list):
-                                default = ", ".join(str(v) for v in default)
+                            default = normalize_list_value(default)
                             updates.append(gr.update(value=default))
 
                     # Load advanced fields
