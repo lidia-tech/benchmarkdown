@@ -593,30 +593,50 @@ def create_app(has_docling=False, has_textract=False):
 
                     for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                         if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
-                            updates.append(gr.update(value=config_data["tesseract_config"][field_name]))
+                            value = config_data["tesseract_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = TesseractOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
-                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
+                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                         if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
-                            updates.append(gr.update(value=config_data["tesseract_cli_config"][field_name]))
+                            value = config_data["tesseract_cli_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = TesseractCliOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
                         if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
-                            updates.append(gr.update(value=config_data["ocr_mac_config"][field_name]))
+                            value = config_data["ocr_mac_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = OcrMacConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
                         if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
-                            updates.append(gr.update(value=config_data["rapidocr_config"][field_name]))
+                            value = config_data["rapidocr_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = RapidOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     # Load advanced fields
@@ -682,6 +702,8 @@ def create_app(has_docling=False, has_textract=False):
                 for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
                     if field_name in EasyOcrConfig.model_fields:
                         default_value = EasyOcrConfig.model_fields[field_name].default
+                        if isinstance(default_value, list):
+                            default_value = ", ".join(str(v) for v in default_value)
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
@@ -689,6 +711,8 @@ def create_app(has_docling=False, has_textract=False):
                 for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                     if field_name in TesseractOcrConfig.model_fields:
                         default_value = TesseractOcrConfig.model_fields[field_name].default
+                        if isinstance(default_value, list):
+                            default_value = ", ".join(str(v) for v in default_value)
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
@@ -696,6 +720,8 @@ def create_app(has_docling=False, has_textract=False):
                 for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
                     if field_name in TesseractCliOcrConfig.model_fields:
                         default_value = TesseractCliOcrConfig.model_fields[field_name].default
+                        if isinstance(default_value, list):
+                            default_value = ", ".join(str(v) for v in default_value)
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
@@ -703,6 +729,8 @@ def create_app(has_docling=False, has_textract=False):
                 for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
                     if field_name in OcrMacConfig.model_fields:
                         default_value = OcrMacConfig.model_fields[field_name].default
+                        if isinstance(default_value, list):
+                            default_value = ", ".join(str(v) for v in default_value)
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
@@ -710,6 +738,8 @@ def create_app(has_docling=False, has_textract=False):
                 for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
                     if field_name in RapidOcrConfig.model_fields:
                         default_value = RapidOcrConfig.model_fields[field_name].default
+                        if isinstance(default_value, list):
+                            default_value = ", ".join(str(v) for v in default_value)
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
@@ -1000,38 +1030,64 @@ def create_app(has_docling=False, has_textract=False):
                     # Load OCR configs (nested)
                     for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
                         if "easyocr_config" in config_data and field_name in config_data["easyocr_config"]:
-                            updates.append(gr.update(value=config_data["easyocr_config"][field_name]))
+                            value = config_data["easyocr_config"][field_name]
+                            # Convert lists to comma-separated strings for UI
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             # Use defaults from model
                             default = EasyOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                         if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
-                            updates.append(gr.update(value=config_data["tesseract_config"][field_name]))
+                            value = config_data["tesseract_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = TesseractOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
-                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
+                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
                         if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
-                            updates.append(gr.update(value=config_data["tesseract_cli_config"][field_name]))
+                            value = config_data["tesseract_cli_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = TesseractCliOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
                         if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
-                            updates.append(gr.update(value=config_data["ocr_mac_config"][field_name]))
+                            value = config_data["ocr_mac_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = OcrMacConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
                         if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
-                            updates.append(gr.update(value=config_data["rapidocr_config"][field_name]))
+                            value = config_data["rapidocr_config"][field_name]
+                            if isinstance(value, list):
+                                value = ", ".join(str(v) for v in value)
+                            updates.append(gr.update(value=value))
                         else:
                             default = RapidOcrConfig.model_fields[field_name].default
+                            if isinstance(default, list):
+                                default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
                     # Load advanced fields

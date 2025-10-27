@@ -1,0 +1,58 @@
+{
+  "engine": "Docling",
+  "profile_name": "easyocr full page",
+  "config_data": {
+    "do_ocr": true,
+    "ocr_engine": "easyocr",
+    "do_table_structure": true,
+    "table_structure_mode": "accurate",
+    "num_threads": 16,
+    "easyocr_config": {
+      "lang": "['en', 'it']",
+      "use_gpu": false,
+      "force_full_page_ocr": true,
+      "confidence_threshold": 0.5,
+      "bitmap_area_threshold": 0.05,
+      "model_storage_directory": ""
+    },
+    "tesseract_config": {
+      "lang": "['eng']",
+      "force_full_page_ocr": false,
+      "bitmap_area_threshold": 0.05,
+      "path": null
+    },
+    "tesseract_cli_config": {
+      "lang": "['eng']",
+      "force_full_page_ocr": false,
+      "bitmap_area_threshold": 0.05,
+      "tesseract_cmd": null,
+      "path": null
+    },
+    "ocr_mac_config": {
+      "lang": "['en-US']",
+      "force_full_page_ocr": false,
+      "bitmap_area_threshold": 0.05
+    },
+    "rapidocr_config": {
+      "lang": "['en']",
+      "force_full_page_ocr": false,
+      "use_det": true,
+      "use_rec": true,
+      "use_cls": false,
+      "text_score": 0.5,
+      "bitmap_area_threshold": 0.05,
+      "print_verbose": false
+    },
+    "force_backend_text": false,
+    "do_cell_matching": true,
+    "do_code_enrichment": false,
+    "do_formula_enrichment": false,
+    "do_picture_classification": false,
+    "do_picture_description": false,
+    "generate_page_images": false,
+    "generate_picture_images": false,
+    "images_scale": 1,
+    "accelerator_device": "auto",
+    "document_timeout": 0
+  }
+}

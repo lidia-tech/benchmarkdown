@@ -79,6 +79,16 @@ def create_gradio_component_from_field(
                 info=description
             )
             return component, field_name
+        elif args and args[0] == str:
+            # List of strings - use Textbox with comma-separated values
+            default_str = ", ".join(default_value) if isinstance(default_value, list) else ""
+            component = gr.Textbox(
+                value=default_str,
+                label=field_name.replace('_', ' ').title(),
+                info=f"{description} (comma-separated)",
+                placeholder="e.g., en, fr, de"
+            )
+            return component, field_name
 
     # Handle primitive types
     if field_type == bool:
@@ -239,6 +249,19 @@ def build_config_from_ui_values(
             field_info = config_class.model_fields[field_name]
             field_type = field_info.annotation
             origin = get_origin(field_type)
+
+            # Handle list[str] fields (comma-separated strings)
+            if origin is list:
+                args = get_args(field_type)
+                if args and args[0] == str:
+                    if isinstance(value, str):
+                        # Parse comma-separated string into list
+                        clean_values[field_name] = [s.strip() for s in value.split(",") if s.strip()]
+                    elif isinstance(value, list):
+                        clean_values[field_name] = value
+                    else:
+                        clean_values[field_name] = []
+                    continue
 
             # Check if this is an Optional type
             is_optional = origin is not None
