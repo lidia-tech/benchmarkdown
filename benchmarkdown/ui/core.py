@@ -24,6 +24,7 @@ class ExtractionResult:
     word_count: int
     error: Optional[str] = None
     warnings: list[str] = None
+    cost_estimate: Optional[float] = None
 
     def __post_init__(self):
         if self.warnings is None:
