@@ -23,9 +23,6 @@ uv sync --group textract     # AWS Textract cloud service
 # Launch Gradio web UI (primary interface)
 uv run python app.py
 
-# Run quick component test
-uv run python test_ui.py
-
 # Use in Jupyter notebooks
 # Set kernel to .venv/bin/python and open notebooks/docling.ipynb or notebooks/textract.ipynb
 ```
@@ -61,9 +58,15 @@ All extractors implement this protocol, allowing the UI to work with any extract
 - Two-tier layout: Basic options + Advanced accordion
 - `build_config_from_ui_values()` constructs validated configs
 
-**`app.py`**: Main application with Configuration tab
-- Users create named configurations through UI
-- Configurations dynamically register as extractors
+**`app.py`**: Main application entry point
+- Auto-detects available extractors (Docling, AWS Textract)
+- Calls `create_app()` from `benchmarkdown.ui` to build Gradio interface
+- Gracefully handles missing dependencies and configuration issues
+
+**Profile-based workflow**:
+- Users create named configuration profiles through the UI
+- Profiles are saved as JSON and can be reused across sessions
+- Multiple tasks with different configurations can be queued before extraction
 - No code changes needed to compare different settings
 
 See `CONFIG_UI_README.md` for user guide and configuration patterns.
@@ -77,31 +80,57 @@ See `CONFIG_UI_README.md` for user guide and configuration patterns.
 
 **`benchmarkdown/textract.py`**:
 - AWS Textract cloud-based service wrapper
-- Requires S3 workspace URI via `TEXTRACT_S3_WORKSPACE` environment variable (e.g., `s3://bucket/path/`)
+- S3 workspace URI automatically read from `TEXTRACT_S3_WORKSPACE` environment variable
 - Uses `Textractor` library with Layout and Tables features
 - Cost per page ~$0.05
+- Configuration managed through TextractConfig (s3_upload_path hidden from UI)
 
-### UI Architecture (`benchmarkdown/ui.py`)
+### UI Architecture (`benchmarkdown/ui/`)
 
-The Gradio UI is built around the `BenchmarkUI` class with these key responsibilities:
+The UI is now modularized into separate components for better maintainability:
 
-1. **Extractor Registry**: Dynamically registers extractors with metadata (cost, name)
-2. **Async Processing Pipeline**:
-   - Processes multiple documents × multiple extractors in parallel
-   - Uses `asyncio.gather()` for concurrent execution
-   - Stores results in `self.results` dict: `{filename: {extractor_name: ExtractionResult}}`
-3. **View Generation**: Creates HTML for tabbed and side-by-side comparison modes
-4. **Export Functions**: ZIP bundling, HTML report generation, individual file downloads
+**`benchmarkdown/ui/core.py`**: Core BenchmarkUI class
+- **Extractor Registry**: Stores extractors with metadata `{name: {instance, cost_per_page}}`
+- **Async Processing Pipeline**:
+  - Processes multiple documents × multiple extractors in parallel
+  - Uses `asyncio.gather()` for concurrent execution
+  - Stores results in `self.results` dict: `{filename: {extractor_name: ExtractionResult}}`
+- **ExtractionResult dataclass**: Captures markdown, timing, metrics, errors
 
-**Progressive Disclosure Pattern**: UI controls (document selector, view toggle, download buttons) remain hidden until extraction completes, reducing cognitive load.
+**`benchmarkdown/ui/results.py`**: Results display generation
+- `generate_comparison_view_tabbed()`: Tabbed view for multiple extractors
+- `generate_comparison_view_sidebyside()`: Side-by-side comparison
+- HTML generation with syntax highlighting and metrics tables
 
-### Application Entry Point (`app.py`)
+**`benchmarkdown/ui/queue.py`**: Task queue persistence
+- `load_queue_from_disk()`: Restores queue from `.task_queue.json` on app start
+- `save_queue_to_disk()`: Persists queue after changes
+- `generate_task_list_html()`: Renders task cards with delete buttons
+- Serializes config_dict (excludes extractor instances which can't be JSON-serialized)
 
-Auto-detects available extractors by attempting imports:
-- Gracefully handles missing dependencies (prints warnings, continues)
-- Checks AWS configuration (S3 bucket environment variable)
-- Registers all available extractors with the UI
-- Fails fast if no extractors available
+**`benchmarkdown/ui/app_builder.py`**: Main Gradio interface
+- `create_app()`: Builds two-column layout (Task List | Task Editor → Results View)
+- **Task Editor workflow**: Add Task → Select Engine → Select/Create Profile → Configure → Save & Add to Queue
+- **Progressive Disclosure**: Editor and results shown/hidden based on user actions
+- Event handlers for profile management, queue operations, extraction runs
+
+**`benchmarkdown/profile_manager.py`**: Configuration profile management
+- Saves profiles as JSON files in `./config/` directory
+- `save_profile()`, `load_profile()`, `list_profiles()`, `delete_profile()`
+- Profiles are engine-specific and reusable across sessions
+
+### Key Workflow Changes
+
+**Queue-based extraction**:
+1. Users build a queue of extraction tasks (each task = engine + profile configuration)
+2. Queue persists to `.task_queue.json` and reloads on app restart
+3. Click "Launch Extraction" to move to upload/run phase
+4. All queued extractors process all uploaded documents in parallel
+
+**Profile persistence**:
+- Profiles stored in `./config/` as JSON files (e.g., `./config/fast_mode.json`)
+- Each profile contains: engine name, profile name, and config_dict
+- Profiles can be edited, deleted, and reused across sessions
 
 ## Adding New Extractors
 
@@ -152,9 +181,14 @@ To add UI-driven configuration (like Docling has):
    MY_EXTRACTOR_ADVANCED_FIELDS = ["threshold"]
    ```
 
-4. **Add Configuration tab section** in `app.py` following the Docling pattern
+4. **Add UI components** in `benchmarkdown/ui/app_builder.py` following the Docling/Textract pattern:
+   - Add configuration area in the task editor
+   - Handle profile save/load for the new extractor
+   - Wire up event handlers for profile management
 
 The UI will automatically generate appropriate Gradio components based on field types.
+
+**Note on environment-only configuration**: For values that should not be editable in the UI (like API keys or S3 paths), exclude them from the field groupings and use `default_factory` to read from environment variables (see TextractConfig.s3_upload_path as example).
 
 ## Data Organization
 
@@ -208,9 +242,8 @@ uv run python tests/test_browser.py       # Manual checklist + connectivity
 - `test_multiple_configs.py` - Multiple extractor instances
 
 **Integration Tests:**
-- `test_ui.py` - Basic UI with single extractor
 - `test_integrated_app.py` - Dynamic extractor registration
-- `test_redesigned_workflow.py` - Queue-based workflow
+- `test_redesigned_workflow.py` - Queue-based workflow with profiles
 
 **Browser/API Tests:**
 - `test_browser.py` - Manual test checklist, connectivity

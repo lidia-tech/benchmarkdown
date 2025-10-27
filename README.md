@@ -36,11 +36,14 @@ Open http://localhost:7860 in your browser.
 
 ### Using the Interface
 
-1. **Configure Extractor**: Select engine (Docling/Textract), name your config, adjust settings
-2. **Add to Queue**: Click "Add to Extraction Queue" - see it appear in the list
-3. **Upload Documents**: Add PDF/DOCX files
-4. **Run Extraction**: Click "Run Extraction" - all queued extractors process your documents
-5. **Compare Results**: View side-by-side or tabbed comparisons
+1. **Add Task**: Click "➕ Add Task" to open the task editor
+2. **Select Engine**: Choose Docling or AWS Textract
+3. **Select/Create Profile**: Load an existing configuration profile or create a new one
+4. **Configure Settings**: Adjust extractor parameters (OCR, tables, etc.)
+5. **Save & Add to Queue**: Profile is saved and task is added to extraction queue
+6. **Launch Extraction**: Click "🚀 Launch Extraction" when ready
+7. **Upload Documents**: Add PDF/DOCX files to process
+8. **Run & Compare**: Process documents and view side-by-side or tabbed comparisons
 
 See [CONFIG_UI_README.md](CONFIG_UI_README.md) for detailed configuration guide.
 
@@ -51,15 +54,22 @@ See [CONFIG_UI_README.md](CONFIG_UI_README.md) for detailed configuration guide.
   - `textract.py` - AWS Textract extractor implementation
   - `config.py` - Pydantic configuration models
   - `config_ui.py` - Automatic UI generation from models
-  - `ui.py` - BenchmarkUI core functionality
+  - `profile_manager.py` - Configuration profile persistence
   - `types.py` - Protocol definitions
+  - `/ui` - Modular UI components
+    - `core.py` - BenchmarkUI class and ExtractionResult dataclass
+    - `results.py` - HTML generation for results display
+    - `queue.py` - Task queue management (load/save/display)
+    - `app_builder.py` - Main Gradio interface creation
 - `/data` - Document storage (not versioned)
   - `input/` - Source documents organized by category
   - `raw_markdown/` - Initial extraction outputs
   - `clean_markdown/` - Processed outputs
+- `/config` - Saved configuration profiles (JSON)
 - `/notebooks` - Jupyter notebooks with examples
 - `/tests` - Comprehensive test suite (see [tests/README.md](tests/README.md))
-- `app.py` - Main web application
+- `app.py` - Main application entry point
+- `.task_queue.json` - Persisted task queue
 - `CLAUDE.md` - Developer guide and architecture docs
 
 ## Testing
@@ -115,10 +125,12 @@ See [CLAUDE.md](CLAUDE.md#adding-new-extractors) for implementation guide.
 ## Architecture
 
 - **Protocol-based design**: Loose coupling via `MarkdownExtractor` protocol
-- **Pydantic configuration**: Type-safe, validated settings
-- **Automatic UI generation**: Gradio components from Pydantic fields
-- **Async processing**: Parallel document extraction
-- **Queue-based workflow**: Configure multiple extractors before running
+- **Pydantic configuration**: Type-safe, validated settings with field metadata
+- **Automatic UI generation**: Gradio components generated from Pydantic fields
+- **Profile management**: Save/load configurations as reusable named profiles
+- **Task queue system**: Build extraction queue with multiple extractor configurations
+- **Async processing**: Parallel document × extractor processing with `asyncio.gather()`
+- **Modular UI**: Separated concerns (core logic, results, queue, app building)
 
 ## License
 
