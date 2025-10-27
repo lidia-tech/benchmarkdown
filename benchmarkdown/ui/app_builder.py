@@ -576,12 +576,56 @@ def create_app(has_docling=False, has_textract=False):
                         gr.update(visible=False),  # textract_config_area
                     ])
 
-                    all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
-                    for field_name in all_fields:
+                    # Load basic fields
+                    for field_name in DOCLING_BASIC_FIELDS:
                         if field_name in config_data:
                             updates.append(gr.update(value=config_data[field_name]))
                         else:
                             updates.append(gr.update())
+
+                    # Load OCR configs (nested)
+                    for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
+                        if "easyocr_config" in config_data and field_name in config_data["easyocr_config"]:
+                            updates.append(gr.update(value=config_data["easyocr_config"][field_name]))
+                        else:
+                            default = EasyOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
+                        if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
+                            updates.append(gr.update(value=config_data["tesseract_config"][field_name]))
+                        else:
+                            default = TesseractOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
+                        if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
+                            updates.append(gr.update(value=config_data["tesseract_cli_config"][field_name]))
+                        else:
+                            default = TesseractCliOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
+                        if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
+                            updates.append(gr.update(value=config_data["ocr_mac_config"][field_name]))
+                        else:
+                            default = OcrMacConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
+                        if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
+                            updates.append(gr.update(value=config_data["rapidocr_config"][field_name]))
+                        else:
+                            default = RapidOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    # Load advanced fields
+                    for field_name in DOCLING_ADVANCED_FIELDS:
+                        if field_name in config_data:
+                            updates.append(gr.update(value=config_data[field_name]))
+                        else:
+                            updates.append(gr.update())
+
                     # Pad with empty updates for textract components
                     updates.extend([gr.update()] * len(textract_components))
 
@@ -626,14 +670,58 @@ def create_app(has_docling=False, has_textract=False):
                     gr.update(visible=False),  # textract_config_area
                 ])
 
-                # Load default values for all fields
-                all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
-                for field_name in all_fields:
+                # Load default values for basic fields
+                for field_name in DOCLING_BASIC_FIELDS:
                     if field_name in DoclingConfig.model_fields:
                         default_value = DoclingConfig.model_fields[field_name].default
                         updates.append(gr.update(value=default_value))
                     else:
                         updates.append(gr.update())
+
+                # Load default values for OCR configs
+                for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
+                    if field_name in EasyOcrConfig.model_fields:
+                        default_value = EasyOcrConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+
+                for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
+                    if field_name in TesseractOcrConfig.model_fields:
+                        default_value = TesseractOcrConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+
+                for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
+                    if field_name in TesseractCliOcrConfig.model_fields:
+                        default_value = TesseractCliOcrConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+
+                for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
+                    if field_name in OcrMacConfig.model_fields:
+                        default_value = OcrMacConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+
+                for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
+                    if field_name in RapidOcrConfig.model_fields:
+                        default_value = RapidOcrConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+
+                # Load default values for advanced fields
+                for field_name in DOCLING_ADVANCED_FIELDS:
+                    if field_name in DoclingConfig.model_fields:
+                        default_value = DoclingConfig.model_fields[field_name].default
+                        updates.append(gr.update(value=default_value))
+                    else:
+                        updates.append(gr.update())
+
                 # Pad with empty updates for textract components
                 updates.extend([gr.update()] * len(textract_components))
 
