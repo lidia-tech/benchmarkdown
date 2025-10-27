@@ -13,14 +13,32 @@ from benchmarkdown.ui.core import BenchmarkUI
 from benchmarkdown.ui.queue import load_queue_from_disk, save_queue_to_disk, generate_task_list_html
 from benchmarkdown.ui.results import generate_comparison_view_tabbed, generate_comparison_view_sidebyside
 from benchmarkdown.docling import DoclingExtractor
-from benchmarkdown.config import DoclingConfig, TextractConfig
+from benchmarkdown.config import (
+    DoclingConfig,
+    TextractConfig,
+    EasyOcrConfig,
+    TesseractOcrConfig,
+    TesseractCliOcrConfig,
+    OcrMacConfig,
+    RapidOcrConfig
+)
 from benchmarkdown.config_ui import (
     create_gradio_component_from_field,
     build_config_from_ui_values,
     DOCLING_BASIC_FIELDS,
     DOCLING_ADVANCED_FIELDS,
     TEXTRACT_BASIC_FIELDS,
-    TEXTRACT_ADVANCED_FIELDS
+    TEXTRACT_ADVANCED_FIELDS,
+    EASYOCR_BASIC_FIELDS,
+    EASYOCR_ADVANCED_FIELDS,
+    TESSERACT_BASIC_FIELDS,
+    TESSERACT_ADVANCED_FIELDS,
+    TESSERACT_CLI_BASIC_FIELDS,
+    TESSERACT_CLI_ADVANCED_FIELDS,
+    OCR_MAC_BASIC_FIELDS,
+    OCR_MAC_ADVANCED_FIELDS,
+    RAPIDOCR_BASIC_FIELDS,
+    RAPIDOCR_ADVANCED_FIELDS
 )
 from benchmarkdown.profile_manager import ProfileManager
 
@@ -175,6 +193,7 @@ def create_app(has_docling=False, has_textract=False):
                     # Docling configuration options
                     with gr.Column(visible=False) as docling_config_area:
                         docling_components = []
+                        ocr_engine_dropdown = None
 
                         with gr.Group():
                             gr.Markdown("#### Basic Options")
@@ -187,6 +206,148 @@ def create_app(has_docling=False, has_textract=False):
                                     field_name, field_info, field_type
                                 )
                                 docling_components.append(component)
+                                # Keep reference to OCR engine dropdown
+                                if field_name == "ocr_engine":
+                                    ocr_engine_dropdown = component
+
+                        # OCR Engine Configuration (conditionally visible)
+                        with gr.Group() as ocr_config_section:
+                            gr.Markdown("#### OCR Engine Configuration")
+
+                            # EasyOCR Configuration
+                            with gr.Group(visible=True) as easyocr_group:
+                                gr.Markdown("**EasyOCR Settings**")
+                                easyocr_components = []
+                                for field_name in EASYOCR_BASIC_FIELDS:
+                                    if field_name not in EasyOcrConfig.model_fields:
+                                        continue
+                                    field_info = EasyOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    easyocr_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in EASYOCR_ADVANCED_FIELDS:
+                                        if field_name not in EasyOcrConfig.model_fields:
+                                            continue
+                                        field_info = EasyOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        easyocr_components.append(component)
+                                        docling_components.append(component)
+
+                            # Tesseract Configuration
+                            with gr.Group(visible=False) as tesseract_group:
+                                gr.Markdown("**Tesseract Settings**")
+                                tesseract_components = []
+                                for field_name in TESSERACT_BASIC_FIELDS:
+                                    if field_name not in TesseractOcrConfig.model_fields:
+                                        continue
+                                    field_info = TesseractOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    tesseract_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in TESSERACT_ADVANCED_FIELDS:
+                                        if field_name not in TesseractOcrConfig.model_fields:
+                                            continue
+                                        field_info = TesseractOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        tesseract_components.append(component)
+                                        docling_components.append(component)
+
+                            # Tesseract CLI Configuration
+                            with gr.Group(visible=False) as tesseract_cli_group:
+                                gr.Markdown("**Tesseract CLI Settings**")
+                                tesseract_cli_components = []
+                                for field_name in TESSERACT_CLI_BASIC_FIELDS:
+                                    if field_name not in TesseractCliOcrConfig.model_fields:
+                                        continue
+                                    field_info = TesseractCliOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    tesseract_cli_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in TESSERACT_CLI_ADVANCED_FIELDS:
+                                        if field_name not in TesseractCliOcrConfig.model_fields:
+                                            continue
+                                        field_info = TesseractCliOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        tesseract_cli_components.append(component)
+                                        docling_components.append(component)
+
+                            # OcrMac Configuration
+                            with gr.Group(visible=False) as ocr_mac_group:
+                                gr.Markdown("**macOS OCR Settings**")
+                                ocr_mac_components = []
+                                for field_name in OCR_MAC_BASIC_FIELDS:
+                                    if field_name not in OcrMacConfig.model_fields:
+                                        continue
+                                    field_info = OcrMacConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    ocr_mac_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in OCR_MAC_ADVANCED_FIELDS:
+                                        if field_name not in OcrMacConfig.model_fields:
+                                            continue
+                                        field_info = OcrMacConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        ocr_mac_components.append(component)
+                                        docling_components.append(component)
+
+                            # RapidOCR Configuration
+                            with gr.Group(visible=False) as rapidocr_group:
+                                gr.Markdown("**RapidOCR Settings**")
+                                rapidocr_components = []
+                                for field_name in RAPIDOCR_BASIC_FIELDS:
+                                    if field_name not in RapidOcrConfig.model_fields:
+                                        continue
+                                    field_info = RapidOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    rapidocr_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in RAPIDOCR_ADVANCED_FIELDS:
+                                        if field_name not in RapidOcrConfig.model_fields:
+                                            continue
+                                        field_info = RapidOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        rapidocr_components.append(component)
+                                        docling_components.append(component)
 
                         with gr.Accordion("Advanced Options", open=False):
                             for field_name in DOCLING_ADVANCED_FIELDS:
@@ -740,10 +901,53 @@ def create_app(has_docling=False, has_textract=False):
 
                 if engine == "Docling":
                     config_data = profile["config_data"]
-                    all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
 
-                    # Update each component with the loaded value
-                    for field_name in all_fields:
+                    # Load basic fields
+                    for field_name in DOCLING_BASIC_FIELDS:
+                        if field_name in config_data:
+                            updates.append(gr.update(value=config_data[field_name]))
+                        else:
+                            updates.append(gr.update())
+
+                    # Load OCR configs (nested)
+                    for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
+                        if "easyocr_config" in config_data and field_name in config_data["easyocr_config"]:
+                            updates.append(gr.update(value=config_data["easyocr_config"][field_name]))
+                        else:
+                            # Use defaults from model
+                            default = EasyOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
+                        if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
+                            updates.append(gr.update(value=config_data["tesseract_config"][field_name]))
+                        else:
+                            default = TesseractOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
+                        if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
+                            updates.append(gr.update(value=config_data["tesseract_cli_config"][field_name]))
+                        else:
+                            default = TesseractCliOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
+                        if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
+                            updates.append(gr.update(value=config_data["ocr_mac_config"][field_name]))
+                        else:
+                            default = OcrMacConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
+                        if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
+                            updates.append(gr.update(value=config_data["rapidocr_config"][field_name]))
+                        else:
+                            default = RapidOcrConfig.model_fields[field_name].default
+                            updates.append(gr.update(value=default))
+
+                    # Load advanced fields
+                    for field_name in DOCLING_ADVANCED_FIELDS:
                         if field_name in config_data:
                             updates.append(gr.update(value=config_data[field_name]))
                         else:
@@ -772,9 +976,72 @@ def create_app(has_docling=False, has_textract=False):
 
             try:
                 if engine == "Docling":
-                    all_fields = DOCLING_BASIC_FIELDS + DOCLING_ADVANCED_FIELDS
-                    # Only take values for docling components
-                    config_data = {field: value for field, value in zip(all_fields, config_values[:len(all_fields)])}
+                    # Calculate indices for each section
+                    basic_len = len(DOCLING_BASIC_FIELDS)
+                    easyocr_len = len(EASYOCR_BASIC_FIELDS) + len(EASYOCR_ADVANCED_FIELDS)
+                    tesseract_len = len(TESSERACT_BASIC_FIELDS) + len(TESSERACT_ADVANCED_FIELDS)
+                    tesseract_cli_len = len(TESSERACT_CLI_BASIC_FIELDS) + len(TESSERACT_CLI_ADVANCED_FIELDS)
+                    ocr_mac_len = len(OCR_MAC_BASIC_FIELDS) + len(OCR_MAC_ADVANCED_FIELDS)
+                    rapidocr_len = len(RAPIDOCR_BASIC_FIELDS) + len(RAPIDOCR_ADVANCED_FIELDS)
+
+                    # Extract values for each section
+                    idx = 0
+                    basic_values = config_values[idx:idx+basic_len]
+                    idx += basic_len
+                    easyocr_values = config_values[idx:idx+easyocr_len]
+                    idx += easyocr_len
+                    tesseract_values = config_values[idx:idx+tesseract_len]
+                    idx += tesseract_len
+                    tesseract_cli_values = config_values[idx:idx+tesseract_cli_len]
+                    idx += tesseract_cli_len
+                    ocr_mac_values = config_values[idx:idx+ocr_mac_len]
+                    idx += ocr_mac_len
+                    rapidocr_values = config_values[idx:idx+rapidocr_len]
+                    idx += rapidocr_len
+                    advanced_values = config_values[idx:idx+len(DOCLING_ADVANCED_FIELDS)]
+
+                    # Build config_data with nested OCR configs
+                    config_data = {}
+
+                    # Basic fields
+                    for field, value in zip(DOCLING_BASIC_FIELDS, basic_values):
+                        config_data[field] = value
+
+                    # OCR configs (nested)
+                    config_data["easyocr_config"] = {
+                        field: value for field, value in zip(
+                            EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS,
+                            easyocr_values
+                        )
+                    }
+                    config_data["tesseract_config"] = {
+                        field: value for field, value in zip(
+                            TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS,
+                            tesseract_values
+                        )
+                    }
+                    config_data["tesseract_cli_config"] = {
+                        field: value for field, value in zip(
+                            TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS,
+                            tesseract_cli_values
+                        )
+                    }
+                    config_data["ocr_mac_config"] = {
+                        field: value for field, value in zip(
+                            OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS,
+                            ocr_mac_values
+                        )
+                    }
+                    config_data["rapidocr_config"] = {
+                        field: value for field, value in zip(
+                            RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS,
+                            rapidocr_values
+                        )
+                    }
+
+                    # Advanced fields
+                    for field, value in zip(DOCLING_ADVANCED_FIELDS, advanced_values):
+                        config_data[field] = value
 
                     # Save profile
                     filepath = profile_manager.save_profile(
@@ -944,6 +1211,28 @@ def create_app(has_docling=False, has_textract=False):
                 gr.update(visible=bool(extractor_queue))
             )
 
+        def ocr_engine_change_handler(ocr_engine_value):
+            """Handle OCR engine selection - show/hide appropriate OCR config sections."""
+            # Map enum values to visibility
+            visibility_map = {
+                "easyocr": [True, False, False, False, False],
+                "tesseract": [False, True, False, False, False],
+                "tesseract_cli": [False, False, True, False, False],
+                "ocr_mac": [False, False, False, True, False],
+                "rapid_ocr": [False, False, False, False, True],
+            }
+
+            # Get visibility for selected engine (default to EasyOCR)
+            visibilities = visibility_map.get(ocr_engine_value, [True, False, False, False, False])
+
+            return [
+                gr.update(visible=visibilities[0]),  # easyocr_group
+                gr.update(visible=visibilities[1]),  # tesseract_group
+                gr.update(visible=visibilities[2]),  # tesseract_cli_group
+                gr.update(visible=visibilities[3]),  # ocr_mac_group
+                gr.update(visible=visibilities[4]),  # rapidocr_group
+            ]
+
         demo.load(
             fn=reload_page,
             outputs=[task_list_display, delete_controls]
@@ -974,6 +1263,14 @@ def create_app(has_docling=False, has_textract=False):
             inputs=[engine_selector, profile_selector],
             outputs=[profile_status]
         )
+
+        # Wire up OCR engine dropdown to control visibility
+        if ocr_engine_dropdown is not None:
+            ocr_engine_dropdown.change(
+                fn=ocr_engine_change_handler,
+                inputs=[ocr_engine_dropdown],
+                outputs=[easyocr_group, tesseract_group, tesseract_cli_group, ocr_mac_group, rapidocr_group]
+            )
 
         refresh_profiles_btn.click(
             fn=refresh_profile_list,
