@@ -45,7 +45,7 @@ def load_queue_from_disk(extractor_queue: list, ui_instance):
                         'config_dict': config_dict
                     }
                     extractor_queue.append(task)
-                    ui_instance.extractors[full_name] = extractor
+                    ui_instance.register_extractor(full_name, extractor, cost_per_page=None)
 
                 elif engine == "AWS Textract":
                     config = build_config_from_ui_values(TextractConfig, config_dict)
@@ -61,7 +61,7 @@ def load_queue_from_disk(extractor_queue: list, ui_instance):
                         'config_dict': config_dict
                     }
                     extractor_queue.append(task)
-                    ui_instance.extractors[full_name] = extractor
+                    ui_instance.register_extractor(full_name, extractor, cost_per_page=0.05)
 
         print(f"✓ Loaded {len(extractor_queue)} tasks from disk")
     except Exception as e:
