@@ -12,8 +12,9 @@ class TextractExtractor:
     using AWS Textract service.
 
     Ensure you have:
-    - AWS credentials configured in your environment.
+    - AWS credentials configured in your environment (via ~/.aws/credentials or environment variables).
     - The `textractor` library installed (`pip install textractor`).
+    - AWS profile name set via AWS_PROFILE environment variable (defaults to "default" if not set).
 
     Configuration:
         You can create multiple instances with different configurations:
@@ -69,6 +70,10 @@ class TextractExtractor:
                 Used only if config is None.
             **kwargs: Additional keyword arguments to pass to the Textractor constructor.
         """
+        # Set AWS profile from environment or use default
+        if 'profile_name' not in kwargs:
+            kwargs['profile_name'] = os.environ.get('AWS_PROFILE', 'default')
+
         if config is not None:
             # Use the config object to build Textractor options
             features_list, markdown_config, s3_path = config.to_textract_options()
