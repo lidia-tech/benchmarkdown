@@ -292,7 +292,7 @@ DOCLING_ADVANCED_FIELDS = [
 
 # Define field groupings for TextractConfig
 TEXTRACT_BASIC_FIELDS = [
-    "s3_upload_path",
+    # Note: s3_upload_path is read from TEXTRACT_S3_WORKSPACE environment variable
     "features",
     "hide_header_layout",
     "hide_footer_layout",

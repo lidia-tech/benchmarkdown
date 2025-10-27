@@ -5,6 +5,7 @@ This module provides Pydantic models for configuring extractors with type valida
 and documentation. These models can be used to generate UI components automatically.
 """
 
+import os
 from enum import Enum
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
@@ -200,19 +201,26 @@ class TextractFeaturesEnum(str, Enum):
     SIGNATURES = "SIGNATURES"
 
 
+def _get_s3_workspace_from_env() -> str:
+    """Get S3 workspace from environment variable."""
+    return os.environ.get("TEXTRACT_S3_WORKSPACE", "s3://your-bucket-name/textract-workspace/")
+
+
 class TextractConfig(BaseModel):
     """
     Configuration for AWS Textract document extractor.
 
     This configuration is split into basic and advanced sections for
     better user experience.
+
+    Note: s3_upload_path is automatically read from TEXTRACT_S3_WORKSPACE environment variable.
     """
 
     # ========== BASIC OPTIONS ==========
 
     s3_upload_path: str = Field(
-        default="s3://your-bucket-name/textract-workspace/",
-        description="Full S3 URI path for Textract workspace (e.g., s3://my-bucket/textract-workspace/)"
+        default_factory=_get_s3_workspace_from_env,
+        description="Full S3 URI path for Textract workspace (read from TEXTRACT_S3_WORKSPACE environment variable)"
     )
 
     features: list[TextractFeaturesEnum] = Field(
