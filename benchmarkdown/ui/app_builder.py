@@ -603,7 +603,7 @@ def create_app(has_docling=False, has_textract=False):
                                 default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
-                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
+                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
                         if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
                             value = config_data["tesseract_cli_config"][field_name]
                             if isinstance(value, list):
@@ -1054,7 +1054,7 @@ def create_app(has_docling=False, has_textract=False):
                                 default = ", ".join(str(v) for v in default)
                             updates.append(gr.update(value=default))
 
-                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
+                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
                         if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
                             value = config_data["tesseract_cli_config"][field_name]
                             if isinstance(value, list):
