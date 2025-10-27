@@ -211,8 +211,8 @@ class TextractConfig(BaseModel):
     # ========== BASIC OPTIONS ==========
 
     s3_upload_path: str = Field(
-        default="s3://your-bucket-name/textract-temp/",
-        description="S3 path for temporary document uploads (required for Textract)"
+        default="s3://your-bucket-name/textract-workspace/",
+        description="Full S3 URI path for Textract workspace (e.g., s3://my-bucket/textract-workspace/)"
     )
 
     features: list[TextractFeaturesEnum] = Field(

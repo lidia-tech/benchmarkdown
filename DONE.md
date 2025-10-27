@@ -443,4 +443,4 @@ Completed full integration of TextractEngine configuration system:
 - ✅ Backward compatibility maintained
 - ✅ UI integration ready (requires running app to test fully)
 
-**Note:** AWS credentials required for actual extraction. Set TEXTRACT_S3_BUCKET environment variable for end-to-end testing.
+**Note:** AWS credentials required for actual extraction. Set TEXTRACT_S3_BUCKET environment variable to a full S3 URI (e.g., `s3://my-bucket/textract-workspace/`) for end-to-end testing.

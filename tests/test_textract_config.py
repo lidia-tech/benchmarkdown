@@ -156,10 +156,11 @@ async def test_extraction_if_aws_available():
     print("=" * 60)
 
     # Check if AWS credentials are configured
-    s3_bucket = os.environ.get("TEXTRACT_S3_BUCKET")
-    if not s3_bucket or s3_bucket == "your-bucket-name":
+    s3_workspace = os.environ.get("TEXTRACT_S3_BUCKET")
+    if not s3_workspace or not s3_workspace.startswith("s3://"):
         print("⚠️  Test 5 skipped: AWS Textract not configured")
-        print("   Set TEXTRACT_S3_BUCKET environment variable to enable this test")
+        print("   Set TEXTRACT_S3_BUCKET environment variable to a full S3 URI")
+        print("   Example: export TEXTRACT_S3_BUCKET=s3://my-bucket/textract-workspace/")
         print()
         return
 
@@ -182,7 +183,7 @@ async def test_extraction_if_aws_available():
 
     # Create config and extractor
     config = TextractConfig(
-        s3_upload_path=f"s3://{s3_bucket}/textract-temp/",
+        s3_upload_path=s3_workspace,
         features=[TextractFeaturesEnum.LAYOUT, TextractFeaturesEnum.TABLES],
         hide_header_layout=True,
         hide_footer_layout=True

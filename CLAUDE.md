@@ -77,7 +77,7 @@ See `CONFIG_UI_README.md` for user guide and configuration patterns.
 
 **`benchmarkdown/textract.py`**:
 - AWS Textract cloud-based service wrapper
-- Requires S3 bucket configuration via `TEXTRACT_S3_BUCKET` environment variable
+- Requires S3 workspace URI via `TEXTRACT_S3_BUCKET` environment variable (e.g., `s3://bucket/path/`)
 - Uses `Textractor` library with Layout and Tables features
 - Cost per page ~$0.05
 
@@ -169,9 +169,9 @@ The UI will automatically generate appropriate Gradio components based on field 
 
 ## Configuration
 
-AWS Textract requires environment variable:
+AWS Textract requires environment variable with full S3 URI:
 ```bash
-export TEXTRACT_S3_BUCKET=your-bucket-name
+export TEXTRACT_S3_BUCKET=s3://your-bucket-name/textract-workspace/
 ```
 
 AWS credentials via standard AWS SDK methods (`~/.aws/credentials` or environment variables).

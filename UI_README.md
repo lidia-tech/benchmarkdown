@@ -34,10 +34,10 @@ uv sync --all-groups
 
 ### For AWS Textract
 
-Set your S3 bucket for temporary file uploads:
+Set your S3 workspace URI for Textract:
 
 ```bash
-export TEXTRACT_S3_BUCKET=your-bucket-name
+export TEXTRACT_S3_BUCKET=s3://your-bucket-name/textract-workspace/
 ```
 
 Make sure you have AWS credentials configured (via `~/.aws/credentials` or environment variables).

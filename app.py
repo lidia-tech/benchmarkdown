@@ -39,12 +39,12 @@ except ImportError as e:
 try:
     from benchmarkdown.textract import TextractExtractor
     from textractor.data.constants import TextractFeatures
-    s3_bucket = os.environ.get("TEXTRACT_S3_BUCKET", "your-bucket-name")
-    if s3_bucket != "your-bucket-name":
+    s3_workspace = os.environ.get("TEXTRACT_S3_BUCKET")
+    if s3_workspace and s3_workspace.startswith("s3://"):
         has_textract = True
-        print("✓ AWS Textract extractor available")
+        print(f"✓ AWS Textract extractor available (workspace: {s3_workspace})")
     else:
-        print("⚠️  AWS Textract not configured (set TEXTRACT_S3_BUCKET)")
+        print("⚠️  AWS Textract not configured (set TEXTRACT_S3_BUCKET to s3://bucket-name/path/)")
 except ImportError:
     print("⚠️  AWS Textract not available")
 
