@@ -41,7 +41,3 @@ https://docs.aspose.com/pdf/python-cpp/extract-text/
 ## Implement Microsoft DocumentAI based extractor engine
 
 TBD
-
-## BUG: In dark mode the markdown preview is unreadable
-
-In dark mode, after a successful extraction task, the markdown preview is shown with a very light gray color on a white background, so unreadable.

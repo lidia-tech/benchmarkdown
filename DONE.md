@@ -1,5 +1,27 @@
 # Implemented tasks
 
+## BUG: In dark mode the markdown preview is unreadable
+
+In dark mode, after a successful extraction task, the markdown preview is shown with a very light gray color on a white background, so unreadable.
+
+### What was implemented
+
+Fixed dark mode compatibility in `benchmarkdown/ui/results.py`:
+
+1. **Markdown preview areas**: Replaced hardcoded `background: white` and `background: #f5f5f5` with Gradio CSS variables:
+   - `background: var(--background-fill-primary)` for rendered markdown
+   - `background: var(--background-fill-secondary)` for raw markdown
+   - Added `color: var(--body-text-color)` to ensure text is readable in both themes
+
+2. **Error messages**: Replaced hardcoded `color: red` and `background: #fee` with theme-aware colors:
+   - `color: var(--error-text-color, #dc2626)`
+   - `background: var(--error-background-fill, rgba(239, 68, 68, 0.1))`
+   - Added border with `var(--error-border-color, rgba(239, 68, 68, 0.3))`
+
+3. **Border colors**: Changed from hardcoded `#ddd` to `var(--border-color-primary)`
+
+All changes use CSS variables that automatically adapt to Gradio's light/dark theme, with sensible fallback colors for compatibility.
+
 ## Configuration profile management
 
 The user should be able to execute CRUD operations on a configuration profile. The profiles should be saved as local json files in a ./config folder for now. After selecting an extractor engine, the user should be able to create a new profile and save it; select an existing one and send it to the extraction queue, or edit it and save it again; or to delete an existing profile.

@@ -73,20 +73,20 @@ def generate_comparison_view_tabbed(results: dict, filename: str) -> str:
         html += f"<h4>{extractor_name}</h4>"
 
         if result.error:
-            html += f"<div style='color: red; padding: 10px; background: #fee; border-radius: 4px; margin-bottom: 20px;'>Error: {result.error}</div>"
+            html += f"<div style='color: var(--error-text-color, #dc2626); padding: 10px; background: var(--error-background-fill, rgba(239, 68, 68, 0.1)); border: 1px solid var(--error-border-color, rgba(239, 68, 68, 0.3)); border-radius: 4px; margin-bottom: 20px;'>Error: {result.error}</div>"
             continue
 
         # Rendered markdown preview
         html += "<div style='margin: 10px 0;'>"
         html += "<strong>Rendered Markdown:</strong>"
         rendered_html = md.markdown(result.markdown, extensions=['extra', 'nl2br', 'sane_lists'])
-        html += f"<div style='border: 1px solid #ddd; padding: 15px; background: white; border-radius: 4px; max-height: 400px; overflow-y: auto;'>{rendered_html}</div>"
+        html += f"<div style='border: 1px solid var(--border-color-primary); padding: 15px; background: var(--background-fill-primary); color: var(--body-text-color); border-radius: 4px; max-height: 400px; overflow-y: auto;'>{rendered_html}</div>"
         html += "</div>"
 
         # Raw markdown
         html += "<div style='margin: 10px 0;'>"
         html += "<strong>Raw Markdown:</strong>"
-        html += f"<pre style='border: 1px solid #ddd; padding: 15px; background: #f5f5f5; border-radius: 4px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;'>{result.markdown}</pre>"
+        html += f"<pre style='border: 1px solid var(--border-color-primary); padding: 15px; background: var(--background-fill-secondary); color: var(--body-text-color); border-radius: 4px; max-height: 300px; overflow-y: auto; white-space: pre-wrap;'>{result.markdown}</pre>"
         html += "</div>"
 
         if result.warnings:
@@ -130,7 +130,7 @@ def generate_comparison_view_sidebyside(results: dict, filename: str) -> str:
         html += f"<h4 style='margin-top: 0;'>{extractor_name}</h4>"
 
         if result.error:
-            html += f"<div style='color: red; padding: 10px; background: #fee; border-radius: 4px;'>Error: {result.error}</div>"
+            html += f"<div style='color: var(--error-text-color, #dc2626); padding: 10px; background: var(--error-background-fill, rgba(239, 68, 68, 0.1)); border: 1px solid var(--error-border-color, rgba(239, 68, 68, 0.3)); border-radius: 4px;'>Error: {result.error}</div>"
         else:
             html += f"<div style='font-size: 0.9em; color: #666; margin-bottom: 10px;'>"
             html += f"Time: {result.execution_time:.1f}s | {result.word_count:,} words"
@@ -141,7 +141,7 @@ def generate_comparison_view_sidebyside(results: dict, filename: str) -> str:
             # Rendered preview
             markdown_preview = result.markdown[:2000] + ('...' if len(result.markdown) > 2000 else '')
             rendered_preview = md.markdown(markdown_preview, extensions=['extra', 'nl2br', 'sane_lists'])
-            html += f"<div style='border: 1px solid #ddd; padding: 10px; background: white; border-radius: 4px; max-height: 500px; overflow-y: auto; font-size: 0.9em;'>{rendered_preview}</div>"
+            html += f"<div style='border: 1px solid var(--border-color-primary); padding: 10px; background: var(--background-fill-primary); color: var(--body-text-color); border-radius: 4px; max-height: 500px; overflow-y: auto; font-size: 0.9em;'>{rendered_preview}</div>"
 
         html += "</div>"
 
