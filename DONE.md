@@ -713,3 +713,114 @@ Complete implementation of plugin-based architecture:
 2. **Done!** UI automatically discovers and integrates it. No code changes needed!
 
 **✨ GOAL ACHIEVED: Zero UI modifications needed for new extractors!**
+
+## Implement LlamaParse extractor engine
+
+https://developers.llamaindex.ai/python/cloud/llamaparse/getting_started
+
+### What was implemented
+
+Successfully implemented LlamaParse extractor as a plugin following the plugin architecture:
+
+**Files Created:**
+
+1. **`benchmarkdown/extractors/llamaparse/config.py`** (129 lines) - Configuration model:
+   - `LlamaParseConfig` Pydantic model with type-safe configuration
+   - Basic fields: api_key, result_type, language, parsing_instruction
+   - Advanced fields: gpt4o_mode, gpt4o_api_key, skip_diagonal_text, invalidate_cache, do_not_cache, page_separator, page_range, num_workers, verbose
+   - Field validators for API key requirements
+   - Proper enums (ResultTypeEnum)
+   - Environment variable integration (LLAMA_CLOUD_API_KEY, OPENAI_API_KEY)
+
+2. **`benchmarkdown/extractors/llamaparse/extractor.py`** (108 lines) - Extractor implementation:
+   - `LlamaParseExtractor` class implementing MarkdownExtractor protocol
+   - Async `extract_markdown()` method using thread executor
+   - Config-based initialization with full parameter mapping
+   - Backward compatibility with raw kwargs
+   - Comprehensive docstrings with usage examples
+
+3. **`benchmarkdown/extractors/llamaparse/__init__.py`** (75 lines) - Plugin interface:
+   - Standard exports: Extractor, Config, BASIC_FIELDS, ADVANCED_FIELDS
+   - Plugin metadata: ENGINE_NAME="llamaparse", ENGINE_DISPLAY_NAME="LlamaParse (Cloud)"
+   - Conditional imports for graceful handling of missing dependencies
+   - Dummy extractor class when llama-parse not installed
+   - `is_available()` function for dependency checking
+
+**Files Modified:**
+
+1. **`pyproject.toml`** - Added llamaparse dependency group:
+   ```toml
+   llamaparse = [
+       "llama-parse>=0.5.0",
+   ]
+   ```
+   Install with: `uv sync --group llamaparse`
+
+2. **`.env.template`** - Added environment variables:
+   ```bash
+   LLAMA_CLOUD_API_KEY="llx-..."
+   OPENAI_API_KEY="sk-..."  # Optional: for GPT-4o mode
+   ```
+
+**Testing:**
+
+Created comprehensive test suite (`test_llamaparse_plugin.py`) that verifies:
+- ✅ Plugin structure exports all required attributes
+- ✅ Availability checking works correctly
+- ✅ Configuration validation with Pydantic models
+- ✅ Extractor instantiation (when library installed)
+- ✅ Registry integration and discovery
+
+All tests passed (5/5), including:
+- Plugin discovered by ExtractorRegistry
+- Graceful handling when llama-parse not installed
+- Config validation working correctly
+- Display name: "LlamaParse (Cloud)"
+
+**Key Features:**
+
+1. **Cloud-based parsing**: LlamaParse is a cloud service from LlamaIndex
+2. **Advanced OCR**: High-quality text extraction with layout understanding
+3. **GPT-4o mode**: Optional integration for complex document understanding
+4. **Flexible configuration**: 13 configuration parameters for fine-tuning
+5. **API key management**: Secure environment variable configuration
+6. **Graceful degradation**: Plugin loads even when dependency missing
+
+**Usage:**
+
+```python
+from benchmarkdown.extractors.llamaparse import Extractor, Config
+
+# Create config
+config = Config(
+    api_key="llx-...",  # Or set LLAMA_CLOUD_API_KEY
+    result_type="markdown",
+    language="en",
+    parsing_instruction="Extract tables and preserve formatting",
+    gpt4o_mode=True  # For complex documents
+)
+
+# Create extractor
+extractor = Extractor(config=config)
+
+# Extract markdown
+markdown = await extractor.extract_markdown("document.pdf")
+```
+
+**Integration:**
+
+- ✅ Zero code changes needed in app.py or UI files
+- ✅ Plugin automatically discovered at runtime
+- ✅ UI dynamically generated from config metadata
+- ✅ Profile save/load works automatically
+- ✅ Task queueing supports LlamaParse
+
+**How to use in the UI:**
+
+1. Install dependency: `uv sync --group llamaparse`
+2. Set API key: `export LLAMA_CLOUD_API_KEY="llx-..."`
+3. Launch app: `uv run python app.py`
+4. Select "LlamaParse (Cloud)" from engine dropdown
+5. Configure options and add to extraction queue
+
+The plugin follows the established architecture perfectly - no modifications to core files needed!

@@ -32,3 +32,6 @@ textract = [
     "amazon-textract-textractor>=1.9.2",
     "boto3>=1.39.12",
 ]
+llamaparse = [
+    "llama-parse>=0.5.0",
+]

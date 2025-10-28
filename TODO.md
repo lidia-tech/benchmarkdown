@@ -1,9 +1,5 @@
 # Task list
 
-## Implement LlamaParse extractor engine
-
-https://developers.llamaindex.ai/python/cloud/llamaparse/getting_started
-
 ## Implement TensorLake extractor engine
 
 https://docs.tensorlake.ai/document-ingestion/parsing/read
