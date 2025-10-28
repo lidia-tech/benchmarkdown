@@ -361,10 +361,9 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     "bbox_left",
     "bbox_right",
 
-    # System
+    # System (only user-configurable)
     "num_workers",
     "verbose",
-    "show_progress",
-    "ignore_errors",
-    "max_timeout",
+    # Note: show_progress, ignore_errors, max_timeout are internal system settings
+    # and not exposed in UI - they use sensible defaults
 ]
