@@ -125,6 +125,8 @@ class LlamaParseExtractor:
                 parser_kwargs["vendor_multimodal_model_name"] = config.vendor_multimodal_model_name
             if config.vendor_multimodal_api_key:
                 parser_kwargs["vendor_multimodal_api_key"] = config.vendor_multimodal_api_key
+            if config.model:
+                parser_kwargs["model"] = config.model
 
             # Bounding box parameters
             if config.bbox_top is not None:

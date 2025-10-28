@@ -3,7 +3,7 @@
   "profile_name": "cost-effective",
   "config_data": {
     "result_type": "markdown",
-    "language": "it, en",
+    "language": "it",
     "parsing_instruction": "",
     "target_pages": "",
     "premium_mode": false,
@@ -41,9 +41,6 @@
     "bbox_left": 0,
     "bbox_right": 0,
     "num_workers": 4,
-    "verbose": false,
-    "show_progress": true,
-    "ignore_errors": true,
-    "max_timeout": 100
+    "verbose": false
   }
 }

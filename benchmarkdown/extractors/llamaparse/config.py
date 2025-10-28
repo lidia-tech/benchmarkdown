@@ -260,6 +260,11 @@ class LlamaParseConfig(BaseModel):
         description="API key for the vendor multimodal model"
     )
 
+    model: Optional[str] = Field(
+        default=None,
+        description="Document model name to be used with agent parsing modes (e.g., parse_document_with_agent)"
+    )
+
     # === Bounding Box ===
     bbox_top: Optional[float] = Field(
         default=None,
@@ -389,6 +394,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     "use_vendor_multimodal_model",
     "vendor_multimodal_model_name",
     "vendor_multimodal_api_key",
+    "model",
 
     # Bounding Box
     "bbox_top",
