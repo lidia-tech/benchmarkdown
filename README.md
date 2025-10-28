@@ -50,25 +50,31 @@ See [CONFIG_UI_README.md](CONFIG_UI_README.md) for detailed configuration guide.
 ## Project Structure
 
 - `/benchmarkdown` - Core package with extractors and configuration
-  - `docling.py` - Docling extractor implementation
-  - `textract.py` - AWS Textract extractor implementation
-  - `config.py` - Pydantic configuration models
-  - `config_ui.py` - Automatic UI generation from models
+  - `/extractors` - **Plugin-based extractor architecture**
+    - `base.py` - Protocol definitions
+    - `__init__.py` - ExtractorRegistry with automatic discovery
+    - `/docling` - Docling extractor plugin
+    - `/textract` - AWS Textract extractor plugin
+  - `config.py` - Re-exports from plugins (backward compatibility)
+  - `config_ui.py` - Automatic UI generation from Pydantic models
   - `profile_manager.py` - Configuration profile persistence
   - `types.py` - Protocol definitions
   - `/ui` - Modular UI components
     - `core.py` - BenchmarkUI class and ExtractionResult dataclass
     - `results.py` - HTML generation for results display
     - `queue.py` - Task queue management (load/save/display)
+    - `dynamic_config.py` - Dynamic UI generation from plugin metadata
     - `app_builder.py` - Main Gradio interface creation
 - `/data` - Document storage (not versioned)
   - `input/` - Source documents organized by category
   - `raw_markdown/` - Initial extraction outputs
   - `clean_markdown/` - Processed outputs
 - `/config` - Saved configuration profiles (JSON)
+- `/docs` - Additional documentation
+  - `/archive` - Historical implementation documentation
 - `/notebooks` - Jupyter notebooks with examples
 - `/tests` - Comprehensive test suite (see [tests/README.md](tests/README.md))
-- `app.py` - Main application entry point
+- `app.py` - Main application entry point (extractor discovery + launch)
 - `.task_queue.json` - Persisted task queue
 - `CLAUDE.md` - Developer guide and architecture docs
 
@@ -120,17 +126,29 @@ jupyter notebook notebooks/
 
 ### Adding New Extractors
 
-See [CLAUDE.md](CLAUDE.md#adding-new-extractors) for implementation guide.
+The plugin architecture makes adding new extractors simple:
+
+1. Create `benchmarkdown/extractors/{name}/` directory with:
+   - `config.py` - Pydantic config model with `BASIC_FIELDS`, `ADVANCED_FIELDS`
+   - `extractor.py` - Class implementing `MarkdownExtractor` protocol
+   - `__init__.py` - Standard exports: `Extractor`, `Config`, fields, metadata, `is_available()`
+
+2. **Done!** The UI automatically discovers and integrates it. No code changes needed!
+
+See [CLAUDE.md](CLAUDE.md#adding-new-extractors) for detailed implementation guide.
 
 ## Architecture
 
+- **Plugin-based extractors**: Automatic discovery, zero-code integration for new extractors
 - **Protocol-based design**: Loose coupling via `MarkdownExtractor` protocol
+- **ExtractorRegistry**: Validates plugins, checks dependencies, manages instances
+- **Dynamic UI generation**: Gradio components generated from plugin metadata at runtime
+- **Nested configuration support**: Complex configs like OCR engines handled automatically
 - **Pydantic configuration**: Type-safe, validated settings with field metadata
-- **Automatic UI generation**: Gradio components generated from Pydantic fields
 - **Profile management**: Save/load configurations as reusable named profiles
 - **Task queue system**: Build extraction queue with multiple extractor configurations
 - **Async processing**: Parallel document × extractor processing with `asyncio.gather()`
-- **Modular UI**: Separated concerns (core logic, results, queue, app building)
+- **Modular UI**: Separated concerns (core logic, results, queue, dynamic config, app building)
 
 ## License
 

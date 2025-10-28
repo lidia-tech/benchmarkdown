@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Benchmarkdown is a benchmark suite for comparing document-to-markdown extraction technologies. It provides a protocol-based framework for testing different extraction tools (local and cloud-based) against real-world documents, with both a programmatic API and a web-based Gradio UI.
+Benchmarkdown is a benchmark suite for comparing document-to-markdown extraction technologies. It features a **plugin-based architecture** where new extractors can be added by simply creating a directory—no code changes needed. The UI automatically discovers and integrates new extractors at runtime. The system provides both a programmatic API and a web-based Gradio UI that dynamically adapts to available extractors.
 
 ## Essential Commands
 
@@ -43,6 +43,29 @@ async def extract_markdown(self, filename: os.PathLike) -> str
 
 All extractors implement this protocol, allowing the UI to work with any extraction tool without tight coupling.
 
+### Plugin Architecture
+
+**Complete plugin-based system** with automatic discovery and zero-code integration:
+
+**`benchmarkdown/extractors/__init__.py`**: ExtractorRegistry
+- Automatic plugin discovery on app startup
+- Validates plugin interface (Extractor, Config, fields, metadata, is_available())
+- Checks dependencies and gracefully skips unavailable extractors
+- Dynamic instantiation through `create_extractor_instance()`
+
+**Plugin structure** (`benchmarkdown/extractors/{name}/`):
+- `__init__.py` - Standard exports: Extractor, Config, BASIC_FIELDS, ADVANCED_FIELDS, ENGINE_NAME, ENGINE_DISPLAY_NAME, is_available(), optional NESTED_CONFIGS
+- `config.py` - Pydantic config model(s) with field groupings
+- `extractor.py` - Class implementing MarkdownExtractor protocol
+
+**`benchmarkdown/ui/dynamic_config.py`**: Dynamic UI generation
+- Generates Gradio UI from plugin metadata at runtime
+- Handles nested configurations (e.g., Docling's 5 OCR engines)
+- Profile save/load works for any extractor automatically
+- Event handlers are generic, not extractor-specific
+
+**Adding new extractors**: Simply create `extractors/{name}/` directory with the 3 files above. UI discovers and integrates automatically—no code changes needed in app.py or UI!
+
 ### Configuration System
 
 **Pydantic-based configuration** enables type-safe, UI-driven extractor configuration:
@@ -73,16 +96,19 @@ See `CONFIG_UI_README.md` for user guide and configuration patterns.
 
 ### Extractor Implementations
 
-**`benchmarkdown/docling.py`**:
-- Wraps IBM's Docling library for local document processing
+**`benchmarkdown/extractors/docling/`**: Docling plugin
+- `extractor.py`: Wraps IBM's Docling library for local document processing
+- `config.py`: DoclingConfig with nested OCR configs (EasyOCR, Tesseract, TesseractCLI, OcrMac, RapidOCR)
 - Uses `DocumentConverter` and thread executor for async operation
 - Free, no external dependencies beyond the library
+- **Backward compatibility**: `benchmarkdown/docling.py` re-exports from plugin
 
-**`benchmarkdown/textract.py`**:
-- AWS Textract cloud-based service wrapper
+**`benchmarkdown/extractors/textract/`**: AWS Textract plugin
+- `extractor.py`: AWS Textract cloud-based service wrapper
+- `config.py`: TextractConfig with markdown formatting options
 - S3 workspace URI automatically read from `TEXTRACT_S3_WORKSPACE` environment variable
 - Uses `Textractor` library with Layout and Tables features
-- Configuration managed through TextractConfig (s3_upload_path hidden from UI)
+- **Backward compatibility**: `benchmarkdown/textract.py` re-exports from plugin
 
 ### UI Architecture (`benchmarkdown/ui/`)
 
@@ -106,6 +132,13 @@ The UI is now modularized into separate components for better maintainability:
 - `save_queue_to_disk()`: Persists queue after changes
 - `generate_task_list_html()`: Renders task cards with delete buttons
 - Serializes config_dict (excludes extractor instances which can't be JSON-serialized)
+
+**`benchmarkdown/ui/dynamic_config.py`**: Dynamic UI generation (NEW!)
+- `DynamicConfigUI`: Generates Gradio components from plugin metadata at runtime
+- Handles nested configurations (e.g., Docling's OCR engine options)
+- Generic event handlers work for ANY extractor
+- Profile save/load automatically supports all extractors
+- **Zero UI code changes needed when adding new extractors!**
 
 **`benchmarkdown/ui/app_builder.py`**: Main Gradio interface
 - `create_app()`: Builds two-column layout (Task List | Task Editor → Results View)
@@ -133,61 +166,114 @@ The UI is now modularized into separate components for better maintainability:
 
 ## Adding New Extractors
 
-### Basic Implementation
+**The plugin architecture makes adding extractors incredibly simple - just create a directory!**
 
-1. Create class in `benchmarkdown/` implementing `MarkdownExtractor` protocol
-2. Implement `async def extract_markdown(self, filename: os.PathLike) -> str`
-3. Use `asyncio.run_in_executor()` if wrapping blocking library
-4. Add to `app.py` extractor registry with try/except for graceful degradation
-5. Add dependency group to `pyproject.toml` if new library required
+### Plugin-Based Implementation (Recommended)
 
-Example:
+**Step 1**: Create plugin directory: `benchmarkdown/extractors/{name}/`
+
+**Step 2**: Create three files:
+
+**`config.py`** - Pydantic configuration model:
 ```python
+from pydantic import BaseModel, Field
+from typing import List
+
+class MyExtractorConfig(BaseModel):
+    """Configuration for MyExtractor."""
+    feature_x: bool = Field(default=True, description="Enable feature X")
+    threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Detection threshold")
+    api_key: str = Field(default_factory=lambda: os.getenv("MY_API_KEY", ""), description="API key")
+
+# Field groupings for UI generation
+BASIC_FIELDS = ["feature_x", "threshold"]
+ADVANCED_FIELDS = ["api_key"]
+```
+
+**`extractor.py`** - Extractor implementation:
+```python
+import asyncio
+from typing import Optional
+from benchmarkdown.extractors.base import MarkdownExtractor
+from .config import MyExtractorConfig
+
 class MyExtractor:
+    """MyExtractor implementation."""
+
+    def __init__(self, config: Optional[MyExtractorConfig] = None, **kwargs):
+        self.config = config or MyExtractorConfig()
+
     async def extract_markdown(self, filename: os.PathLike) -> str:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._blocking_extract, filename)
 
     def _blocking_extract(self, filename):
-        # Your synchronous extraction logic
+        # Your extraction logic here
         return markdown_text
 ```
 
-### Adding Configuration Support
+**`__init__.py`** - Standard plugin interface:
+```python
+from typing import Tuple
+from .extractor import MyExtractor
+from .config import MyExtractorConfig, BASIC_FIELDS, ADVANCED_FIELDS
 
-To add UI-driven configuration (like Docling has):
+# Standard exports (required by registry)
+Extractor = MyExtractor
+Config = MyExtractorConfig
+BASIC_FIELDS = BASIC_FIELDS
+ADVANCED_FIELDS = ADVANCED_FIELDS
 
-1. **Create Pydantic model** in `benchmarkdown/config.py`:
-   ```python
-   class MyExtractorConfig(BaseModel):
-       feature_x: bool = Field(default=True, description="Enable feature X")
-       threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Detection threshold")
-   ```
+# Plugin metadata (required)
+ENGINE_NAME = "myextractor"
+ENGINE_DISPLAY_NAME = "My Extractor"
 
-2. **Update extractor** to accept config:
-   ```python
-   class MyExtractor:
-       def __init__(self, config: Optional[MyExtractorConfig] = None, **kwargs):
-           if config:
-               self.config = config
-           else:
-               # fallback
-   ```
+def is_available() -> Tuple[bool, str]:
+    """Check if dependencies are installed."""
+    try:
+        import myextractor_library
+        return True, ""
+    except ImportError as e:
+        return False, f"MyExtractor not installed: {e}"
 
-3. **Define field groupings** in `config_ui.py`:
-   ```python
-   MY_EXTRACTOR_BASIC_FIELDS = ["feature_x"]
-   MY_EXTRACTOR_ADVANCED_FIELDS = ["threshold"]
-   ```
+__all__ = ['Extractor', 'Config', 'BASIC_FIELDS', 'ADVANCED_FIELDS',
+           'ENGINE_NAME', 'ENGINE_DISPLAY_NAME', 'is_available']
+```
 
-4. **Add UI components** in `benchmarkdown/ui/app_builder.py` following the Docling/Textract pattern:
-   - Add configuration area in the task editor
-   - Handle profile save/load for the new extractor
-   - Wire up event handlers for profile management
+**Step 3**: (Optional) Add dependency group to `pyproject.toml`:
+```toml
+[project.optional-dependencies]
+myextractor = ["myextractor-library>=1.0.0"]
+```
 
-The UI will automatically generate appropriate Gradio components based on field types.
+**Step 4**: Done! Launch app and the UI will automatically:
+- Discover your extractor
+- Generate configuration UI from your Pydantic model
+- Handle profile save/load
+- Support task queueing
 
-**Note on environment-only configuration**: For values that should not be editable in the UI (like API keys or S3 paths), exclude them from the field groupings and use `default_factory` to read from environment variables (see TextractConfig.s3_upload_path as example).
+**No changes needed to app.py, UI code, or any other files!**
+
+### Nested Configurations (Optional)
+
+For complex nested configs (like Docling's OCR engines), add to `__init__.py`:
+
+```python
+NESTED_CONFIGS = {
+    "parent_field": {  # e.g., "ocr_engine"
+        "option1": {
+            "config_class": Option1Config,
+            "config_field": "option1_config",
+            "basic_fields": ["field1", "field2"],
+            "advanced_fields": ["field3"],
+            "display_name": "Option 1 Settings"
+        },
+        # More options...
+    }
+}
+```
+
+The UI will automatically generate nested sections that show/hide based on the parent field value.
 
 ## Data Organization
 

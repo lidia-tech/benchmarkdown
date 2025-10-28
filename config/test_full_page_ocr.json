@@ -8,8 +8,8 @@
     "table_structure_mode": "accurate",
     "num_threads": 16,
     "easyocr_config": {
-      "lang": "en",
-      "use_gpu": false,
+      "lang": "it, en",
+      "use_gpu": true,
       "force_full_page_ocr": true,
       "confidence_threshold": 0.5,
       "bitmap_area_threshold": 0.05,
