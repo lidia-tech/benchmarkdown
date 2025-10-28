@@ -107,6 +107,8 @@ class LlamaParseExtractor:
             }
 
             # Add optional fields if set
+            if config.parse_mode:
+                parser_kwargs["parse_mode"] = config.parse_mode.value if hasattr(config.parse_mode, 'value') else config.parse_mode
             if config.parsing_instruction:
                 parser_kwargs["parsing_instruction"] = config.parsing_instruction
             if config.target_pages:

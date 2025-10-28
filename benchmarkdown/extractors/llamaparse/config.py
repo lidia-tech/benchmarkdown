@@ -15,6 +15,18 @@ class ResultTypeEnum(str, Enum):
     """Output format type."""
     MARKDOWN = "markdown"
     TEXT = "text"
+    JSON = "json"
+    STRUCTURED = "structured"
+
+
+class ParsingModeEnum(str, Enum):
+    """Parsing mode for the parser."""
+    PARSE_PAGE_WITHOUT_LLM = "parse_page_without_llm"
+    PARSE_PAGE_WITH_LLM = "parse_page_with_llm"
+    PARSE_PAGE_WITH_LVM = "parse_page_with_lvm"
+    PARSE_PAGE_WITH_AGENT = "parse_page_with_agent"
+    PARSE_DOCUMENT_WITH_LLM = "parse_document_with_llm"
+    PARSE_DOCUMENT_WITH_AGENT = "parse_document_with_agent"
 
 
 class LlamaParseConfig(BaseModel):
@@ -57,6 +69,11 @@ class LlamaParseConfig(BaseModel):
     premium_mode: bool = Field(
         default=False,
         description="Use the best parser mode (higher accuracy, higher cost)"
+    )
+
+    parse_mode: Optional[ParsingModeEnum] = Field(
+        default=None,
+        description="Parsing mode to use (controls how pages/documents are parsed with LLMs/agents)"
     )
 
     # ========== ADVANCED OPTIONS ==========
@@ -292,6 +309,7 @@ LLAMAPARSE_BASIC_FIELDS = [
     "parsing_instruction",
     "target_pages",
     "premium_mode",
+    "parse_mode",
 ]
 
 LLAMAPARSE_ADVANCED_FIELDS = [

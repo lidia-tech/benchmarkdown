@@ -13,6 +13,8 @@ from .config import (
     LlamaParseConfig,
     LLAMAPARSE_BASIC_FIELDS,
     LLAMAPARSE_ADVANCED_FIELDS,
+    ResultTypeEnum,
+    ParsingModeEnum,
 )
 
 # Plugin metadata
@@ -79,4 +81,6 @@ __all__ = [
     # Also export the actual classes for direct imports
     'LlamaParseExtractor',
     'LlamaParseConfig',
+    'ResultTypeEnum',
+    'ParsingModeEnum',
 ]
