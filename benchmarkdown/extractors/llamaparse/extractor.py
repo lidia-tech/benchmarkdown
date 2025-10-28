@@ -63,7 +63,7 @@ class LlamaParseExtractor:
             parser_kwargs = {
                 "api_key": config.api_key,
                 "result_type": config.result_type.value if hasattr(config.result_type, 'value') else config.result_type,
-                "language": config.language,
+                "language": config.language.value if hasattr(config.language, 'value') else config.language,
                 "num_workers": config.num_workers,
                 "verbose": config.verbose,
                 "show_progress": config.show_progress,
@@ -157,14 +157,36 @@ class LlamaParseExtractor:
             Exception: If extraction fails
         """
         def blocking_extract_markdown(filename: os.PathLike) -> str:
-            # LlamaParse returns a list of Documents
-            documents = self.parser.load_data(str(filename))
+            try:
+                # LlamaParse returns a list of Documents
+                documents = self.parser.load_data(str(filename))
 
-            # Combine all document text
-            # Each document represents a page or chunk
-            if documents:
-                return "\n\n".join(doc.text for doc in documents)
-            return ""
+                # Combine all document text
+                # Each document represents a page or chunk
+                if documents:
+                    return "\n\n".join(doc.text for doc in documents)
+                return ""
+            except Exception as e:
+                # Make error messages more user-friendly
+                error_msg = str(e)
+
+                # Check for common API errors
+                if "language" in error_msg.lower() and "input should be" in error_msg.lower():
+                    raise ValueError(
+                        "Invalid language code. Please select a valid language from the dropdown menu. "
+                        "The language field only accepts single language codes (e.g., 'en', 'es', 'fr')."
+                    ) from e
+                elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+                    raise ValueError(
+                        "Authentication failed. Please check your LLAMA_CLOUD_API_KEY environment variable."
+                    ) from e
+                elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
+                    raise ValueError(
+                        "API quota exceeded or rate limit reached. Please check your LlamaParse account."
+                    ) from e
+                else:
+                    # Re-raise with original error
+                    raise
 
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, blocking_extract_markdown, filename)

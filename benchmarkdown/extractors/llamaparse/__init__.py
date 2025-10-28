@@ -15,6 +15,7 @@ from .config import (
     LLAMAPARSE_ADVANCED_FIELDS,
     ResultTypeEnum,
     ParsingModeEnum,
+    LanguageEnum,
 )
 
 # Plugin metadata
@@ -83,4 +84,5 @@ __all__ = [
     'LlamaParseConfig',
     'ResultTypeEnum',
     'ParsingModeEnum',
+    'LanguageEnum',
 ]

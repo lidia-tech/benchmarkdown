@@ -29,6 +29,41 @@ class ParsingModeEnum(str, Enum):
     PARSE_DOCUMENT_WITH_AGENT = "parse_document_with_agent"
 
 
+class LanguageEnum(str, Enum):
+    """Language codes supported by LlamaParse."""
+    # Western European
+    ENGLISH = "en"
+    GERMAN = "de"
+    FRENCH = "fr"
+    SPANISH = "es"
+    ITALIAN = "it"
+    PORTUGUESE = "pt"
+    DUTCH = "nl"
+    SWEDISH = "sv"
+    DANISH = "da"
+    NORWEGIAN = "no"
+    # Eastern European
+    POLISH = "pl"
+    CZECH = "cs"
+    RUSSIAN = "ru"
+    UKRAINIAN = "uk"
+    BULGARIAN = "bg"
+    ROMANIAN = "ro"
+    HUNGARIAN = "hu"
+    # Asian
+    CHINESE_SIMPLIFIED = "ch_sim"
+    CHINESE_TRADITIONAL = "ch_tra"
+    JAPANESE = "ja"
+    KOREAN = "ko"
+    HINDI = "hi"
+    THAI = "th"
+    VIETNAMESE = "vi"
+    # Other
+    ARABIC = "ar"
+    TURKISH = "tr"
+    INDONESIAN = "id"
+
+
 class LlamaParseConfig(BaseModel):
     """
     Configuration for LlamaParse document extractor.
@@ -51,9 +86,9 @@ class LlamaParseConfig(BaseModel):
         description="Output format: markdown or text"
     )
 
-    language: str = Field(
-        default="en",
-        description="Document language for OCR (e.g., 'en', 'es', 'fr', 'de', 'auto')"
+    language: LanguageEnum = Field(
+        default=LanguageEnum.ENGLISH,
+        description="Document language for OCR"
     )
 
     parsing_instruction: Optional[str] = Field(
@@ -273,7 +308,7 @@ class LlamaParseConfig(BaseModel):
     )
 
     ignore_errors: bool = Field(
-        default=True,
+        default=False,
         description="Whether to ignore and skip errors raised during parsing"
     )
 
