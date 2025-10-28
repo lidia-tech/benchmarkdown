@@ -5,7 +5,7 @@ This module provides utilities to generate Gradio UI components from Pydantic
 models, enabling type-safe configuration interfaces.
 """
 
-from typing import Any, Dict, List, Tuple, Type, get_origin, get_args
+from typing import Any, Dict, List, Tuple, Type, Union, get_origin, get_args
 from enum import Enum
 import gradio as gr
 from pydantic import BaseModel
@@ -242,6 +242,8 @@ def build_config_from_ui_values(
     Returns:
         Instance of config_class
     """
+    from pydantic import BaseModel as PydanticBaseModel
+
     # Clean up the values dict - handle None for optional fields
     clean_values = {}
     for field_name, value in values.items():
@@ -283,6 +285,22 @@ def build_config_from_ui_values(
                         clean_values[field_name] = None
                     else:
                         clean_values[field_name] = value
+                else:
+                    clean_values[field_name] = value
+            # Handle nested BaseModel fields (like OCR configs)
+            elif isinstance(value, dict):
+                # Check if this field is a BaseModel type
+                args = get_args(field_type) if origin else []
+                nested_type = None
+                if origin is Union:
+                    # For Optional[SomeModel], get the non-None type
+                    nested_type = next((arg for arg in args if arg is not type(None) and isinstance(arg, type) and issubclass(arg, PydanticBaseModel)), None)
+                elif isinstance(field_type, type) and issubclass(field_type, PydanticBaseModel):
+                    nested_type = field_type
+
+                if nested_type:
+                    # Convert dict to the proper BaseModel instance
+                    clean_values[field_name] = nested_type(**value)
                 else:
                     clean_values[field_name] = value
             else:
