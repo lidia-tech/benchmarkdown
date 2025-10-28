@@ -19,7 +19,7 @@ class LlamaParseExtractor:
     markdown content using the LlamaParse cloud service.
 
     LlamaParse provides cloud-based document processing with advanced OCR,
-    layout understanding, and optional GPT-4o integration for complex documents.
+    layout understanding, and optional multimodal model integration.
 
     Configuration:
         You can create multiple instances with different configurations:
@@ -27,10 +27,10 @@ class LlamaParseExtractor:
         from benchmarkdown.extractors.llamaparse import Extractor, Config
 
         config = Config(
-            api_key="your-api-key",
             result_type="markdown",
             language="en",
-            gpt4o_mode=True
+            premium_mode=True,
+            aggressive_table_extraction=True
         )
         extractor = Extractor(config=config)
 
@@ -42,7 +42,8 @@ class LlamaParseExtractor:
         config = LlamaParseConfig(
             language="es",
             parsing_instruction="Extract tables and preserve formatting",
-            gpt4o_mode=True
+            premium_mode=True,
+            merge_tables_across_pages_in_markdown=True
         )
         extractor = LlamaParseExtractor(config=config)
     """
@@ -58,28 +59,80 @@ class LlamaParseExtractor:
                      Used only if config is None.
         """
         if config is not None:
-            # Build kwargs from config
+            # Build kwargs from config - include all configured parameters
             parser_kwargs = {
                 "api_key": config.api_key,
                 "result_type": config.result_type.value if hasattr(config.result_type, 'value') else config.result_type,
                 "language": config.language,
-                "skip_diagonal_text": config.skip_diagonal_text,
-                "invalidate_cache": config.invalidate_cache,
-                "do_not_cache": config.do_not_cache,
-                "page_separator": config.page_separator,
                 "num_workers": config.num_workers,
                 "verbose": config.verbose,
+                "show_progress": config.show_progress,
+                "ignore_errors": config.ignore_errors,
+                "max_timeout": config.max_timeout,
+                "split_by_page": config.split_by_page,
+
+                # Mode & Performance
+                "premium_mode": config.premium_mode,
+                "fast_mode": config.fast_mode,
+                "continuous_mode": config.continuous_mode,
+
+                # Table Extraction
+                "aggressive_table_extraction": config.aggressive_table_extraction,
+                "adaptive_long_table": config.adaptive_long_table,
+                "merge_tables_across_pages_in_markdown": config.merge_tables_across_pages_in_markdown,
+                "outlined_table_extraction": config.outlined_table_extraction,
+                "output_tables_as_HTML": config.output_tables_as_HTML,
+                "compact_markdown_table": config.compact_markdown_table,
+
+                # OCR & Text
+                "disable_ocr": config.disable_ocr,
+                "high_res_ocr": config.high_res_ocr,
+                "skip_diagonal_text": config.skip_diagonal_text,
+                "preserve_very_small_text": config.preserve_very_small_text,
+                "do_not_unroll_columns": config.do_not_unroll_columns,
+
+                # Layout & Structure
+                "extract_layout": config.extract_layout,
+                "extract_charts": config.extract_charts,
+                "annotate_links": config.annotate_links,
+                "preserve_layout_alignment_across_pages": config.preserve_layout_alignment_across_pages,
+                "disable_image_extraction": config.disable_image_extraction,
+
+                # Cache
+                "invalidate_cache": config.invalidate_cache,
+                "do_not_cache": config.do_not_cache,
+
+                # Vendor Models
+                "use_vendor_multimodal_model": config.use_vendor_multimodal_model,
             }
 
             # Add optional fields if set
             if config.parsing_instruction:
                 parser_kwargs["parsing_instruction"] = config.parsing_instruction
-            if config.page_range:
-                parser_kwargs["page_range"] = config.page_range
-            if config.gpt4o_mode:
-                parser_kwargs["gpt4o_mode"] = True
-                if config.gpt4o_api_key:
-                    parser_kwargs["gpt4o_api_key"] = config.gpt4o_api_key
+            if config.target_pages:
+                parser_kwargs["target_pages"] = config.target_pages
+            if config.page_separator:
+                parser_kwargs["page_separator"] = config.page_separator
+            if config.page_prefix:
+                parser_kwargs["page_prefix"] = config.page_prefix
+            if config.page_suffix:
+                parser_kwargs["page_suffix"] = config.page_suffix
+            if config.max_pages is not None:
+                parser_kwargs["max_pages"] = config.max_pages
+            if config.vendor_multimodal_model_name:
+                parser_kwargs["vendor_multimodal_model_name"] = config.vendor_multimodal_model_name
+            if config.vendor_multimodal_api_key:
+                parser_kwargs["vendor_multimodal_api_key"] = config.vendor_multimodal_api_key
+
+            # Bounding box parameters
+            if config.bbox_top is not None:
+                parser_kwargs["bbox_top"] = config.bbox_top
+            if config.bbox_bottom is not None:
+                parser_kwargs["bbox_bottom"] = config.bbox_bottom
+            if config.bbox_left is not None:
+                parser_kwargs["bbox_left"] = config.bbox_left
+            if config.bbox_right is not None:
+                parser_kwargs["bbox_right"] = config.bbox_right
 
             self.parser = LlamaParse(**parser_kwargs)
             self.config = config
