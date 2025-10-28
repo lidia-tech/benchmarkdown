@@ -46,9 +46,17 @@ def is_available() -> Tuple[bool, str]:
 
     Returns:
         Tuple of (is_available, message)
-        - is_available: True if llama_parse is installed
+        - is_available: True if llama_parse is installed and API key is configured
         - message: Empty string if available, error message otherwise
     """
+    import os
+
+    # Check if API key is configured
+    api_key = os.environ.get("LLAMA_CLOUD_API_KEY")
+    if not api_key:
+        return False, "LLAMA_CLOUD_API_KEY environment variable not set"
+
+    # Check if library is installed
     if not _extractor_available:
         return False, f"LlamaParse not installed: {_import_error}"
 

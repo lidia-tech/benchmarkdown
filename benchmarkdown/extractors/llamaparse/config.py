@@ -99,15 +99,6 @@ class LlamaParseConfig(BaseModel):
     class Config:
         use_enum_values = True
 
-    @field_validator("api_key")
-    def validate_api_key(cls, v):
-        if not v:
-            raise ValueError(
-                "LlamaCloud API key is required. "
-                "Set LLAMA_CLOUD_API_KEY environment variable or provide it in configuration."
-            )
-        return v
-
     @field_validator("gpt4o_api_key")
     def validate_gpt4o_key(cls, v, values):
         # Only validate if gpt4o_mode is enabled
@@ -120,8 +111,8 @@ class LlamaParseConfig(BaseModel):
 
 
 # Field groupings for UI generation
+# Note: api_key is intentionally excluded - it's loaded from environment variables only
 LLAMAPARSE_BASIC_FIELDS = [
-    "api_key",
     "result_type",
     "language",
     "parsing_instruction",
@@ -129,7 +120,7 @@ LLAMAPARSE_BASIC_FIELDS = [
 
 LLAMAPARSE_ADVANCED_FIELDS = [
     "gpt4o_mode",
-    "gpt4o_api_key",
+    # gpt4o_api_key intentionally excluded - loaded from OPENAI_API_KEY environment variable
     "skip_diagonal_text",
     "invalidate_cache",
     "do_not_cache",
