@@ -5,9 +5,6 @@ Layout:
 - Left column (35%): Task List - always visible, primary focus
 - Right column (65%): Task Editor - appears on Add/Edit
 - Results view: Full-width, replaces both columns
-
-This module now uses DYNAMIC UI GENERATION from the plugin registry.
-No hardcoded extractor-specific code!
 """
 
 import asyncio
@@ -15,28 +12,55 @@ import gradio as gr
 from benchmarkdown.ui.core import BenchmarkUI
 from benchmarkdown.ui.queue import load_queue_from_disk, save_queue_to_disk, generate_task_list_html
 from benchmarkdown.ui.results import generate_comparison_view_tabbed, generate_comparison_view_sidebyside
-from benchmarkdown.ui.dynamic_config import DynamicConfigUI
-from benchmarkdown.config_ui import build_config_from_ui_values
+from benchmarkdown.docling import DoclingExtractor
+from benchmarkdown.config import (
+    DoclingConfig,
+    TextractConfig,
+    EasyOcrConfig,
+    TesseractOcrConfig,
+    TesseractCliOcrConfig,
+    OcrMacConfig,
+    RapidOcrConfig
+)
+from benchmarkdown.config_ui import (
+    create_gradio_component_from_field,
+    build_config_from_ui_values,
+    DOCLING_BASIC_FIELDS,
+    DOCLING_ADVANCED_FIELDS,
+    TEXTRACT_BASIC_FIELDS,
+    TEXTRACT_ADVANCED_FIELDS,
+    EASYOCR_BASIC_FIELDS,
+    EASYOCR_ADVANCED_FIELDS,
+    TESSERACT_BASIC_FIELDS,
+    TESSERACT_ADVANCED_FIELDS,
+    TESSERACT_CLI_BASIC_FIELDS,
+    TESSERACT_CLI_ADVANCED_FIELDS,
+    OCR_MAC_BASIC_FIELDS,
+    OCR_MAC_ADVANCED_FIELDS,
+    RAPIDOCR_BASIC_FIELDS,
+    RAPIDOCR_ADVANCED_FIELDS
+)
 from benchmarkdown.profile_manager import ProfileManager
 
 
-def create_app(registry):
+def create_app(registry=None, has_docling=False, has_textract=False):
     """
-    Create the redesigned Gradio interface with full dynamic plugin support.
+    Create the redesigned Gradio interface.
 
     Args:
-        registry: ExtractorRegistry instance containing discovered plugins
-
-    Returns:
-        Gradio Blocks app instance
+        registry: ExtractorRegistry instance (new plugin-based approach)
+        has_docling: Legacy boolean flag (deprecated, kept for backward compatibility)
+        has_textract: Legacy boolean flag (deprecated, kept for backward compatibility)
     """
-    if registry is None:
-        raise ValueError("Registry parameter is required for dynamic UI generation")
+    # Support both new registry-based and old boolean-based approaches
+    if registry is not None:
+        # New plugin-based approach: check which extractors are available
+        available = registry.get_available_extractors()
+        has_docling = 'docling' in available
+        has_textract = 'textract' in available
 
-    # Initialize components
     ui = BenchmarkUI()
     profile_manager = ProfileManager()
-    dynamic_config = DynamicConfigUI(registry)
 
     # State for extractor queue - list of dicts with keys: engine, config_name, extractor, cost
     extractor_queue = []
@@ -130,16 +154,21 @@ def create_app(registry):
 
                 editor_status = gr.Markdown("*Select an extractor engine and profile*")
 
-                # Step 1: Select Engine (Dynamically generated from registry!)
+                # Step 1: Select Engine
                 with gr.Group():
                     gr.Markdown("### 1. Select Extractor Engine")
 
+                    extractor_engines = []
+                    if has_docling:
+                        extractor_engines.append("Docling")
+                    if has_textract:
+                        extractor_engines.append("AWS Textract")
+
                     engine_selector = gr.Dropdown(
-                        choices=dynamic_config.generate_engine_choices(),
+                        choices=extractor_engines,
                         label="Extractor Engine",
                         value=None,
-                        interactive=True,
-                        info="Engines discovered dynamically from plugins"
+                        interactive=True
                     )
 
                 # Step 2: Select Profile (hidden until engine selected)
@@ -175,19 +204,202 @@ def create_app(registry):
                         interactive=True
                     )
 
-                    # ========== DYNAMIC CONFIG UI GENERATION ==========
-                    # All config UIs generated dynamically from plugin registry!
-                    # This replaces 197 lines of hardcoded Docling/Textract UI
-                    
-                    config_ui_data = dynamic_config.generate_all_config_uis()
-                    
-                    # Store references for event handlers
-                    config_areas = config_ui_data['config_areas']
-                    component_lists = config_ui_data['component_lists']
-                    field_maps = config_ui_data['field_maps']
-                    
-                    # All config areas are now generated and ready!
-                    # No hardcoded engine-specific code needed.
+                    # Docling configuration options
+                    with gr.Column(visible=False) as docling_config_area:
+                        docling_components = []
+                        ocr_engine_dropdown = None
+
+                        with gr.Group():
+                            gr.Markdown("#### Basic Options")
+                            for field_name in DOCLING_BASIC_FIELDS:
+                                if field_name not in DoclingConfig.model_fields:
+                                    continue
+                                field_info = DoclingConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                docling_components.append(component)
+                                # Keep reference to OCR engine dropdown
+                                if field_name == "ocr_engine":
+                                    ocr_engine_dropdown = component
+
+                        # OCR Engine Configuration (conditionally visible)
+                        with gr.Group() as ocr_config_section:
+                            gr.Markdown("#### OCR Engine Configuration")
+
+                            # EasyOCR Configuration
+                            with gr.Group(visible=True) as easyocr_group:
+                                gr.Markdown("**EasyOCR Settings**")
+                                easyocr_components = []
+                                for field_name in EASYOCR_BASIC_FIELDS:
+                                    if field_name not in EasyOcrConfig.model_fields:
+                                        continue
+                                    field_info = EasyOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    easyocr_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in EASYOCR_ADVANCED_FIELDS:
+                                        if field_name not in EasyOcrConfig.model_fields:
+                                            continue
+                                        field_info = EasyOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        easyocr_components.append(component)
+                                        docling_components.append(component)
+
+                            # Tesseract Configuration
+                            with gr.Group(visible=False) as tesseract_group:
+                                gr.Markdown("**Tesseract Settings**")
+                                tesseract_components = []
+                                for field_name in TESSERACT_BASIC_FIELDS:
+                                    if field_name not in TesseractOcrConfig.model_fields:
+                                        continue
+                                    field_info = TesseractOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    tesseract_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in TESSERACT_ADVANCED_FIELDS:
+                                        if field_name not in TesseractOcrConfig.model_fields:
+                                            continue
+                                        field_info = TesseractOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        tesseract_components.append(component)
+                                        docling_components.append(component)
+
+                            # Tesseract CLI Configuration
+                            with gr.Group(visible=False) as tesseract_cli_group:
+                                gr.Markdown("**Tesseract CLI Settings**")
+                                tesseract_cli_components = []
+                                for field_name in TESSERACT_CLI_BASIC_FIELDS:
+                                    if field_name not in TesseractCliOcrConfig.model_fields:
+                                        continue
+                                    field_info = TesseractCliOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    tesseract_cli_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in TESSERACT_CLI_ADVANCED_FIELDS:
+                                        if field_name not in TesseractCliOcrConfig.model_fields:
+                                            continue
+                                        field_info = TesseractCliOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        tesseract_cli_components.append(component)
+                                        docling_components.append(component)
+
+                            # OcrMac Configuration
+                            with gr.Group(visible=False) as ocr_mac_group:
+                                gr.Markdown("**macOS OCR Settings**")
+                                ocr_mac_components = []
+                                for field_name in OCR_MAC_BASIC_FIELDS:
+                                    if field_name not in OcrMacConfig.model_fields:
+                                        continue
+                                    field_info = OcrMacConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    ocr_mac_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in OCR_MAC_ADVANCED_FIELDS:
+                                        if field_name not in OcrMacConfig.model_fields:
+                                            continue
+                                        field_info = OcrMacConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        ocr_mac_components.append(component)
+                                        docling_components.append(component)
+
+                            # RapidOCR Configuration
+                            with gr.Group(visible=False) as rapidocr_group:
+                                gr.Markdown("**RapidOCR Settings**")
+                                rapidocr_components = []
+                                for field_name in RAPIDOCR_BASIC_FIELDS:
+                                    if field_name not in RapidOcrConfig.model_fields:
+                                        continue
+                                    field_info = RapidOcrConfig.model_fields[field_name]
+                                    field_type = field_info.annotation
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    rapidocr_components.append(component)
+                                    docling_components.append(component)
+
+                                with gr.Accordion("Advanced OCR Options", open=False):
+                                    for field_name in RAPIDOCR_ADVANCED_FIELDS:
+                                        if field_name not in RapidOcrConfig.model_fields:
+                                            continue
+                                        field_info = RapidOcrConfig.model_fields[field_name]
+                                        field_type = field_info.annotation
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        rapidocr_components.append(component)
+                                        docling_components.append(component)
+
+                        with gr.Accordion("Advanced Options", open=False):
+                            for field_name in DOCLING_ADVANCED_FIELDS:
+                                if field_name not in DoclingConfig.model_fields:
+                                    continue
+                                field_info = DoclingConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                docling_components.append(component)
+
+                    # Textract configuration options
+                    with gr.Column(visible=False) as textract_config_area:
+                        textract_components = []
+
+                        with gr.Group():
+                            gr.Markdown("#### Basic Options")
+                            for field_name in TEXTRACT_BASIC_FIELDS:
+                                if field_name not in TextractConfig.model_fields:
+                                    continue
+                                field_info = TextractConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                textract_components.append(component)
+
+                        with gr.Accordion("Advanced Options", open=False):
+                            for field_name in TEXTRACT_ADVANCED_FIELDS:
+                                if field_name not in TextractConfig.model_fields:
+                                    continue
+                                field_info = TextractConfig.model_fields[field_name]
+                                field_type = field_info.annotation
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                textract_components.append(component)
 
                     # Configuration editor action buttons
                     with gr.Row():
@@ -315,7 +527,7 @@ def create_app(registry):
                         gr.update(visible=True),  # textract_config_area
                     ])
                     # Add empty updates for docling components
-                    updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
+                    updates.extend([gr.update()] * len(docling_components))
 
                 return tuple(updates)
 
@@ -373,7 +585,7 @@ def create_app(registry):
 
         def edit_profile_handler(engine, selected_profile):
             """Open config editor to edit the selected profile."""
-            max_components = max(max(len(comps) for comps in component_lists.values()), max(len(comps) for comps in component_lists.values()))
+            max_components = max(len(docling_components), len(textract_components))
             if not selected_profile:
                 return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
 
@@ -460,7 +672,7 @@ def create_app(registry):
                             updates.append(gr.update())
 
                     # Pad with empty updates for textract components
-                    updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
+                    updates.extend([gr.update()] * len(textract_components))
 
                 elif engine == "AWS Textract":
                     updates.extend([
@@ -468,7 +680,7 @@ def create_app(registry):
                         gr.update(visible=True),  # textract_config_area
                     ])
                     # Pad with empty updates for docling components
-                    updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
+                    updates.extend([gr.update()] * len(docling_components))
 
                     all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
                     for field_name in all_fields:
@@ -484,7 +696,7 @@ def create_app(registry):
 
         def new_profile_handler(engine):
             """Open config editor for creating a new profile."""
-            max_components = max(max(len(comps) for comps in component_lists.values()), max(len(comps) for comps in component_lists.values()))
+            max_components = max(len(docling_components), len(textract_components))
             if not engine:
                 return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
 
@@ -566,7 +778,7 @@ def create_app(registry):
                         updates.append(gr.update())
 
                 # Pad with empty updates for textract components
-                updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
+                updates.extend([gr.update()] * len(textract_components))
 
             elif engine == "AWS Textract":
                 updates.extend([
@@ -574,7 +786,7 @@ def create_app(registry):
                     gr.update(visible=True),  # textract_config_area
                 ])
                 # Pad with empty updates for docling components
-                updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
+                updates.extend([gr.update()] * len(docling_components))
 
                 # Load default values for all Textract fields
                 all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
@@ -772,7 +984,7 @@ def create_app(registry):
             """Open editor to edit an existing task based on dropdown selection."""
             if not selected_task or not extractor_queue:
                 # Return defaults if error
-                return tuple([gr.update()] * (7 + max(len(comps) for comps in component_lists.values())))
+                return tuple([gr.update()] * (7 + len(docling_components)))
 
             try:
                 # Extract index from dropdown value like "1. Docling - Fast Mode"
@@ -784,7 +996,7 @@ def create_app(registry):
                 pass
 
             # Return defaults if error
-            return tuple([gr.update()] * (7 + max(len(comps) for comps in component_lists.values())))
+            return tuple([gr.update()] * (7 + len(docling_components)))
 
         def toggle_profile_group(engine):
             """Show profile group when engine is selected."""
@@ -795,18 +1007,13 @@ def create_app(registry):
                 return gr.update(visible=True), gr.update(choices=profile_names, value=None)
             return gr.update(visible=False), gr.update(choices=[], value=None)
 
-        def show_config_area(engine_display):
-            """Show appropriate config area dynamically (works for ANY engine!)."""
-            if not engine_display:
-                # Hide all config areas
-                updates = [gr.update(visible=False) for _ in config_areas]
-                updates.append(gr.update(visible=False))  # profile_status
-                return updates
-
-            # Get updates for all config areas
-            updates = dynamic_config.get_config_area_updates(engine_display)
-            updates.append(gr.update(visible=False))  # profile_status
-            return updates
+        def show_config_area(engine):
+            """Show appropriate config area and hide profile status."""
+            if engine == "Docling":
+                return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+            elif engine == "AWS Textract":
+                return gr.update(visible=False), gr.update(visible=True), gr.update(visible=False)
+            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
 
         def refresh_profile_list(engine):
             """Refresh the list of available profiles for the selected engine."""
@@ -820,14 +1027,14 @@ def create_app(registry):
         def load_profile_handler(engine, selected_profile):
             """Load a profile and populate configuration UI."""
             if not selected_profile:
-                return [gr.update(visible=True, value="❌ Please select a profile to load")] + [gr.update()] * max(len(comps) for comps in component_lists.values()) + [gr.update()]
+                return [gr.update(visible=True, value="❌ Please select a profile to load")] + [gr.update()] * len(docling_components) + [gr.update()]
 
             try:
                 profile = profile_manager.load_profile(selected_profile)
 
                 # Verify engine matches
                 if profile["engine"] != engine:
-                    return [gr.update(visible=True, value=f"❌ Profile is for {profile['engine']}, but {engine} is selected")] + [gr.update()] * max(len(comps) for comps in component_lists.values()) + [gr.update()]
+                    return [gr.update(visible=True, value=f"❌ Profile is for {profile['engine']}, but {engine} is selected")] + [gr.update()] * len(docling_components) + [gr.update()]
 
                 # Update config name
                 config_name = profile["profile_name"]
@@ -903,7 +1110,7 @@ def create_app(registry):
                         else:
                             updates.append(gr.update())
                 else:
-                    updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
+                    updates.extend([gr.update()] * len(docling_components))
 
                 # Update config name field
                 updates.append(gr.update(value=config_name))
@@ -911,9 +1118,9 @@ def create_app(registry):
                 return updates
 
             except FileNotFoundError:
-                return [gr.update(visible=True, value=f"❌ Profile '{selected_profile}' not found")] + [gr.update()] * max(len(comps) for comps in component_lists.values()) + [gr.update()]
+                return [gr.update(visible=True, value=f"❌ Profile '{selected_profile}' not found")] + [gr.update()] * len(docling_components) + [gr.update()]
             except Exception as e:
-                return [gr.update(visible=True, value=f"❌ Error loading profile: {e}")] + [gr.update()] * max(len(comps) for comps in component_lists.values()) + [gr.update()]
+                return [gr.update(visible=True, value=f"❌ Error loading profile: {e}")] + [gr.update()] * len(docling_components) + [gr.update()]
 
         def save_profile_handler(engine, config_name, *config_values):
             """Save current configuration as a profile and close config editor."""
@@ -1016,7 +1223,7 @@ def create_app(registry):
                 elif engine == "AWS Textract":
                     all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
                     # Skip docling components, take textract values
-                    textract_values = config_values[max(len(comps) for comps in component_lists.values()):]
+                    textract_values = config_values[len(docling_components):]
                     config_data = {field: value for field, value in zip(all_fields, textract_values[:len(all_fields)])}
 
                     # Save profile
@@ -1214,25 +1421,13 @@ def create_app(registry):
             outputs=[profile_status]
         )
 
-        # TODO: Wire up OCR engine dropdown for Docling config
-        # This needs to be reimplemented with dynamic config system
-        # if ocr_engine_dropdown is not None:
-        #     ocr_engine_dropdown.change(
-        #         fn=ocr_engine_change_handler,
-        #         inputs=[ocr_engine_dropdown],
-        #         outputs=[easyocr_group, tesseract_group, tesseract_cli_group, ocr_mac_group, rapidocr_group]
-        #     )
-
-
-# Helper to get all config components in order
-        def get_all_config_components_flat():
-            all_comps = []
-            for eng in sorted(config_areas.keys()):
-                all_comps.extend(component_lists[eng])
-            return all_comps
-        
-        all_config_components = get_all_config_components_flat()
-        all_config_areas_list = [config_areas[eng] for eng in sorted(config_areas.keys())]
+        # Wire up OCR engine dropdown to control visibility
+        if ocr_engine_dropdown is not None:
+            ocr_engine_dropdown.change(
+                fn=ocr_engine_change_handler,
+                inputs=[ocr_engine_dropdown],
+                outputs=[easyocr_group, tesseract_group, tesseract_cli_group, ocr_mac_group, rapidocr_group]
+            )
 
         refresh_profiles_btn.click(
             fn=refresh_profile_list,
@@ -1243,18 +1438,18 @@ def create_app(registry):
         edit_profile_btn.click(
             fn=edit_profile_handler,
             inputs=[engine_selector, profile_selector],
-            outputs=[config_editor, config_name_input] + all_config_areas_list + all_config_components
+            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components + textract_components
         )
 
         new_profile_btn.click(
             fn=new_profile_handler,
             inputs=[engine_selector],
-            outputs=[config_editor, config_name_input] + all_config_areas_list + all_config_components
+            outputs=[config_editor, config_name_input, docling_config_area, textract_config_area] + docling_components + textract_components
         )
 
         save_profile_btn.click(
             fn=save_profile_handler,
-            inputs=[engine_selector, config_name_input] + all_config_components,
+            inputs=[engine_selector, config_name_input] + docling_components + textract_components,
             outputs=[config_editor, profile_status, profile_selector]
         )
 

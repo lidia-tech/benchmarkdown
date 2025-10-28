@@ -8,33 +8,33 @@
     "table_structure_mode": "accurate",
     "num_threads": 16,
     "easyocr_config": {
-      "lang": "['en', 'it']",
-      "use_gpu": false,
+      "lang": "en, it",
+      "use_gpu": true,
       "force_full_page_ocr": true,
       "confidence_threshold": 0.5,
       "bitmap_area_threshold": 0.05,
       "model_storage_directory": ""
     },
     "tesseract_config": {
-      "lang": "['eng']",
+      "lang": "eng",
       "force_full_page_ocr": false,
       "bitmap_area_threshold": 0.05,
       "path": null
     },
     "tesseract_cli_config": {
-      "lang": "['eng']",
+      "lang": "eng",
       "force_full_page_ocr": false,
       "bitmap_area_threshold": 0.05,
       "tesseract_cmd": null,
       "path": null
     },
     "ocr_mac_config": {
-      "lang": "['en-US']",
+      "lang": "en-US",
       "force_full_page_ocr": false,
       "bitmap_area_threshold": 0.05
     },
     "rapidocr_config": {
-      "lang": "['en']",
+      "lang": "en",
       "force_full_page_ocr": false,
       "use_det": true,
       "use_rec": true,
