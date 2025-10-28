@@ -8,7 +8,7 @@ and documentation. These models can be used to generate UI components automatica
 import os
 from enum import Enum
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import multiprocessing
 
 
@@ -47,7 +47,7 @@ class EasyOcrConfig(BaseModel):
     """Configuration for EasyOCR engine."""
     lang: list[str] = Field(
         default=["en"],
-        description="Language codes for OCR (e.g., ['en', 'fr', 'de'])"
+        description="Language codes for OCR (e.g.: en, fr, de')"
     )
     use_gpu: bool = Field(
         default=False,
@@ -74,6 +74,13 @@ class EasyOcrConfig(BaseModel):
         description="Custom directory for EasyOCR models"
     )
 
+    @field_validator("lang", mode="before")
+    def split_languages(cls, v):
+        if isinstance(v, str):
+            # Split by comma and strip whitespace
+            return [s.strip() for s in v.split(',')]
+        return v
+
 
 class TesseractOcrConfig(BaseModel):
     """Configuration for Tesseract OCR engine (Python API)."""
@@ -95,6 +102,13 @@ class TesseractOcrConfig(BaseModel):
         default=None,
         description="Path to Tesseract installation directory"
     )
+
+    @field_validator("lang", mode="before")
+    def split_languages(cls, v):
+        if isinstance(v, str):
+            # Split by comma and strip whitespace
+            return [s.strip() for s in v.split(',')]
+        return v
 
 
 class TesseractCliOcrConfig(BaseModel):
@@ -122,6 +136,12 @@ class TesseractCliOcrConfig(BaseModel):
         description="Path to Tesseract data directory"
     )
 
+    @field_validator("lang", mode="before")
+    def split_languages(cls, v):
+        if isinstance(v, str):
+            # Split by comma and strip whitespace
+            return [s.strip() for s in v.split(',')]
+        return v
 
 class OcrMacConfig(BaseModel):
     """Configuration for macOS native OCR engine (macOS only)."""
@@ -140,6 +160,12 @@ class OcrMacConfig(BaseModel):
         description="Force OCR on entire page instead of selective regions"
     )
 
+    @field_validator("lang", mode="before")
+    def split_languages(cls, v):
+        if isinstance(v, str):
+            # Split by comma and strip whitespace
+            return [s.strip() for s in v.split(',')]
+        return v
 
 class RapidOcrConfig(BaseModel):
     """Configuration for RapidOCR engine."""
@@ -179,6 +205,13 @@ class RapidOcrConfig(BaseModel):
         default=False,
         description="Enable verbose debug output"
     )
+
+    @field_validator("lang", mode="before")
+    def split_languages(cls, v):
+        if isinstance(v, str):
+            # Split by comma and strip whitespace
+            return [s.strip() for s in v.split(',')]
+        return v
 
 
 class DoclingConfig(BaseModel):
@@ -344,7 +377,9 @@ class DoclingConfig(BaseModel):
         )
 
         # Create OCR options based on selected engine
-        ocr_options = None
+        # Always provide a default OCR options instance, even if OCR is disabled
+        ocr_options = EasyOcrOptions()  # Default fallback
+
         if self.do_ocr:
             ocr_engine = self.ocr_engine.value if isinstance(self.ocr_engine, OcrEngineEnum) else self.ocr_engine
 
