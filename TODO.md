@@ -96,31 +96,54 @@ benchmarkdown/extractors/
 - Updated `benchmarkdown/config_ui.py` to re-export field groupings from plugins
 - All existing imports continue to work: `from benchmarkdown.config import DoclingConfig`
 
-**Phase 5: Dynamic Discovery in app.py**
+**Phase 5: Dynamic Discovery in app.py** ✅
 - Replaced hardcoded imports with `ExtractorRegistry.discover_extractors()`
 - Dynamic availability checking via plugin `is_available()` method
 - Passes registry to `create_app()` instead of boolean flags
 
-**Phase 6: Testing**
+**Phase 6: Testing** ✅
 - Verified plugin discovery works correctly
 - Verified backward compatibility (old imports still work)
 - Verified extractor instance creation through registry
 - All tests pass without breaking existing functionality
 
-**Key Features:**
+**⚠️ Phase 7: Dynamic UI Generation - NOT COMPLETED**
+
+The UI (app_builder.py) still has ~500 lines of hardcoded extractor-specific code:
+- ❌ Hardcoded imports (28 import statements for Docling/Textract configs)
+- ❌ Hardcoded engine selector (if has_docling / if has_textract)
+- ❌ Hardcoded config UI generation (183 lines for Docling, separate for Textract)
+- ❌ Hardcoded event handlers with engine-specific logic
+
+**This means adding a new extractor still requires modifying app_builder.py!**
+
+See IMPLEMENTATION_GAPS.md for detailed analysis.
+
+**What was achieved:**
+- ✅ Backend plugin infrastructure is excellent
 - ✅ Zero breaking changes - existing code works unchanged
 - ✅ Backward compatible imports maintained
-- ✅ Dynamic plugin discovery - no hardcoded imports needed
-- ✅ Clean plugin interface - easy to add new extractors
+- ✅ Dynamic plugin discovery at app startup
+- ✅ Clean plugin interface for extractor development
 - ✅ Graceful degradation - plugins with missing dependencies are skipped
 
-**How to Add New Extractors:**
-Just create `benchmarkdown/extractors/{name}/` directory with:
-1. `config.py` - Pydantic config model with BASIC_FIELDS and ADVANCED_FIELDS
-2. `extractor.py` - Class implementing MarkdownExtractor protocol
-3. `__init__.py` - Exports: Extractor, Config, fields, ENGINE_NAME, ENGINE_DISPLAY_NAME, is_available()
+**What's missing:**
+- ❌ UI doesn't use registry to generate config forms dynamically
+- ❌ Still need to modify UI code to add new extractors
 
-No changes needed to app.py or UI code!
+**How to Add New Extractors (Current State):**
+1. Create `benchmarkdown/extractors/{name}/` directory with:
+   - `config.py` - Pydantic config model with BASIC_FIELDS and ADVANCED_FIELDS
+   - `extractor.py` - Class implementing MarkdownExtractor protocol
+   - `__init__.py` - Exports: Extractor, Config, fields, ENGINE_NAME, ENGINE_DISPLAY_NAME, is_available()
+
+2. **⚠️ Still required:** Modify `benchmarkdown/ui/app_builder.py`:
+   - Add imports for new config classes
+   - Add field grouping imports
+   - Add hardcoded config UI section (100+ lines)
+   - Add event handler cases for the new engine
+
+**Goal:** Steps should be just #1 above, no UI modifications needed!
 
 ## Implement LlamaParse extractor engine
 
