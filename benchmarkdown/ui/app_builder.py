@@ -43,8 +43,22 @@ from benchmarkdown.config_ui import (
 from benchmarkdown.profile_manager import ProfileManager
 
 
-def create_app(has_docling=False, has_textract=False):
-    """Create the redesigned Gradio interface."""
+def create_app(registry=None, has_docling=False, has_textract=False):
+    """
+    Create the redesigned Gradio interface.
+
+    Args:
+        registry: ExtractorRegistry instance (new plugin-based approach)
+        has_docling: Legacy boolean flag (deprecated, kept for backward compatibility)
+        has_textract: Legacy boolean flag (deprecated, kept for backward compatibility)
+    """
+    # Support both new registry-based and old boolean-based approaches
+    if registry is not None:
+        # New plugin-based approach: check which extractors are available
+        available = registry.get_available_extractors()
+        has_docling = 'docling' in available
+        has_textract = 'textract' in available
+
     ui = BenchmarkUI()
     profile_manager = ProfileManager()
 
