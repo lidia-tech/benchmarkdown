@@ -309,103 +309,28 @@ def build_config_from_ui_values(
     return config_class(**clean_values)
 
 
-# Define field groupings for DoclingConfig
-DOCLING_BASIC_FIELDS = [
-    "do_ocr",
-    "ocr_engine",
-    "do_table_structure",
-    "table_structure_mode",
-    "num_threads",
-]
+# =================================================================
+# Backward compatibility: Re-export field groupings from plugins
+# =================================================================
 
-DOCLING_ADVANCED_FIELDS = [
-    "force_backend_text",
-    "do_cell_matching",
-    "do_code_enrichment",
-    "do_formula_enrichment",
-    "do_picture_classification",
-    "do_picture_description",
-    "generate_page_images",
-    "generate_picture_images",
-    "images_scale",
-    "accelerator_device",
-    "document_timeout",
-]
+# Re-export Docling field groupings
+from benchmarkdown.extractors.docling.config import (
+    DOCLING_BASIC_FIELDS,
+    DOCLING_ADVANCED_FIELDS,
+    EASYOCR_BASIC_FIELDS,
+    EASYOCR_ADVANCED_FIELDS,
+    TESSERACT_BASIC_FIELDS,
+    TESSERACT_ADVANCED_FIELDS,
+    TESSERACT_CLI_BASIC_FIELDS,
+    TESSERACT_CLI_ADVANCED_FIELDS,
+    OCR_MAC_BASIC_FIELDS,
+    OCR_MAC_ADVANCED_FIELDS,
+    RAPIDOCR_BASIC_FIELDS,
+    RAPIDOCR_ADVANCED_FIELDS,
+)
 
-# Define field groupings for each OCR engine configuration
-EASYOCR_BASIC_FIELDS = [
-    "lang",
-    "use_gpu",
-    "force_full_page_ocr",
-]
-
-EASYOCR_ADVANCED_FIELDS = [
-    "confidence_threshold",
-    "bitmap_area_threshold",
-    "model_storage_directory",
-]
-
-TESSERACT_BASIC_FIELDS = [
-    "lang",
-    "force_full_page_ocr",
-]
-
-TESSERACT_ADVANCED_FIELDS = [
-    "bitmap_area_threshold",
-    "path",
-]
-
-TESSERACT_CLI_BASIC_FIELDS = [
-    "lang",
-    "force_full_page_ocr",
-]
-
-TESSERACT_CLI_ADVANCED_FIELDS = [
-    "bitmap_area_threshold",
-    "tesseract_cmd",
-    "path",
-]
-
-OCR_MAC_BASIC_FIELDS = [
-    "lang",
-    "force_full_page_ocr",
-]
-
-OCR_MAC_ADVANCED_FIELDS = [
-    "bitmap_area_threshold",
-]
-
-RAPIDOCR_BASIC_FIELDS = [
-    "lang",
-    "force_full_page_ocr",
-    "use_det",
-    "use_rec",
-]
-
-RAPIDOCR_ADVANCED_FIELDS = [
-    "use_cls",
-    "text_score",
-    "bitmap_area_threshold",
-    "print_verbose",
-]
-
-# Define field groupings for TextractConfig
-TEXTRACT_BASIC_FIELDS = [
-    # Note: s3_upload_path is read from TEXTRACT_S3_WORKSPACE environment variable
-    "features",
-    "hide_header_layout",
-    "hide_footer_layout",
-]
-
-TEXTRACT_ADVANCED_FIELDS = [
-    "hide_figure_layout",
-    "hide_table_layout",
-    "hide_key_value_layout",
-    "hide_page_num_layout",
-    "table_remove_column_headers",
-    "table_add_title_as_caption",
-    "table_add_footer_as_paragraph",
-    "max_number_of_consecutive_new_lines",
-    "title_prefix",
-    "section_header_prefix",
-]
+# Re-export Textract field groupings
+from benchmarkdown.extractors.textract.config import (
+    TEXTRACT_BASIC_FIELDS,
+    TEXTRACT_ADVANCED_FIELDS,
+)
