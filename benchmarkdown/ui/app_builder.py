@@ -371,17 +371,32 @@ def create_app(registry):
                     pass
             return value
 
-        def edit_profile_handler(engine, selected_profile):
-            """Open config editor to edit the selected profile."""
-            max_components = max(max(len(comps) for comps in component_lists.values()), max(len(comps) for comps in component_lists.values()))
+        def edit_profile_handler(engine_display, selected_profile):
+            """Open config editor to edit the selected profile (works for ANY engine!)."""
             if not selected_profile:
-                return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
+                # Return updates to hide editor
+                updates = [
+                    gr.update(visible=False),  # config_editor
+                    gr.update(value=""),  # config_name_input
+                ]
+                # Hide all config areas
+                updates.extend([gr.update(visible=False) for _ in config_areas])
+                # Clear all component values
+                updates.extend([gr.update() for _ in all_config_components])
+                return updates
 
             try:
                 profile = profile_manager.load_profile(selected_profile)
 
-                if profile["engine"] != engine:
-                    return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
+                if profile["engine"] != engine_display:
+                    # Engine mismatch - hide editor
+                    updates = [
+                        gr.update(visible=False),  # config_editor
+                        gr.update(value=""),  # config_name_input
+                    ]
+                    updates.extend([gr.update(visible=False) for _ in config_areas])
+                    updates.extend([gr.update() for _ in all_config_components])
+                    return updates
 
                 config_data = profile["config_data"]
                 current_profile_data[0] = config_data
@@ -392,101 +407,46 @@ def create_app(registry):
                     gr.update(value=selected_profile),  # config_name_input
                 ]
 
-                # Show appropriate config area and load values
-                if engine == "Docling":
-                    updates.extend([
-                        gr.update(visible=True),  # docling_config_area
-                        gr.update(visible=False),  # textract_config_area
-                    ])
+                # Show appropriate config area (hide others)
+                updates.extend(dynamic_config.get_config_area_updates(engine_display))
 
-                    # Load basic fields
-                    for field_name in DOCLING_BASIC_FIELDS:
-                        if field_name in config_data:
-                            updates.append(gr.update(value=config_data[field_name]))
-                        else:
-                            updates.append(gr.update())
+                # Load profile values for the selected engine
+                # For other engines, return empty updates
+                engine_name = dynamic_config.engine_name_from_display(engine_display)
 
-                    # Load OCR configs (nested)
-                    for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
-                        if "easyocr_config" in config_data and field_name in config_data["easyocr_config"]:
-                            value = normalize_list_value(config_data["easyocr_config"][field_name])
-                            updates.append(gr.update(value=value))
-                        else:
-                            default = EasyOcrConfig.model_fields[field_name].default
-                            default = normalize_list_value(default)
-                            updates.append(gr.update(value=default))
-
-                    for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
-                        if "tesseract_config" in config_data and field_name in config_data["tesseract_config"]:
-                            value = normalize_list_value(config_data["tesseract_config"][field_name])
-                            updates.append(gr.update(value=value))
-                        else:
-                            default = TesseractOcrConfig.model_fields[field_name].default
-                            default = normalize_list_value(default)
-                            updates.append(gr.update(value=default))
-
-                    for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
-                        if "tesseract_cli_config" in config_data and field_name in config_data["tesseract_cli_config"]:
-                            value = normalize_list_value(config_data["tesseract_cli_config"][field_name])
-                            updates.append(gr.update(value=value))
-                        else:
-                            default = TesseractCliOcrConfig.model_fields[field_name].default
-                            default = normalize_list_value(default)
-                            updates.append(gr.update(value=default))
-
-                    for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
-                        if "ocr_mac_config" in config_data and field_name in config_data["ocr_mac_config"]:
-                            value = normalize_list_value(config_data["ocr_mac_config"][field_name])
-                            updates.append(gr.update(value=value))
-                        else:
-                            default = OcrMacConfig.model_fields[field_name].default
-                            default = normalize_list_value(default)
-                            updates.append(gr.update(value=default))
-
-                    for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
-                        if "rapidocr_config" in config_data and field_name in config_data["rapidocr_config"]:
-                            value = normalize_list_value(config_data["rapidocr_config"][field_name])
-                            updates.append(gr.update(value=value))
-                        else:
-                            default = RapidOcrConfig.model_fields[field_name].default
-                            default = normalize_list_value(default)
-                            updates.append(gr.update(value=default))
-
-                    # Load advanced fields
-                    for field_name in DOCLING_ADVANCED_FIELDS:
-                        if field_name in config_data:
-                            updates.append(gr.update(value=config_data[field_name]))
-                        else:
-                            updates.append(gr.update())
-
-                    # Pad with empty updates for textract components
-                    updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
-
-                elif engine == "AWS Textract":
-                    updates.extend([
-                        gr.update(visible=False),  # docling_config_area
-                        gr.update(visible=True),  # textract_config_area
-                    ])
-                    # Pad with empty updates for docling components
-                    updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
-
-                    all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
-                    for field_name in all_fields:
-                        if field_name in config_data:
-                            updates.append(gr.update(value=config_data[field_name]))
-                        else:
-                            updates.append(gr.update())
+                for eng_name in sorted(component_lists.keys()):
+                    if eng_name == engine_name:
+                        # Load profile values for this engine
+                        updates.extend(dynamic_config.get_profile_values_for_engine(engine_display, config_data))
+                    else:
+                        # Empty updates for other engines' components
+                        updates.extend([gr.update() for _ in component_lists[eng_name]])
 
                 return updates
 
             except Exception as e:
-                return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
+                # Error loading profile - hide editor
+                updates = [
+                    gr.update(visible=False),  # config_editor
+                    gr.update(value=""),  # config_name_input
+                ]
+                updates.extend([gr.update(visible=False) for _ in config_areas])
+                updates.extend([gr.update() for _ in all_config_components])
+                return updates
 
-        def new_profile_handler(engine):
-            """Open config editor for creating a new profile."""
-            max_components = max(max(len(comps) for comps in component_lists.values()), max(len(comps) for comps in component_lists.values()))
-            if not engine:
-                return [gr.update(visible=False)] + [gr.update()] * (2 + max_components)
+        def new_profile_handler(engine_display):
+            """Open config editor for creating a new profile (works for ANY engine!)."""
+            if not engine_display:
+                # Return updates to hide editor and clear everything
+                updates = [
+                    gr.update(visible=False),  # config_editor
+                    gr.update(value=""),  # config_name_input
+                ]
+                # Hide all config areas
+                updates.extend([gr.update(visible=False) for _ in config_areas])
+                # Clear all component values
+                updates.extend([gr.update() for _ in all_config_components])
+                return updates
 
             current_profile_data[0] = None  # Clear current profile
 
@@ -496,94 +456,20 @@ def create_app(registry):
                 gr.update(value=""),  # config_name_input (empty for new)
             ]
 
-            # Show appropriate config area with defaults
-            if engine == "Docling":
-                updates.extend([
-                    gr.update(visible=True),  # docling_config_area
-                    gr.update(visible=False),  # textract_config_area
-                ])
+            # Show appropriate config area (hide others)
+            updates.extend(dynamic_config.get_config_area_updates(engine_display))
 
-                # Load default values for basic fields
-                for field_name in DOCLING_BASIC_FIELDS:
-                    if field_name in DoclingConfig.model_fields:
-                        default_value = DoclingConfig.model_fields[field_name].default
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
+            # Get default values for the selected engine's components
+            # For other engines, return empty updates
+            engine_name = dynamic_config.engine_name_from_display(engine_display)
 
-                # Load default values for OCR configs
-                for field_name in EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS:
-                    if field_name in EasyOcrConfig.model_fields:
-                        default_value = EasyOcrConfig.model_fields[field_name].default
-                        if isinstance(default_value, list):
-                            default_value = ", ".join(str(v) for v in default_value)
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
-
-                for field_name in TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS:
-                    if field_name in TesseractOcrConfig.model_fields:
-                        default_value = TesseractOcrConfig.model_fields[field_name].default
-                        if isinstance(default_value, list):
-                            default_value = ", ".join(str(v) for v in default_value)
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
-
-                for field_name in TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS:
-                    if field_name in TesseractCliOcrConfig.model_fields:
-                        default_value = TesseractCliOcrConfig.model_fields[field_name].default
-                        if isinstance(default_value, list):
-                            default_value = ", ".join(str(v) for v in default_value)
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
-
-                for field_name in OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS:
-                    if field_name in OcrMacConfig.model_fields:
-                        default_value = OcrMacConfig.model_fields[field_name].default
-                        if isinstance(default_value, list):
-                            default_value = ", ".join(str(v) for v in default_value)
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
-
-                for field_name in RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS:
-                    if field_name in RapidOcrConfig.model_fields:
-                        default_value = RapidOcrConfig.model_fields[field_name].default
-                        if isinstance(default_value, list):
-                            default_value = ", ".join(str(v) for v in default_value)
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
-
-                # Load default values for advanced fields
-                for field_name in DOCLING_ADVANCED_FIELDS:
-                    if field_name in DoclingConfig.model_fields:
-                        default_value = DoclingConfig.model_fields[field_name].default
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
-
-                # Pad with empty updates for textract components
-                updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
-
-            elif engine == "AWS Textract":
-                updates.extend([
-                    gr.update(visible=False),  # docling_config_area
-                    gr.update(visible=True),  # textract_config_area
-                ])
-                # Pad with empty updates for docling components
-                updates.extend([gr.update()] * max(len(comps) for comps in component_lists.values()))
-
-                # Load default values for all Textract fields
-                all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
-                for field_name in all_fields:
-                    if field_name in TextractConfig.model_fields:
-                        default_value = TextractConfig.model_fields[field_name].default
-                        updates.append(gr.update(value=default_value))
-                    else:
-                        updates.append(gr.update())
+            for eng_name in sorted(component_lists.keys()):
+                if eng_name == engine_name:
+                    # Load default values for this engine
+                    updates.extend(dynamic_config.get_default_values_for_engine(engine_display))
+                else:
+                    # Empty updates for other engines' components
+                    updates.extend([gr.update() for _ in component_lists[eng_name]])
 
             return updates
 
@@ -591,9 +477,9 @@ def create_app(registry):
             """Close config editor without saving."""
             return gr.update(visible=False)  # Hide config_editor
 
-        def save_task(engine, selected_profile):
-            """Add current task (from loaded profile) to queue."""
-            if not engine:
+        def save_task(engine_display, selected_profile):
+            """Add current task (from loaded profile) to queue (works for ANY engine!)."""
+            if not engine_display:
                 return (
                     gr.update(value=generate_task_list_html(extractor_queue)),
                     gr.update(visible=False),  # hide editor
@@ -618,16 +504,36 @@ def create_app(registry):
                     gr.update(visible=bool(extractor_queue))
                 )
 
-            if engine == "Docling":
-                # Build config from current profile data
-                config = build_config_from_ui_values(DoclingConfig, current_profile_data[0])
+            try:
+                # Get engine name from display name
+                engine_name = dynamic_config.engine_name_from_display(engine_display)
+                if not engine_name:
+                    return (
+                        gr.update(value=generate_task_list_html(extractor_queue)),
+                        gr.update(visible=True),
+                        f"❌ Unknown engine: {engine_display}",
+                        gr.update(visible=bool(extractor_queue))
+                    )
 
-                # Create extractor
-                extractor = DoclingExtractor(config=config)
-                full_name = f"Docling ({selected_profile})"
+                # Get extractor metadata from registry
+                extractor_meta = registry.get_extractor(engine_name)
+                if not extractor_meta:
+                    return (
+                        gr.update(value=generate_task_list_html(extractor_queue)),
+                        gr.update(visible=True),
+                        f"❌ Extractor not found: {engine_name}",
+                        gr.update(visible=bool(extractor_queue))
+                    )
+
+                # Build config from current profile data
+                config = build_config_from_ui_values(extractor_meta.config_class, current_profile_data[0])
+
+                # Create extractor instance
+                extractor = registry.create_extractor_instance(engine_name, config=config)
+                full_name = f"{engine_display} ({selected_profile})"
 
                 task_data = {
-                    'engine': 'Docling',
+                    'engine': engine_display,
                     'config_name': selected_profile,
                     'extractor': extractor,
                     'cost': None,
@@ -640,7 +546,7 @@ def create_app(registry):
                     old_name = extractor_queue[editing_task_index[0]]['config_name']
                     extractor_queue[editing_task_index[0]] = task_data
                     # Update UI registry
-                    old_full_name = f"Docling ({old_name})"
+                    old_full_name = f"{engine_display} ({old_name})"
                     if old_full_name in ui.extractors:
                         del ui.extractors[old_full_name]
                     ui.register_extractor(full_name, extractor)
@@ -665,58 +571,16 @@ def create_app(registry):
                     gr.update(visible=True)  # show delete_controls
                 )
 
-            elif engine == "AWS Textract":
-                # Build config from current profile data
-                config = build_config_from_ui_values(TextractConfig, current_profile_data[0])
-
-                # Create extractor
-                from benchmarkdown.textract import TextractExtractor
-                extractor = TextractExtractor(config=config)
-                full_name = f"AWS Textract ({selected_profile})"
-
-                task_data = {
-                    'engine': 'AWS Textract',
-                    'config_name': selected_profile,
-                    'extractor': extractor,
-                    'config_dict': current_profile_data[0]
-                }
-
-                # Add or update task
-                if editing_task_index[0] is not None:
-                    # Update existing task
-                    old_name = extractor_queue[editing_task_index[0]]['config_name']
-                    extractor_queue[editing_task_index[0]] = task_data
-                    # Update UI registry
-                    old_full_name = f"AWS Textract ({old_name})"
-                    if old_full_name in ui.extractors:
-                        del ui.extractors[old_full_name]
-                    ui.register_extractor(full_name, extractor)
-                    message = f"✓ Updated task: {selected_profile}"
-                else:
-                    # Add new task
-                    extractor_queue.append(task_data)
-                    ui.register_extractor(full_name, extractor)
-                    message = f"✓ Added task: {selected_profile}"
-
-                # Save queue to disk
-                save_queue_to_disk(extractor_queue)
-
-                editing_task_index[0] = None
-                current_profile_data[0] = None
-
+            except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"Error saving task: {error_details}")
                 return (
                     gr.update(value=generate_task_list_html(extractor_queue)),
-                    gr.update(visible=False),  # hide editor
-                    message,
-                    gr.update(visible=True)  # show delete_controls
+                    gr.update(visible=True),
+                    f"❌ Error: {e}",
+                    gr.update(visible=bool(extractor_queue))
                 )
-
-            return (
-                gr.update(value=generate_task_list_html(extractor_queue)),
-                gr.update(visible=True),
-                "❌ Unknown engine",
-                gr.update(visible=bool(extractor_queue))
-            )
 
         def delete_task_handler(task_number):
             """Delete a task from the queue by its number."""
@@ -915,138 +779,46 @@ def create_app(registry):
             except Exception as e:
                 return [gr.update(visible=True, value=f"❌ Error loading profile: {e}")] + [gr.update()] * max(len(comps) for comps in component_lists.values()) + [gr.update()]
 
-        def save_profile_handler(engine, config_name, *config_values):
-            """Save current configuration as a profile and close config editor."""
+        def save_profile_handler(engine_display, config_name, *config_values):
+            """Save current configuration as a profile (works for ANY engine!)."""
             if not config_name:
                 return (
-                    gr.update(visible=False),  # Don't close editor yet, show error in status
+                    gr.update(visible=True),  # Keep editor open
                     gr.update(value="❌ Please enter a profile name", visible=True),
                     gr.update(),  # profile_selector
                 )
 
             try:
-                if engine == "Docling":
-                    # Calculate indices for each section
-                    basic_len = len(DOCLING_BASIC_FIELDS)
-                    easyocr_len = len(EASYOCR_BASIC_FIELDS) + len(EASYOCR_ADVANCED_FIELDS)
-                    tesseract_len = len(TESSERACT_BASIC_FIELDS) + len(TESSERACT_ADVANCED_FIELDS)
-                    tesseract_cli_len = len(TESSERACT_CLI_BASIC_FIELDS) + len(TESSERACT_CLI_ADVANCED_FIELDS)
-                    ocr_mac_len = len(OCR_MAC_BASIC_FIELDS) + len(OCR_MAC_ADVANCED_FIELDS)
-                    rapidocr_len = len(RAPIDOCR_BASIC_FIELDS) + len(RAPIDOCR_ADVANCED_FIELDS)
+                # Extract values for the selected engine from the flattened list
+                _, config_dict = dynamic_config.extract_engine_values_from_all_values(
+                    engine_display,
+                    list(config_values)
+                )
 
-                    # Extract values for each section
-                    idx = 0
-                    basic_values = config_values[idx:idx+basic_len]
-                    idx += basic_len
-                    easyocr_values = config_values[idx:idx+easyocr_len]
-                    idx += easyocr_len
-                    tesseract_values = config_values[idx:idx+tesseract_len]
-                    idx += tesseract_len
-                    tesseract_cli_values = config_values[idx:idx+tesseract_cli_len]
-                    idx += tesseract_cli_len
-                    ocr_mac_values = config_values[idx:idx+ocr_mac_len]
-                    idx += ocr_mac_len
-                    rapidocr_values = config_values[idx:idx+rapidocr_len]
-                    idx += rapidocr_len
-                    advanced_values = config_values[idx:idx+len(DOCLING_ADVANCED_FIELDS)]
+                # Save profile
+                profile_manager.save_profile(
+                    engine=engine_display,
+                    profile_name=config_name,
+                    config_data=config_dict
+                )
 
-                    # Build config_data with nested OCR configs
-                    config_data = {}
+                # Update current profile data
+                current_profile_data[0] = config_dict
 
-                    # Basic fields
-                    for field, value in zip(DOCLING_BASIC_FIELDS, basic_values):
-                        config_data[field] = value
+                # Refresh profile list
+                profiles = profile_manager.list_profiles(engine=engine_display)
+                profile_names = [p["profile_name"] for p in profiles]
 
-                    # OCR configs (nested)
-                    config_data["easyocr_config"] = {
-                        field: value for field, value in zip(
-                            EASYOCR_BASIC_FIELDS + EASYOCR_ADVANCED_FIELDS,
-                            easyocr_values
-                        )
-                    }
-                    config_data["tesseract_config"] = {
-                        field: value for field, value in zip(
-                            TESSERACT_BASIC_FIELDS + TESSERACT_ADVANCED_FIELDS,
-                            tesseract_values
-                        )
-                    }
-                    config_data["tesseract_cli_config"] = {
-                        field: value for field, value in zip(
-                            TESSERACT_CLI_BASIC_FIELDS + TESSERACT_CLI_ADVANCED_FIELDS,
-                            tesseract_cli_values
-                        )
-                    }
-                    config_data["ocr_mac_config"] = {
-                        field: value for field, value in zip(
-                            OCR_MAC_BASIC_FIELDS + OCR_MAC_ADVANCED_FIELDS,
-                            ocr_mac_values
-                        )
-                    }
-                    config_data["rapidocr_config"] = {
-                        field: value for field, value in zip(
-                            RAPIDOCR_BASIC_FIELDS + RAPIDOCR_ADVANCED_FIELDS,
-                            rapidocr_values
-                        )
-                    }
-
-                    # Advanced fields
-                    for field, value in zip(DOCLING_ADVANCED_FIELDS, advanced_values):
-                        config_data[field] = value
-
-                    # Save profile
-                    filepath = profile_manager.save_profile(
-                        engine=engine,
-                        profile_name=config_name,
-                        config_data=config_data
-                    )
-
-                    # Update current profile data
-                    current_profile_data[0] = config_data
-
-                    # Refresh profile list
-                    profiles = profile_manager.list_profiles(engine=engine)
-                    profile_names = [p["profile_name"] for p in profiles]
-
-                    return (
-                        gr.update(visible=False),  # Close config_editor
-                        gr.update(value=f"✅ Saved profile: **{config_name}** - Ready to add to queue", visible=True),  # profile_status
-                        gr.update(choices=profile_names, value=config_name)  # profile_selector with new profile selected
-                    )
-
-                elif engine == "AWS Textract":
-                    all_fields = TEXTRACT_BASIC_FIELDS + TEXTRACT_ADVANCED_FIELDS
-                    # Skip docling components, take textract values
-                    textract_values = config_values[max(len(comps) for comps in component_lists.values()):]
-                    config_data = {field: value for field, value in zip(all_fields, textract_values[:len(all_fields)])}
-
-                    # Save profile
-                    filepath = profile_manager.save_profile(
-                        engine=engine,
-                        profile_name=config_name,
-                        config_data=config_data
-                    )
-
-                    # Update current profile data
-                    current_profile_data[0] = config_data
-
-                    # Refresh profile list
-                    profiles = profile_manager.list_profiles(engine=engine)
-                    profile_names = [p["profile_name"] for p in profiles]
-
-                    return (
-                        gr.update(visible=False),  # Close config_editor
-                        gr.update(value=f"✅ Saved profile: **{config_name}** - Ready to add to queue", visible=True),  # profile_status
-                        gr.update(choices=profile_names, value=config_name)  # profile_selector with new profile selected
-                    )
-
-                else:
-                    return (
-                        gr.update(visible=True),  # Keep editor open
-                        gr.update(value="⚠️  Profile saving not yet implemented for this engine", visible=True),
-                        gr.update()
-                    )
+                return (
+                    gr.update(visible=False),  # Close config_editor
+                    gr.update(value=f"✅ Saved profile: **{config_name}** - Ready to add to queue", visible=True),  # profile_status
+                    gr.update(choices=profile_names, value=config_name)  # profile_selector with new profile selected
+                )
 
             except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"Error saving profile: {error_details}")
                 return (
                     gr.update(visible=True),  # Keep editor open
                     gr.update(value=f"❌ Error saving profile: {e}", visible=True),

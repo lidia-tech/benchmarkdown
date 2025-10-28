@@ -209,3 +209,137 @@ class DynamicConfigUI:
             List of Gradio components
         """
         return self.component_lists.get(engine_name, [])
+
+    def get_default_values_for_engine(self, engine_display_name: str) -> List[gr.update]:
+        """
+        Get default values for all fields of an engine.
+
+        Args:
+            engine_display_name: Display name of the engine
+
+        Returns:
+            List of gr.update() objects with default values for all components
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name:
+            return []
+
+        field_names = self.component_field_maps.get(engine_name, [])
+        extractor_meta = self.registry.get_extractor(engine_name)
+        if not extractor_meta:
+            return []
+
+        config_class = extractor_meta.config_class
+        updates = []
+
+        for field_name in field_names:
+            if field_name not in config_class.model_fields:
+                updates.append(gr.update())
+                continue
+
+            field_info = config_class.model_fields[field_name]
+            default_value = field_info.default
+
+            # Handle list defaults - convert to comma-separated string for UI
+            if isinstance(default_value, list):
+                default_value = ", ".join(str(v) for v in default_value)
+
+            updates.append(gr.update(value=default_value))
+
+        return updates
+
+    def get_profile_values_for_engine(
+        self,
+        engine_display_name: str,
+        config_data: Dict[str, Any]
+    ) -> List[gr.update]:
+        """
+        Get profile values for all fields of an engine, falling back to defaults.
+
+        Args:
+            engine_display_name: Display name of the engine
+            config_data: Dictionary with saved profile values
+
+        Returns:
+            List of gr.update() objects with profile values for all components
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name:
+            return []
+
+        field_names = self.component_field_maps.get(engine_name, [])
+        extractor_meta = self.registry.get_extractor(engine_name)
+        if not extractor_meta:
+            return []
+
+        config_class = extractor_meta.config_class
+        updates = []
+
+        def normalize_list_value(value):
+            """Convert list values to comma-separated strings for UI display."""
+            if isinstance(value, list):
+                return ", ".join(str(v) for v in value)
+            elif isinstance(value, str) and value.startswith("[") and value.endswith("]"):
+                try:
+                    import ast
+                    parsed = ast.literal_eval(value)
+                    if isinstance(parsed, list):
+                        return ", ".join(str(v) for v in parsed)
+                except:
+                    pass
+            return value
+
+        for field_name in field_names:
+            if field_name not in config_class.model_fields:
+                updates.append(gr.update())
+                continue
+
+            field_info = config_class.model_fields[field_name]
+
+            # Try to get value from config_data
+            if field_name in config_data:
+                value = normalize_list_value(config_data[field_name])
+                updates.append(gr.update(value=value))
+            else:
+                # Fall back to default
+                default_value = field_info.default
+                default_value = normalize_list_value(default_value)
+                updates.append(gr.update(value=default_value))
+
+        return updates
+
+    def extract_engine_values_from_all_values(
+        self,
+        engine_display_name: str,
+        all_config_values: List[Any]
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        """
+        Extract values for a specific engine from the flattened list of all component values.
+
+        Args:
+            engine_display_name: Display name of the engine
+            all_config_values: Flattened list of ALL component values from ALL engines
+
+        Returns:
+            Tuple of (engine_values_list, config_dict)
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name:
+            return [], {}
+
+        # Calculate the starting index for this engine's values
+        start_idx = 0
+        for eng_name in sorted(self.component_lists.keys()):
+            if eng_name == engine_name:
+                break
+            start_idx += len(self.component_lists[eng_name])
+
+        # Extract this engine's values
+        num_components = len(self.component_lists.get(engine_name, []))
+        engine_values = all_config_values[start_idx:start_idx + num_components]
+
+        # Build config dictionary
+        field_names = self.component_field_maps.get(engine_name, [])
+        config_dict = dict(zip(field_names, engine_values))
+
+        return engine_values, config_dict
