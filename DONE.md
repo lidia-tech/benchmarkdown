@@ -18,7 +18,14 @@ Fixed dark mode compatibility in `benchmarkdown/ui/results.py`:
    - `background: var(--error-background-fill, rgba(239, 68, 68, 0.1))`
    - Added border with `var(--error-border-color, rgba(239, 68, 68, 0.3))`
 
-3. **Border colors**: Changed from hardcoded `#ddd` to `var(--border-color-primary)`
+3. **Results table**: Fixed white-on-white table header in dark mode:
+   - Table header: `background: var(--background-fill-secondary)` with `color: var(--body-text-color)`
+   - Table rows: `color: var(--body-text-color)` for readable text
+   - All borders changed to `var(--border-color-primary)`
+
+4. **Side-by-side comparison view**: Updated subdued text color:
+   - Changed `color: #666` to `color: var(--body-text-color-subdued, #666)` for metadata
+   - Border colors changed to `var(--border-color-primary)`
 
 All changes use CSS variables that automatically adapt to Gradio's light/dark theme, with sensible fallback colors for compatibility.
 

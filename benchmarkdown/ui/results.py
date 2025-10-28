@@ -23,7 +23,7 @@ def generate_results_table(results: dict) -> str:
         html += f"<h3>📋 {filename}</h3>"
         html += "<table style='width:100%; border-collapse: collapse; margin-bottom: 20px;'>"
         html += """
-        <tr style='background-color: #f0f0f0; border-bottom: 2px solid #ccc;'>
+        <tr style='background: var(--background-fill-secondary); border-bottom: 2px solid var(--border-color-primary); color: var(--body-text-color);'>
             <th style='padding: 8px; text-align: left;'>Extractor</th>
             <th style='padding: 8px; text-align: left;'>Time</th>
             <th style='padding: 8px; text-align: left;'>Chars / Words</th>
@@ -36,7 +36,7 @@ def generate_results_table(results: dict) -> str:
             cost_str = f" (~${result.cost_estimate:.3f})" if result.cost_estimate else ""
 
             html += f"""
-            <tr style='border-bottom: 1px solid #eee;'>
+            <tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color);'>
                 <td style='padding: 8px;'>{result.extractor_name}</td>
                 <td style='padding: 8px;'>{result.execution_time:.1f}s{cost_str}</td>
                 <td style='padding: 8px;'>{result.character_count:,} / {result.word_count:,}</td>
@@ -126,13 +126,13 @@ def generate_comparison_view_sidebyside(results: dict, filename: str) -> str:
     html += "<div style='display: flex; gap: 20px; overflow-x: auto;'>"
 
     for extractor_name, result in extractor_results.items():
-        html += f"<div style='flex: 1; min-width: 400px; border: 1px solid #ddd; border-radius: 8px; padding: 15px;'>"
+        html += f"<div style='flex: 1; min-width: 400px; border: 1px solid var(--border-color-primary); border-radius: 8px; padding: 15px;'>"
         html += f"<h4 style='margin-top: 0;'>{extractor_name}</h4>"
 
         if result.error:
             html += f"<div style='color: var(--error-text-color, #dc2626); padding: 10px; background: var(--error-background-fill, rgba(239, 68, 68, 0.1)); border: 1px solid var(--error-border-color, rgba(239, 68, 68, 0.3)); border-radius: 4px;'>Error: {result.error}</div>"
         else:
-            html += f"<div style='font-size: 0.9em; color: #666; margin-bottom: 10px;'>"
+            html += f"<div style='font-size: 0.9em; color: var(--body-text-color-subdued, #666); margin-bottom: 10px;'>"
             html += f"Time: {result.execution_time:.1f}s | {result.word_count:,} words"
             if result.cost_estimate:
                 html += f" | ~${result.cost_estimate:.3f}"
