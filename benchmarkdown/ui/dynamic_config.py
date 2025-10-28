@@ -25,6 +25,8 @@ class DynamicConfigUI:
         self.config_areas = {}  # engine_name -> gr.Column
         self.component_lists = {}  # engine_name -> list of gr.Components
         self.component_field_maps = {}  # engine_name -> list of field names
+        self.nested_groups = {}  # engine_name -> {parent_field: {option_value: gr.Group}}
+        self.parent_components = {}  # engine_name -> {parent_field: gr.Component}
 
     def generate_engine_choices(self) -> List[str]:
         """
@@ -67,6 +69,8 @@ class DynamicConfigUI:
         with gr.Column(visible=False) as config_area:
             components = []
             field_names = []
+            nested_groups_for_engine = {}  # parent_field -> {option_value: gr.Group}
+            parent_components_for_engine = {}  # parent_field -> gr.Component
 
             # Basic fields section
             with gr.Group():
@@ -84,6 +88,63 @@ class DynamicConfigUI:
                     components.append(component)
                     field_names.append(field_name)
 
+                    # Check if this field is a parent for nested configs
+                    if metadata.nested_configs and field_name in metadata.nested_configs:
+                        parent_components_for_engine[field_name] = component
+
+            # Generate nested config sections if present
+            if metadata.nested_configs:
+                for parent_field_name, nested_options in metadata.nested_configs.items():
+                    if parent_field_name in parent_components_for_engine:
+                        nested_groups_for_engine[parent_field_name] = {}
+
+                        # Generate UI for each nested config option
+                        for option_value, option_meta in nested_options.items():
+                            config_class = option_meta["config_class"]
+                            basic_fields = option_meta.get("basic_fields", [])
+                            advanced_fields = option_meta.get("advanced_fields", [])
+                            display_name = option_meta.get("display_name", option_value)
+
+                            # Determine default visibility (show first option by default)
+                            is_first = list(nested_options.keys())[0] == option_value
+
+                            with gr.Group(visible=is_first) as nested_group:
+                                gr.Markdown(f"##### {display_name}")
+
+                                # Basic nested fields
+                                for field_name in basic_fields:
+                                    if field_name not in config_class.model_fields:
+                                        continue
+
+                                    field_info = config_class.model_fields[field_name]
+                                    field_type = field_info.annotation
+
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    components.append(component)
+                                    # Use nested field name format: config_field.field_name
+                                    field_names.append(f"{option_meta['config_field']}.{field_name}")
+
+                                # Advanced nested fields
+                                if advanced_fields:
+                                    with gr.Accordion(f"Advanced {display_name}", open=False):
+                                        for field_name in advanced_fields:
+                                            if field_name not in config_class.model_fields:
+                                                continue
+
+                                            field_info = config_class.model_fields[field_name]
+                                            field_type = field_info.annotation
+
+                                            component, _ = create_gradio_component_from_field(
+                                                field_name, field_info, field_type
+                                            )
+                                            components.append(component)
+                                            field_names.append(f"{option_meta['config_field']}.{field_name}")
+
+                            # Store the nested group for show/hide logic
+                            nested_groups_for_engine[parent_field_name][option_value] = nested_group
+
             # Advanced fields section
             if metadata.advanced_fields:
                 with gr.Accordion("Advanced Options", open=False):
@@ -100,7 +161,7 @@ class DynamicConfigUI:
                         components.append(component)
                         field_names.append(field_name)
 
-        return config_area, components, field_names
+        return config_area, components, field_names, nested_groups_for_engine, parent_components_for_engine
 
     def generate_all_config_uis(self) -> Dict[str, Any]:
         """
@@ -117,16 +178,20 @@ class DynamicConfigUI:
         available = self.registry.get_available_extractors()
 
         for engine_name, metadata in available.items():
-            config_area, components, field_names = self.generate_config_ui_for_extractor(metadata)
+            config_area, components, field_names, nested_groups, parent_components = self.generate_config_ui_for_extractor(metadata)
 
             self.config_areas[engine_name] = config_area
             self.component_lists[engine_name] = components
             self.component_field_maps[engine_name] = field_names
+            self.nested_groups[engine_name] = nested_groups
+            self.parent_components[engine_name] = parent_components
 
         return {
             "config_areas": self.config_areas,
             "component_lists": self.component_lists,
             "field_maps": self.component_field_maps,
+            "nested_groups": self.nested_groups,
+            "parent_components": self.parent_components,
         }
 
     def build_config_dict_from_values(
@@ -230,15 +295,40 @@ class DynamicConfigUI:
             return []
 
         config_class = extractor_meta.config_class
+        nested_configs = extractor_meta.nested_configs or {}
         updates = []
 
         for field_name in field_names:
-            if field_name not in config_class.model_fields:
-                updates.append(gr.update())
-                continue
+            # Check if this is a nested field (e.g., "easyocr_config.lang")
+            if '.' in field_name:
+                parts = field_name.split('.')
+                nested_config_name = parts[0]
+                nested_field_name = parts[1]
 
-            field_info = config_class.model_fields[field_name]
-            default_value = field_info.default
+                # Find the nested config class
+                nested_config_class = None
+                for parent_field, nested_options in nested_configs.items():
+                    for option_value, option_meta in nested_options.items():
+                        if option_meta.get('config_field') == nested_config_name:
+                            nested_config_class = option_meta['config_class']
+                            break
+                    if nested_config_class:
+                        break
+
+                if nested_config_class and nested_field_name in nested_config_class.model_fields:
+                    field_info = nested_config_class.model_fields[nested_field_name]
+                    default_value = field_info.default
+                else:
+                    updates.append(gr.update())
+                    continue
+            else:
+                # Top-level field
+                if field_name not in config_class.model_fields:
+                    updates.append(gr.update())
+                    continue
+
+                field_info = config_class.model_fields[field_name]
+                default_value = field_info.default
 
             # Handle list defaults - convert to comma-separated string for UI
             if isinstance(default_value, list):
@@ -273,6 +363,7 @@ class DynamicConfigUI:
             return []
 
         config_class = extractor_meta.config_class
+        nested_configs = extractor_meta.nested_configs or {}
         updates = []
 
         def normalize_list_value(value):
@@ -290,21 +381,58 @@ class DynamicConfigUI:
             return value
 
         for field_name in field_names:
-            if field_name not in config_class.model_fields:
-                updates.append(gr.update())
-                continue
+            # Check if this is a nested field (e.g., "easyocr_config.lang")
+            if '.' in field_name:
+                parts = field_name.split('.')
+                nested_config_name = parts[0]
+                nested_field_name = parts[1]
 
-            field_info = config_class.model_fields[field_name]
+                # Find the nested config class
+                nested_config_class = None
+                for parent_field, nested_options in nested_configs.items():
+                    for option_value, option_meta in nested_options.items():
+                        if option_meta.get('config_field') == nested_config_name:
+                            nested_config_class = option_meta['config_class']
+                            break
+                    if nested_config_class:
+                        break
 
-            # Try to get value from config_data
-            if field_name in config_data:
-                value = normalize_list_value(config_data[field_name])
-                updates.append(gr.update(value=value))
+                if not nested_config_class:
+                    updates.append(gr.update())
+                    continue
+
+                # Try to get value from nested config_data
+                if nested_config_name in config_data and isinstance(config_data[nested_config_name], dict):
+                    nested_data = config_data[nested_config_name]
+                    if nested_field_name in nested_data:
+                        value = normalize_list_value(nested_data[nested_field_name])
+                        updates.append(gr.update(value=value))
+                        continue
+
+                # Fall back to default from nested config class
+                if nested_field_name in nested_config_class.model_fields:
+                    field_info = nested_config_class.model_fields[nested_field_name]
+                    default_value = normalize_list_value(field_info.default)
+                    updates.append(gr.update(value=default_value))
+                else:
+                    updates.append(gr.update())
             else:
-                # Fall back to default
-                default_value = field_info.default
-                default_value = normalize_list_value(default_value)
-                updates.append(gr.update(value=default_value))
+                # Top-level field
+                if field_name not in config_class.model_fields:
+                    updates.append(gr.update())
+                    continue
+
+                field_info = config_class.model_fields[field_name]
+
+                # Try to get value from config_data
+                if field_name in config_data:
+                    value = normalize_list_value(config_data[field_name])
+                    updates.append(gr.update(value=value))
+                else:
+                    # Fall back to default
+                    default_value = field_info.default
+                    default_value = normalize_list_value(default_value)
+                    updates.append(gr.update(value=default_value))
 
         return updates
 
@@ -340,6 +468,71 @@ class DynamicConfigUI:
 
         # Build config dictionary
         field_names = self.component_field_maps.get(engine_name, [])
-        config_dict = dict(zip(field_names, engine_values))
+
+        # Handle nested field names (e.g., "easyocr_config.lang")
+        config_dict = {}
+        for field_name, value in zip(field_names, engine_values):
+            if '.' in field_name:
+                # Nested field
+                parts = field_name.split('.')
+                nested_config_name = parts[0]
+                nested_field_name = parts[1]
+
+                if nested_config_name not in config_dict:
+                    config_dict[nested_config_name] = {}
+                config_dict[nested_config_name][nested_field_name] = value
+            else:
+                # Top-level field
+                config_dict[field_name] = value
 
         return engine_values, config_dict
+
+    def get_nested_group_updates(
+        self,
+        engine_display_name: str,
+        parent_field: str,
+        selected_value: str
+    ) -> List[gr.update]:
+        """
+        Generate gr.update() objects for nested group visibility based on parent field value.
+
+        Args:
+            engine_display_name: Display name of the engine
+            parent_field: Name of the parent field (e.g., "ocr_engine")
+            selected_value: Selected value of the parent field (e.g., "easyocr")
+
+        Returns:
+            List of gr.update() objects for each nested group
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name or engine_name not in self.nested_groups:
+            return []
+
+        nested_groups = self.nested_groups[engine_name].get(parent_field, {})
+        if not nested_groups:
+            return []
+
+        # Generate updates: show only the selected nested group, hide others
+        updates = []
+        for option_value, group in nested_groups.items():
+            visible = (option_value == selected_value)
+            updates.append(gr.update(visible=visible))
+
+        return updates
+
+    def get_parent_component(self, engine_display_name: str, parent_field: str):
+        """
+        Get the parent component for a nested config.
+
+        Args:
+            engine_display_name: Display name of the engine
+            parent_field: Name of the parent field
+
+        Returns:
+            Parent component or None
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name or engine_name not in self.parent_components:
+            return None
+
+        return self.parent_components[engine_name].get(parent_field)
