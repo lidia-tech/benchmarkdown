@@ -299,8 +299,8 @@ def build_config_from_ui_values(
                     nested_type = field_type
 
                 if nested_type:
-                    # Convert dict to the proper BaseModel instance
-                    clean_values[field_name] = nested_type(**value)
+                    # Recursively clean the nested dict before creating the instance
+                    clean_values[field_name] = build_config_from_ui_values(nested_type, value)
                 else:
                     clean_values[field_name] = value
             else:
