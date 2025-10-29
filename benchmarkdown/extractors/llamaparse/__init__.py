@@ -13,6 +13,7 @@ from .config import (
     LlamaParseConfig,
     LLAMAPARSE_BASIC_FIELDS,
     LLAMAPARSE_ADVANCED_FIELDS,
+    LLAMAPARSE_CONDITIONAL_FIELDS,
     ResultTypeEnum,
     ParsingModeEnum,
     LanguageEnum,
@@ -41,6 +42,7 @@ Extractor = LlamaParseExtractor
 Config = LlamaParseConfig
 BASIC_FIELDS = LLAMAPARSE_BASIC_FIELDS
 ADVANCED_FIELDS = LLAMAPARSE_ADVANCED_FIELDS
+CONDITIONAL_FIELDS = LLAMAPARSE_CONDITIONAL_FIELDS
 
 
 def is_available() -> Tuple[bool, str]:
@@ -76,6 +78,7 @@ __all__ = [
     'Config',
     'BASIC_FIELDS',
     'ADVANCED_FIELDS',
+    'CONDITIONAL_FIELDS',
     'ENGINE_NAME',
     'ENGINE_DISPLAY_NAME',
     'is_available',

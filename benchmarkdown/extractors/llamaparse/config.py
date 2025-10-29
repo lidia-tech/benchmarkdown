@@ -387,11 +387,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     "fast_mode",
     "continuous_mode",
     "auto_mode",
-    "auto_mode_trigger_on_image_in_page",
-    "auto_mode_trigger_on_table_in_page",
-    "auto_mode_trigger_on_text_in_page",
-    "auto_mode_trigger_on_regexp_in_page",
-    "auto_mode_configuration_json",
+    # Note: auto_mode triggers moved to conditional fields
 
     # Table Extraction
     "aggressive_table_extraction",
@@ -416,10 +412,8 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     "disable_image_extraction",
 
     # Page Formatting
-    "page_separator",
-    "page_prefix",
-    "page_suffix",
     "split_by_page",
+    # Note: page formatting options moved to conditional fields
 
     # Cache & Optimization
     "invalidate_cache",
@@ -428,8 +422,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
 
     # Vendor Models
     "use_vendor_multimodal_model",
-    "vendor_multimodal_model_name",
-    "vendor_multimodal_api_key",
+    # Note: vendor model settings moved to conditional fields
     "model",
 
     # Bounding Box
@@ -444,3 +437,30 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     # Note: show_progress, ignore_errors, max_timeout are internal system settings
     # and not exposed in UI - they use sensible defaults
 ]
+
+# Conditional fields that depend on parent field values
+# Format: {parent_field: {parent_value: [dependent_fields]}}
+LLAMAPARSE_CONDITIONAL_FIELDS = {
+    "auto_mode": {
+        True: [
+            "auto_mode_trigger_on_image_in_page",
+            "auto_mode_trigger_on_table_in_page",
+            "auto_mode_trigger_on_text_in_page",
+            "auto_mode_trigger_on_regexp_in_page",
+            "auto_mode_configuration_json",
+        ]
+    },
+    "use_vendor_multimodal_model": {
+        True: [
+            "vendor_multimodal_model_name",
+            "vendor_multimodal_api_key",
+        ]
+    },
+    "split_by_page": {
+        True: [
+            "page_separator",
+            "page_prefix",
+            "page_suffix",
+        ]
+    },
+}
