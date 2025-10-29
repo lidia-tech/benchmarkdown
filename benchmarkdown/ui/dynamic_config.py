@@ -120,45 +120,45 @@ class DynamicConfigUI:
                             # Track all components in this nested section
                             nested_section_components = []
 
-                            with gr.Group():
-                                section_label = gr.Markdown(f"##### {display_name}", visible=is_first)
-                                nested_section_components.append(section_label)
+                            # Don't use gr.Group() - it shows borders even when hidden
+                            section_label = gr.Markdown(f"##### {display_name}", visible=is_first)
+                            nested_section_components.append(section_label)
 
-                                # Basic nested fields
-                                for field_name in basic_fields:
-                                    if field_name not in config_class.model_fields:
-                                        continue
+                            # Basic nested fields
+                            for field_name in basic_fields:
+                                if field_name not in config_class.model_fields:
+                                    continue
 
-                                    field_info = config_class.model_fields[field_name]
-                                    field_type = field_info.annotation
+                                field_info = config_class.model_fields[field_name]
+                                field_type = field_info.annotation
 
-                                    component, _ = create_gradio_component_from_field(
-                                        field_name, field_info, field_type
-                                    )
-                                    component.visible = is_first  # Set initial visibility
-                                    components.append(component)
-                                    nested_section_components.append(component)
-                                    # Use nested field name format: config_field.field_name
-                                    field_names.append(f"{option_meta['config_field']}.{field_name}")
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                component.visible = is_first  # Set initial visibility
+                                components.append(component)
+                                nested_section_components.append(component)
+                                # Use nested field name format: config_field.field_name
+                                field_names.append(f"{option_meta['config_field']}.{field_name}")
 
-                                # Advanced nested fields
-                                if advanced_fields:
-                                    with gr.Accordion(f"Advanced {display_name}", open=False, visible=is_first) as accordion:
-                                        nested_section_components.append(accordion)
-                                        for field_name in advanced_fields:
-                                            if field_name not in config_class.model_fields:
-                                                continue
+                            # Advanced nested fields
+                            if advanced_fields:
+                                with gr.Accordion(f"Advanced {display_name}", open=False, visible=is_first) as accordion:
+                                    nested_section_components.append(accordion)
+                                    for field_name in advanced_fields:
+                                        if field_name not in config_class.model_fields:
+                                            continue
 
-                                            field_info = config_class.model_fields[field_name]
-                                            field_type = field_info.annotation
+                                        field_info = config_class.model_fields[field_name]
+                                        field_type = field_info.annotation
 
-                                            component, _ = create_gradio_component_from_field(
-                                                field_name, field_info, field_type
-                                            )
-                                            component.visible = is_first  # Set initial visibility
-                                            components.append(component)
-                                            nested_section_components.append(component)
-                                            field_names.append(f"{option_meta['config_field']}.{field_name}")
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        component.visible = is_first  # Set initial visibility
+                                        components.append(component)
+                                        nested_section_components.append(component)
+                                        field_names.append(f"{option_meta['config_field']}.{field_name}")
 
                             # Store list of components for this nested section
                             nested_groups_for_engine[parent_field_name][option_value] = nested_section_components
@@ -173,24 +173,24 @@ class DynamicConfigUI:
                         # Track all components in this conditional section
                         conditional_section_components = []
 
-                        with gr.Group():
-                            section_label = gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options", visible=False)
-                            conditional_section_components.append(section_label)
+                        # Don't use gr.Group() - it shows borders even when hidden
+                        section_label = gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options", visible=False)
+                        conditional_section_components.append(section_label)
 
-                            for field_name in dependent_field_names:
-                                if field_name not in metadata.config_class.model_fields:
-                                    continue
+                        for field_name in dependent_field_names:
+                            if field_name not in metadata.config_class.model_fields:
+                                continue
 
-                                field_info = metadata.config_class.model_fields[field_name]
-                                field_type = field_info.annotation
+                            field_info = metadata.config_class.model_fields[field_name]
+                            field_type = field_info.annotation
 
-                                component, _ = create_gradio_component_from_field(
-                                    field_name, field_info, field_type
-                                )
-                                component.visible = False  # Initially hidden
-                                components.append(component)
-                                conditional_section_components.append(component)
-                                field_names.append(field_name)
+                            component, _ = create_gradio_component_from_field(
+                                field_name, field_info, field_type
+                            )
+                            component.visible = False  # Initially hidden
+                            components.append(component)
+                            conditional_section_components.append(component)
+                            field_names.append(field_name)
 
                         # Store list of components for this conditional section
                         conditional_groups_for_engine[parent_field_name][parent_value] = conditional_section_components
