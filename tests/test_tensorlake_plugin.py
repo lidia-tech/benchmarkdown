@@ -150,8 +150,9 @@ def test_field_groupings():
         basic_set = set(BASIC_FIELDS)
         advanced_set = set(ADVANCED_FIELDS)
 
-        # api_key is intentionally excluded from UI fields
+        # api_key and max_timeout are intentionally excluded from UI fields
         config_fields.discard('api_key')
+        config_fields.discard('max_timeout')
 
         print(f"   ✓ Config fields: {len(config_fields)}")
         print(f"   ✓ Basic fields: {len(BASIC_FIELDS)}")

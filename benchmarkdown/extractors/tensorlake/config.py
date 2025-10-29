@@ -98,7 +98,7 @@ TENSORLAKE_ADVANCED_FIELDS = [
     "figure_summarization",
     "table_summarization",
     "strike_through_detection",
-    "max_timeout",
+    # Note: max_timeout is a system setting and not exposed in UI (uses default 300s)
 ]
 
 # No conditional fields for TensorLake (simple configuration)
