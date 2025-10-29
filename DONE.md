@@ -825,6 +825,47 @@ markdown = await extractor.extract_markdown("document.pdf")
 
 The plugin follows the established architecture perfectly - no modifications to core files needed!
 
+## BUG: changing extractor engine should close settings
+
+Currently, if the user changes extractor engine with the config section opened (previously clicked "new profile" or "edit profile"), the config page stays on the old engine. Close at least the old engine's settings if the engine has changed from the dropdown list.
+
+### Clarifications
+
+The issue occurs in `benchmarkdown/ui/app_builder.py` where the `engine_selector.change` event handler only updates the profile group visibility and profile selector dropdown, but doesn't hide the config editor panel that may be open with the previous engine's settings.
+
+### Thoughts, proposed solution
+
+The fix should be simple:
+1. Modify the `engine_selector.change` event handler to also hide the config_editor panel
+2. Also hide the profile_status message to provide clean visual feedback
+3. Maintain existing behavior of showing/hiding the profile group and refreshing the profile list
+
+This provides clearer UX: when the user changes engines, they start fresh without seeing stale configuration from the previous engine.
+
+### What was implemented
+
+Fixed the bug in `benchmarkdown/ui/app_builder.py`:
+
+1. Created new `engine_change_handler()` function (lines 1051-1059) that:
+   - Calls existing `toggle_profile_group()` to maintain current behavior
+   - Returns updates for 4 components instead of 2:
+     - `profile_group` - shown/hidden based on engine selection (existing)
+     - `profile_selector` - refreshed with profiles for new engine (existing)
+     - `config_editor` - **now hidden when engine changes** (new fix)
+     - `profile_status` - **now hidden when engine changes** (new fix)
+
+2. Updated `engine_selector.change` event handler (lines 1061-1065) to:
+   - Call the new `engine_change_handler` function
+   - Output to all 4 components (profile_group, profile_selector, config_editor, profile_status)
+
+**User workflow improvement:**
+- Before: User changes engine → Config editor stays open with old settings → Confusion
+- After: User changes engine → Config editor automatically closes → Clean state
+
+The fix has been tested and the app starts correctly without errors.
+
+**Related commit:** ba6b734
+
 ## ~~Fix Docling OCR engine conditional settings display bug~~ ✅ FIXED
 
 **Status:** RESOLVED in commit 4907184
