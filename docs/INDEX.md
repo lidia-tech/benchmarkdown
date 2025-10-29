@@ -33,6 +33,12 @@ Welcome to the Benchmarkdown documentation! This guide helps you find the right 
   - Test categories and coverage
   - Writing new tests
 
+- **[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** - Environment Configuration
+  - All extractor environment variables
+  - Authentication setup
+  - System-level performance settings
+  - Usage examples and .env file setup
+
 ### Task Management
 
 - **[TODO.md](../TODO.md)** - Current Tasks
@@ -103,9 +109,12 @@ When contributing documentation:
   - Profile-based configuration
   - Queue-based workflow
 
-- ✅ **Extractors**: 2 available
+- ✅ **Extractors**: 5 available
   - Docling (local processing)
   - AWS Textract (cloud service)
+  - LlamaParse (cloud service)
+  - TensorLake (cloud service)
+  - Azure Document Intelligence (cloud service)
 
 See [DONE.md](../DONE.md) for complete implementation history.
 

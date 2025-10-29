@@ -19,6 +19,16 @@ This document lists all environment variables that can be used to configure Benc
   Full S3 URI for Textract workspace (e.g., `s3://bucket-name/textract-workspace/`)
   Also requires AWS credentials via standard AWS SDK methods (`~/.aws/credentials` or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`)
 
+### Azure Document Intelligence
+- **`AZURE_DOC_INTEL_ENDPOINT`** (required)
+  Azure endpoint URL for your Document Intelligence resource
+  Format: `https://your-resource.cognitiveservices.azure.com/`
+  Get from Azure Portal: https://portal.azure.com/
+
+- **`AZURE_DOC_INTEL_KEY`** (required)
+  Azure API key for authentication
+  Get from Azure Portal under your Document Intelligence resource → Keys and Endpoint
+
 ## System-Level Performance Settings
 
 These environment variables control system-level settings like timeouts, worker counts, and verbosity. They are not exposed in the UI to keep it clean, but can be configured for advanced use cases.
@@ -82,6 +92,10 @@ export LLAMA_CLOUD_API_KEY="your-llamaparse-key"
 # AWS Textract
 export TEXTRACT_S3_WORKSPACE="s3://your-bucket/textract-workspace/"
 export AWS_PROFILE="your-aws-profile"  # or use AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY
+
+# Azure Document Intelligence
+export AZURE_DOC_INTEL_ENDPOINT="https://your-resource.cognitiveservices.azure.com/"
+export AZURE_DOC_INTEL_KEY="your-azure-key"
 ```
 
 ### Advanced Setup (With System Settings)
@@ -117,6 +131,9 @@ LLAMAPARSE_VERBOSE=true
 
 TEXTRACT_S3_WORKSPACE=s3://your-bucket/textract-workspace/
 AWS_PROFILE=your-aws-profile
+
+AZURE_DOC_INTEL_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+AZURE_DOC_INTEL_KEY=your-azure-key
 
 DOCLING_NUM_THREADS=16
 DOCLING_DOCUMENT_TIMEOUT=600.0

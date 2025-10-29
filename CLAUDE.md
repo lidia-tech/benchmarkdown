@@ -62,9 +62,21 @@ These notes serve as developer reference and onboarding documentation, distinct 
 uv sync --all-groups
 
 # Install specific extractors only
-uv sync --group docling      # Local processing with Docling
-uv sync --group textract     # AWS Textract cloud service
+uv sync --group docling                      # Local processing with Docling
+uv sync --group textract                     # AWS Textract cloud service
+uv sync --group llamaparse                   # LlamaParse cloud service
+uv sync --group tensorlake                   # TensorLake cloud service
+uv sync --group azure-document-intelligence  # Azure Document Intelligence
 ```
+
+**Environment Variables**: Each extractor has specific environment variable requirements documented in its own README:
+- `benchmarkdown/extractors/docling/README.md`
+- `benchmarkdown/extractors/textract/README.md`
+- `benchmarkdown/extractors/llamaparse/README.md`
+- `benchmarkdown/extractors/tensorlake/README.md`
+- `benchmarkdown/extractors/azure_document_intelligence/README.md`
+
+See also: `docs/ENVIRONMENT_VARIABLES.md` for a consolidated reference.
 
 ### Running the Application
 ```bash
