@@ -74,12 +74,12 @@ class TensorLakeConfig(BaseModel):
         description="Detect strike-through text in the document"
     )
 
-    # System options
+    # System options (can be configured via environment variables)
     max_timeout: int = Field(
-        default=300,
+        default_factory=lambda: int(os.getenv("TENSORLAKE_MAX_TIMEOUT", "300")),
         ge=30,
         le=600,
-        description="Maximum timeout in seconds to wait for parsing to finish (30-600 seconds)"
+        description="Maximum timeout in seconds to wait for parsing to finish (30-600 seconds). Set via TENSORLAKE_MAX_TIMEOUT env var."
     )
 
     class Config:

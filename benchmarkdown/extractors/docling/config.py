@@ -5,6 +5,7 @@ This module provides Pydantic models for configuring the Docling extractor
 with type validation and documentation.
 """
 
+import os
 import multiprocessing
 from enum import Enum
 from typing import Optional
@@ -266,11 +267,12 @@ class DoclingConfig(BaseModel):
         description="Table extraction mode: FAST (faster, less accurate) or ACCURATE (slower, better quality)"
     )
 
+    # System options (can be configured via environment variables)
     num_threads: int = Field(
-        default=multiprocessing.cpu_count(),
+        default_factory=lambda: int(os.getenv("DOCLING_NUM_THREADS", str(multiprocessing.cpu_count()))),
         ge=1,
         le=32,
-        description="Number of CPU threads to use for processing"
+        description="Number of CPU threads to use for processing. Set via DOCLING_NUM_THREADS env var."
     )
 
     # ========== ADVANCED OPTIONS ==========
@@ -328,9 +330,9 @@ class DoclingConfig(BaseModel):
     )
 
     document_timeout: Optional[float] = Field(
-        default=None,
+        default_factory=lambda: float(os.getenv("DOCLING_DOCUMENT_TIMEOUT")) if os.getenv("DOCLING_DOCUMENT_TIMEOUT") else None,
         ge=1.0,
-        description="Maximum processing time per document in seconds (advanced)"
+        description="Maximum processing time per document in seconds. Set via DOCLING_DOCUMENT_TIMEOUT env var."
     )
 
     class Config:
@@ -469,7 +471,7 @@ DOCLING_BASIC_FIELDS = [
     "ocr_engine",
     "do_table_structure",
     "table_structure_mode",
-    "num_threads",
+    # Note: num_threads is a system setting, use DOCLING_NUM_THREADS env var
 ]
 
 DOCLING_ADVANCED_FIELDS = [
@@ -483,7 +485,7 @@ DOCLING_ADVANCED_FIELDS = [
     "generate_picture_images",
     "images_scale",
     "accelerator_device",
-    "document_timeout",
+    # Note: document_timeout is a system setting, use DOCLING_DOCUMENT_TIMEOUT env var
 ]
 
 # OCR engine config field groupings

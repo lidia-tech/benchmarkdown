@@ -324,32 +324,32 @@ class LlamaParseConfig(BaseModel):
         description="Right margin of bounding box (0-1 as percentage of page width)"
     )
 
-    # === System Options ===
+    # === System Options (can be configured via environment variables) ===
     num_workers: int = Field(
-        default=4,
+        default_factory=lambda: int(os.getenv("LLAMAPARSE_NUM_WORKERS", "4")),
         ge=1,
         lt=20,
-        description="Number of workers for parallel page processing"
+        description="Number of workers for parallel page processing. Set via LLAMAPARSE_NUM_WORKERS env var."
     )
 
     verbose: bool = Field(
-        default=False,
-        description="Enable verbose logging"
+        default_factory=lambda: os.getenv("LLAMAPARSE_VERBOSE", "false").lower() in ("true", "1", "yes"),
+        description="Enable verbose logging. Set via LLAMAPARSE_VERBOSE env var."
     )
 
     show_progress: bool = Field(
-        default=True,
-        description="Show progress when parsing multiple files"
+        default_factory=lambda: os.getenv("LLAMAPARSE_SHOW_PROGRESS", "true").lower() in ("true", "1", "yes"),
+        description="Show progress when parsing multiple files. Set via LLAMAPARSE_SHOW_PROGRESS env var."
     )
 
     ignore_errors: bool = Field(
-        default=False,
-        description="Whether to ignore and skip errors raised during parsing"
+        default_factory=lambda: os.getenv("LLAMAPARSE_IGNORE_ERRORS", "false").lower() in ("true", "1", "yes"),
+        description="Whether to ignore and skip errors raised during parsing. Set via LLAMAPARSE_IGNORE_ERRORS env var."
     )
 
     max_timeout: int = Field(
-        default=2000,
-        description="Maximum timeout in seconds to wait for parsing to finish"
+        default_factory=lambda: int(os.getenv("LLAMAPARSE_MAX_TIMEOUT", "2000")),
+        description="Maximum timeout in seconds to wait for parsing to finish. Set via LLAMAPARSE_MAX_TIMEOUT env var."
     )
 
     class Config:
