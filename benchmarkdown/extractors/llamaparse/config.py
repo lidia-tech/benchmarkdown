@@ -379,15 +379,17 @@ LLAMAPARSE_BASIC_FIELDS = [
     "parsing_instruction",
     "target_pages",
     "premium_mode",
+    "auto_mode",  # Conditional parent - shows trigger options when enabled
     "parse_mode",
+    "use_vendor_multimodal_model",  # Conditional parent - shows vendor model settings
+    "split_by_page",  # Conditional parent - shows page formatting options
 ]
 
 LLAMAPARSE_ADVANCED_FIELDS = [
     # Mode & Performance
     "fast_mode",
     "continuous_mode",
-    "auto_mode",
-    # Note: auto_mode triggers moved to conditional fields
+    # Note: auto_mode moved to BASIC_FIELDS (conditional parent)
 
     # Table Extraction
     "aggressive_table_extraction",
@@ -412,8 +414,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     "disable_image_extraction",
 
     # Page Formatting
-    "split_by_page",
-    # Note: page formatting options moved to conditional fields
+    # Note: split_by_page moved to BASIC_FIELDS (conditional parent)
 
     # Cache & Optimization
     "invalidate_cache",
@@ -421,8 +422,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     "max_pages",
 
     # Vendor Models
-    "use_vendor_multimodal_model",
-    # Note: vendor model settings moved to conditional fields
+    # Note: use_vendor_multimodal_model moved to BASIC_FIELDS (conditional parent)
     "model",
 
     # Bounding Box
