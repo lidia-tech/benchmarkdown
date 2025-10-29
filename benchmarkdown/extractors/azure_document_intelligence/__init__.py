@@ -14,15 +14,15 @@ try:
     from .extractor import AzureDocIntelExtractor
     from .config import (
         AzureDocIntelConfig,
-        AZURE_DOC_INTEL_BASIC_FIELDS,
-        AZURE_DOC_INTEL_ADVANCED_FIELDS,
+        AZURE_DOCUMENT_INTELLIGENCE_BASIC_FIELDS,
+        AZURE_DOCUMENT_INTELLIGENCE_ADVANCED_FIELDS,
     )
 
     # Standard plugin interface exports
     Extractor = AzureDocIntelExtractor
     Config = AzureDocIntelConfig
-    BASIC_FIELDS = AZURE_DOC_INTEL_BASIC_FIELDS
-    ADVANCED_FIELDS = AZURE_DOC_INTEL_ADVANCED_FIELDS
+    BASIC_FIELDS = AZURE_DOCUMENT_INTELLIGENCE_BASIC_FIELDS
+    ADVANCED_FIELDS = AZURE_DOCUMENT_INTELLIGENCE_ADVANCED_FIELDS
 
     _import_successful = True
 except ImportError as e:
@@ -71,18 +71,18 @@ def is_available() -> Tuple[bool, str]:
         return False, f"Azure Document Intelligence SDK not installed: {e}"
 
     # Check if credentials are configured
-    endpoint = os.environ.get("AZURE_DOC_INTEL_ENDPOINT")
-    api_key = os.environ.get("AZURE_DOC_INTEL_KEY")
+    endpoint = os.environ.get("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
+    api_key = os.environ.get("AZURE_DOCUMENT_INTELLIGENCE_KEY")
 
     if not endpoint:
-        return False, "AZURE_DOC_INTEL_ENDPOINT environment variable not set"
+        return False, "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT environment variable not set"
 
     if not api_key:
-        return False, "AZURE_DOC_INTEL_KEY environment variable not set"
+        return False, "AZURE_DOCUMENT_INTELLIGENCE_KEY environment variable not set"
 
     # Validate endpoint format
     if not endpoint.startswith("https://"):
-        return False, "AZURE_DOC_INTEL_ENDPOINT must start with https://"
+        return False, "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT must start with https://"
 
     return True, ""
 

@@ -127,8 +127,8 @@ def test_extractor_instantiation():
             return True  # Not a failure, just skipped
 
         # Set dummy credentials to test instantiation
-        os.environ["AZURE_DOC_INTEL_ENDPOINT"] = "https://test.cognitiveservices.azure.com/"
-        os.environ["AZURE_DOC_INTEL_KEY"] = "dummy-key-for-testing"
+        os.environ["AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT"] = "https://test.cognitiveservices.azure.com/"
+        os.environ["AZURE_DOCUMENT_INTELLIGENCE_KEY"] = "dummy-key-for-testing"
 
         config = Config()
         extractor = Extractor(config=config)

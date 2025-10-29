@@ -21,20 +21,20 @@ uv sync --group azure-document-intelligence
 
 ### Required
 
-- **`AZURE_DOC_INTEL_ENDPOINT`** (required)
+- **`AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT`** (required)
   - Azure endpoint URL for your Document Intelligence resource
   - Format: `https://your-resource.cognitiveservices.azure.com/`
   - Get from: [Azure Portal](https://portal.azure.com/) → Your Document Intelligence resource → Overview
 
-- **`AZURE_DOC_INTEL_KEY`** (required)
+- **`AZURE_DOCUMENT_INTELLIGENCE_KEY`** (required)
   - Azure API key for authentication
   - Get from: [Azure Portal](https://portal.azure.com/) → Your Document Intelligence resource → Keys and Endpoint
 
 ### Example Setup
 
 ```bash
-export AZURE_DOC_INTEL_ENDPOINT="https://your-resource.cognitiveservices.azure.com/"
-export AZURE_DOC_INTEL_KEY="your-api-key-here"
+export AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT="https://your-resource.cognitiveservices.azure.com/"
+export AZURE_DOCUMENT_INTELLIGENCE_KEY="your-api-key-here"
 ```
 
 ## Configuration Options

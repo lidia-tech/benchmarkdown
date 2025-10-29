@@ -26,8 +26,8 @@ class AzureDocIntelExtractor:
     Requirements:
         - Azure subscription with Document Intelligence resource
         - The `azure-ai-documentintelligence` library installed
-        - AZURE_DOC_INTEL_ENDPOINT environment variable (endpoint URL)
-        - AZURE_DOC_INTEL_KEY environment variable (API key)
+        - AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT environment variable (endpoint URL)
+        - AZURE_DOCUMENT_INTELLIGENCE_KEY environment variable (API key)
 
     Configuration:
         You can create multiple instances with different configurations:
@@ -92,18 +92,18 @@ class AzureDocIntelExtractor:
             # Fallback to raw parameters for backward compatibility
             if endpoint is None:
                 endpoint = os.environ.get(
-                    "AZURE_DOC_INTEL_ENDPOINT",
+                    "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT",
                     "https://your-resource.cognitiveservices.azure.com/"
                 )
             if api_key is None:
-                api_key = os.environ.get("AZURE_DOC_INTEL_KEY", "")
+                api_key = os.environ.get("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
             if model_id is None:
                 model_id = "prebuilt-layout"
 
             if not api_key:
                 raise ValueError(
                     "Azure API key must be provided via config, parameter, or "
-                    "AZURE_DOC_INTEL_KEY environment variable"
+                    "AZURE_DOCUMENT_INTELLIGENCE_KEY environment variable"
                 )
 
             self.endpoint = endpoint

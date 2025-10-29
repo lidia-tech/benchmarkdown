@@ -62,14 +62,14 @@ class StringIndexType(str, Enum):
 def _get_endpoint_from_env() -> str:
     """Get Azure endpoint from environment variable."""
     return os.environ.get(
-        "AZURE_DOC_INTEL_ENDPOINT",
+        "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT",
         "https://your-resource.cognitiveservices.azure.com/"
     )
 
 
 def _get_api_key_from_env() -> str:
     """Get Azure API key from environment variable."""
-    return os.environ.get("AZURE_DOC_INTEL_KEY", "")
+    return os.environ.get("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
 
 
 # ============================================================================
@@ -87,8 +87,8 @@ class AzureDocIntelConfig(BaseModel):
     better user experience.
 
     Note: Credentials are read from environment variables:
-    - AZURE_DOC_INTEL_ENDPOINT: Azure endpoint URL
-    - AZURE_DOC_INTEL_KEY: Azure API key
+    - AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: Azure endpoint URL
+    - AZURE_DOCUMENT_INTELLIGENCE_KEY: Azure API key
 
     Based on Azure SDK API version 2024-11-30.
     """
@@ -97,12 +97,12 @@ class AzureDocIntelConfig(BaseModel):
 
     endpoint: str = Field(
         default_factory=_get_endpoint_from_env,
-        description="Azure endpoint URL (read from AZURE_DOC_INTEL_ENDPOINT)"
+        description="Azure endpoint URL (read from AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT)"
     )
 
     api_key: str = Field(
         default_factory=_get_api_key_from_env,
-        description="Azure API key (read from AZURE_DOC_INTEL_KEY)"
+        description="Azure API key (read from AZURE_DOCUMENT_INTELLIGENCE_KEY)"
     )
 
     model_id: AzureModelEnum = Field(
@@ -206,12 +206,12 @@ class AzureDocIntelConfig(BaseModel):
 
 
 # Field groupings for UI generation
-AZURE_DOC_INTEL_BASIC_FIELDS = [
+AZURE_DOCUMENT_INTELLIGENCE_BASIC_FIELDS = [
     "model_id",
     "output_content_format",
 ]
 
-AZURE_DOC_INTEL_ADVANCED_FIELDS = [
+AZURE_DOCUMENT_INTELLIGENCE_ADVANCED_FIELDS = [
     "pages",
     "locale",
     "features",
