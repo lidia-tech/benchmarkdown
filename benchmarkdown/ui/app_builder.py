@@ -197,11 +197,13 @@ def create_app(registry):
                     # Set up event handlers for conditional fields (show/hide based on parent value)
                     for engine_name, parent_components_dict in conditional_parent_components.items():
                         for parent_field, parent_component in parent_components_dict.items():
-                            # Get the conditional Row containers for this parent field
+                            # Get the conditional sections for this parent field
                             if engine_name in conditional_groups and parent_field in conditional_groups[engine_name]:
-                                cond_rows_dict = conditional_groups[engine_name][parent_field]
-                                # Get Row containers in sorted order
-                                cond_rows_list = [cond_rows_dict[key] for key in sorted(cond_rows_dict.keys())]
+                                cond_sections_dict = conditional_groups[engine_name][parent_field]
+                                # Flatten all components from all conditional sections
+                                cond_components_flat = []
+                                for key in sorted(cond_sections_dict.keys()):
+                                    cond_components_flat.extend(cond_sections_dict[key])
 
                                 # Create handler function for this parent field
                                 def make_conditional_handler(eng_name, parent_fld):
@@ -209,7 +211,7 @@ def create_app(registry):
                                         # Get the metadata to find display name
                                         metadata = registry.get_extractor(eng_name)
                                         if not metadata:
-                                            return [gr.update() for _ in cond_rows_list]
+                                            return [gr.update() for _ in cond_components_flat]
 
                                         # Get updates from dynamic_config
                                         updates = dynamic_config.get_conditional_group_updates(
@@ -225,18 +227,20 @@ def create_app(registry):
                                 parent_component.change(
                                     fn=handler_fn,
                                     inputs=[parent_component],
-                                    outputs=cond_rows_list
+                                    outputs=cond_components_flat
                                 )
 
                     # ========== SETUP NESTED CONFIG HANDLERS ==========
                     # Set up event handlers for nested configs (e.g., Docling OCR engine selection)
                     for engine_name, nested_parent_components_dict in parent_components.items():
                         for parent_field, parent_component in nested_parent_components_dict.items():
-                            # Get the nested Row containers for this parent field
+                            # Get the nested sections for this parent field
                             if engine_name in nested_groups and parent_field in nested_groups[engine_name]:
-                                nested_rows_dict = nested_groups[engine_name][parent_field]
-                                # Get Row containers in sorted order
-                                nested_rows_list = [nested_rows_dict[key] for key in sorted(nested_rows_dict.keys())]
+                                nested_sections_dict = nested_groups[engine_name][parent_field]
+                                # Flatten all components from all nested sections
+                                nested_components_flat = []
+                                for key in sorted(nested_sections_dict.keys()):
+                                    nested_components_flat.extend(nested_sections_dict[key])
 
                                 # Create handler function for this parent field
                                 def make_nested_handler(eng_name, parent_fld):
@@ -244,7 +248,7 @@ def create_app(registry):
                                         # Get the metadata to find display name
                                         metadata = registry.get_extractor(eng_name)
                                         if not metadata:
-                                            return [gr.update() for _ in nested_rows_list]
+                                            return [gr.update() for _ in nested_components_flat]
 
                                         # Get updates from dynamic_config
                                         updates = dynamic_config.get_nested_group_updates(
@@ -260,7 +264,7 @@ def create_app(registry):
                                 parent_component.change(
                                     fn=handler_fn,
                                     inputs=[parent_component],
-                                    outputs=nested_rows_list
+                                    outputs=nested_components_flat
                                 )
 
                     # Configuration editor action buttons
