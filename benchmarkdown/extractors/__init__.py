@@ -28,6 +28,7 @@ class ExtractorMetadata:
     availability_message: str
     module_path: str
     nested_configs: Optional[Dict[str, Any]] = None  # Optional nested config metadata
+    conditional_fields: Optional[Dict[str, Dict[Any, List[str]]]] = None  # Optional conditional fields
 
 
 class ExtractorRegistry:
@@ -122,6 +123,9 @@ class ExtractorRegistry:
         # Extract nested configs if present (optional for plugins with nested config structures)
         nested_configs = getattr(plugin_module, 'NESTED_CONFIGS', None)
 
+        # Extract conditional fields if present (optional for plugins with conditional field visibility)
+        conditional_fields = getattr(plugin_module, 'CONDITIONAL_FIELDS', None)
+
         # Create metadata
         metadata = ExtractorMetadata(
             engine_name=engine_name,
@@ -133,7 +137,8 @@ class ExtractorRegistry:
             is_available=is_available,
             availability_message=availability_message,
             module_path=f'benchmarkdown.extractors.{module_name}',
-            nested_configs=nested_configs
+            nested_configs=nested_configs,
+            conditional_fields=conditional_fields
         )
 
         # Register

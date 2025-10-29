@@ -27,6 +27,8 @@ class DynamicConfigUI:
         self.component_field_maps = {}  # engine_name -> list of field names
         self.nested_groups = {}  # engine_name -> {parent_field: {option_value: gr.Group}}
         self.parent_components = {}  # engine_name -> {parent_field: gr.Component}
+        self.conditional_groups = {}  # engine_name -> {parent_field: {parent_value: gr.Group}}
+        self.conditional_parent_components = {}  # engine_name -> {parent_field: gr.Component}
 
     def generate_engine_choices(self) -> List[str]:
         """
@@ -71,6 +73,8 @@ class DynamicConfigUI:
             field_names = []
             nested_groups_for_engine = {}  # parent_field -> {option_value: gr.Group}
             parent_components_for_engine = {}  # parent_field -> gr.Component
+            conditional_groups_for_engine = {}  # parent_field -> {parent_value: gr.Group}
+            conditional_parent_components_for_engine = {}  # parent_field -> gr.Component
 
             # Basic fields section
             with gr.Group():
@@ -91,6 +95,11 @@ class DynamicConfigUI:
                     # Check if this field is a parent for nested configs
                     if metadata.nested_configs and field_name in metadata.nested_configs:
                         parent_components_for_engine[field_name] = component
+
+                    # Check if this field is a parent for conditional fields
+                    conditional_fields = getattr(metadata, 'conditional_fields', None)
+                    if conditional_fields and field_name in conditional_fields:
+                        conditional_parent_components_for_engine[field_name] = component
 
             # Generate nested config sections if present
             if metadata.nested_configs:
@@ -145,6 +154,33 @@ class DynamicConfigUI:
                             # Store the nested group for show/hide logic
                             nested_groups_for_engine[parent_field_name][option_value] = nested_group
 
+            # Generate conditional field sections if present
+            conditional_fields = getattr(metadata, 'conditional_fields', None)
+            if conditional_fields:
+                for parent_field_name, parent_value_conditions in conditional_fields.items():
+                    conditional_groups_for_engine[parent_field_name] = {}
+
+                    for parent_value, dependent_field_names in parent_value_conditions.items():
+                        # Create a group for these conditional fields (initially hidden)
+                        with gr.Group(visible=False) as conditional_group:
+                            gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options")
+
+                            for field_name in dependent_field_names:
+                                if field_name not in metadata.config_class.model_fields:
+                                    continue
+
+                                field_info = metadata.config_class.model_fields[field_name]
+                                field_type = field_info.annotation
+
+                                component, _ = create_gradio_component_from_field(
+                                    field_name, field_info, field_type
+                                )
+                                components.append(component)
+                                field_names.append(field_name)
+
+                        # Store the conditional group for show/hide logic
+                        conditional_groups_for_engine[parent_field_name][parent_value] = conditional_group
+
             # Advanced fields section
             if metadata.advanced_fields:
                 with gr.Accordion("Advanced Options", open=False):
@@ -161,7 +197,20 @@ class DynamicConfigUI:
                         components.append(component)
                         field_names.append(field_name)
 
-        return config_area, components, field_names, nested_groups_for_engine, parent_components_for_engine
+                        # Check if this field is a parent for conditional fields
+                        conditional_fields = getattr(metadata, 'conditional_fields', None)
+                        if conditional_fields and field_name in conditional_fields:
+                            conditional_parent_components_for_engine[field_name] = component
+
+        return (
+            config_area,
+            components,
+            field_names,
+            nested_groups_for_engine,
+            parent_components_for_engine,
+            conditional_groups_for_engine,
+            conditional_parent_components_for_engine
+        )
 
     def generate_all_config_uis(self) -> Dict[str, Any]:
         """
@@ -178,13 +227,16 @@ class DynamicConfigUI:
         available = self.registry.get_available_extractors()
 
         for engine_name, metadata in available.items():
-            config_area, components, field_names, nested_groups, parent_components = self.generate_config_ui_for_extractor(metadata)
+            (config_area, components, field_names, nested_groups, parent_components,
+             conditional_groups, conditional_parent_components) = self.generate_config_ui_for_extractor(metadata)
 
             self.config_areas[engine_name] = config_area
             self.component_lists[engine_name] = components
             self.component_field_maps[engine_name] = field_names
             self.nested_groups[engine_name] = nested_groups
             self.parent_components[engine_name] = parent_components
+            self.conditional_groups[engine_name] = conditional_groups
+            self.conditional_parent_components[engine_name] = conditional_parent_components
 
         return {
             "config_areas": self.config_areas,
@@ -192,6 +244,8 @@ class DynamicConfigUI:
             "field_maps": self.component_field_maps,
             "nested_groups": self.nested_groups,
             "parent_components": self.parent_components,
+            "conditional_groups": self.conditional_groups,
+            "conditional_parent_components": self.conditional_parent_components,
         }
 
     def build_config_dict_from_values(
@@ -536,3 +590,69 @@ class DynamicConfigUI:
             return None
 
         return self.parent_components[engine_name].get(parent_field)
+
+    def get_conditional_group_updates(
+        self,
+        engine_display_name: str,
+        parent_field: str,
+        parent_value: Any
+    ) -> List[gr.update]:
+        """
+        Generate gr.update() objects for conditional group visibility based on parent field value.
+
+        Args:
+            engine_display_name: Display name of the engine
+            parent_field: Name of the parent field (e.g., "auto_mode")
+            parent_value: Value of the parent field (e.g., True/False)
+
+        Returns:
+            List of gr.update() objects for conditional groups (one update per parent_value condition)
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name or engine_name not in self.conditional_groups:
+            return []
+
+        conditional_groups = self.conditional_groups[engine_name].get(parent_field, {})
+        if not conditional_groups:
+            return []
+
+        # Generate updates: show group only if parent value matches
+        updates = []
+        for condition_value, group in conditional_groups.items():
+            visible = (condition_value == parent_value)
+            updates.append(gr.update(visible=visible))
+
+        return updates
+
+    def get_conditional_parent_component(self, engine_display_name: str, parent_field: str):
+        """
+        Get the parent component for a conditional field group.
+
+        Args:
+            engine_display_name: Display name of the engine
+            parent_field: Name of the parent field
+
+        Returns:
+            Parent component or None
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name or engine_name not in self.conditional_parent_components:
+            return None
+
+        return self.conditional_parent_components[engine_name].get(parent_field)
+
+    def get_all_conditional_groups_for_engine(self, engine_display_name: str) -> Dict[str, Dict[Any, Any]]:
+        """
+        Get all conditional groups for a specific engine.
+
+        Args:
+            engine_display_name: Display name of the engine
+
+        Returns:
+            Dict mapping parent_field -> {parent_value: gr.Group}
+        """
+        engine_name = self.engine_name_from_display(engine_display_name)
+        if not engine_name or engine_name not in self.conditional_groups:
+            return {}
+
+        return self.conditional_groups[engine_name]
