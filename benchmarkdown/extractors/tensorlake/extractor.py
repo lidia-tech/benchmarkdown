@@ -87,7 +87,7 @@ class TensorLakeExtractor:
         def blocking_extract_markdown(filename: os.PathLike) -> str:
             try:
                 # Upload the document
-                file_id = self.doc_ai.upload(str(filename))
+                file_id = self.doc_ai.upload(path=str(filename))
 
                 # Configure parsing options
                 parsing_options = ParsingOptions(
@@ -102,12 +102,15 @@ class TensorLakeExtractor:
                     table_summarization=self.config.table_summarization,
                 )
 
-                # Parse and wait for completion
-                result = self.doc_ai.parse_and_wait(
-                    file_id,
+                # Submit parse operation (using known-working API pattern)
+                parse_id = self.doc_ai.read(
+                    file_id=file_id,
                     parsing_options=parsing_options,
                     enrichment_options=enrichment_options
                 )
+
+                # Wait for parsing to complete
+                result = self.doc_ai.wait_for_completion(parse_id)
 
                 # Check if parsing was successful
                 if result.status != ParseStatus.SUCCESSFUL:
