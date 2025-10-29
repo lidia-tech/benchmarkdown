@@ -54,6 +54,58 @@ These notes serve as developer reference and onboarding documentation, distinct 
 - Profile management
 - And more...
 
+## TODO/DONE Workflow
+
+### Managing Task Lists Efficiently
+
+**IMPORTANT: Avoid reading DONE.md entirely** - it can grow very long over time.
+
+**Checking completed tasks:**
+```bash
+# Search for task names (second-level headers) only
+grep "^## " DONE.md
+```
+
+**Adding completed tasks to DONE.md:**
+- Use file append operations, NOT Read + Edit
+- Never read the entire DONE.md file just to add a task
+- Example of correct approach:
+  ```bash
+  # Append task content directly to end of file
+  cat >> DONE.md << 'EOF'
+
+  ## Task Name
+
+  Task description...
+
+  ### Clarifications
+  ...
+
+  ### Thoughts, proposed solution
+  ...
+
+  ### What was implemented
+  ...
+  EOF
+  ```
+
+**Task structure in both TODO.md and DONE.md:**
+- First-level heading: `# Task list` (TODO.md) or `# Implemented tasks` (DONE.md)
+- Each task: Second-level heading `## Task Name`
+- Three subsections: Third-level headings `### Clarifications`, `### Thoughts, proposed solution`, `### What was implemented`
+- Tasks may have `Priority: N` under the task title
+- When moving from TODO to DONE, ensure all three subsections are present
+
+**Workflow reminder:**
+1. Select task from TODO.md (check priorities)
+2. Add clarifications if needed
+3. Add thoughts/proposed solution
+4. Implement the task
+5. Document what was implemented
+6. Use grep to verify task isn't already in DONE.md
+7. Append (don't read+edit) task to DONE.md
+8. Remove task from TODO.md
+
 ## Essential Commands
 
 ### Environment Setup
