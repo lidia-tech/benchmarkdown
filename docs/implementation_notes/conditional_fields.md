@@ -97,7 +97,9 @@ def generate_config_ui_for_extractor(self, metadata):
     if conditional_fields:
         for parent_field, parent_value_conditions in conditional_fields.items():
             for parent_value, dependent_field_names in parent_value_conditions.items():
-                with gr.Group(visible=False) as conditional_group:
+                # IMPORTANT: Use gr.Column, not gr.Group!
+                # gr.Column supports visibility updates in event handlers
+                with gr.Column(visible=False) as conditional_group:
                     # Create UI for dependent fields
                     for field_name in dependent_field_names:
                         # Generate component...
@@ -109,7 +111,8 @@ def get_conditional_group_updates(self, engine_display_name, parent_field, paren
     """Returns list of gr.update(visible=True/False) for conditional groups."""
     conditional_groups = self.conditional_groups[engine_name][parent_field]
     updates = []
-    for condition_value, group in conditional_groups.items():
+    # IMPORTANT: Iterate in sorted order to match outputs list in event handler
+    for condition_value in sorted(conditional_groups.keys()):
         visible = (condition_value == parent_value)
         updates.append(gr.update(visible=visible))
     return updates
@@ -149,9 +152,26 @@ for engine_name, parent_components in conditional_parent_components.items():
 
 Used factory function `make_conditional_handler(eng_name, parent_fld)` to properly capture loop variables in closures, avoiding Python's late binding issue.
 
+### Container Choice: gr.Column vs gr.Group
+
+**IMPORTANT**: Conditional field sections use `gr.Column`, NOT `gr.Group`.
+
+- **Why**: Gradio's event handlers can only update components, not layout containers
+- **Error if gr.Group used**: `InvalidComponentError: <class 'gradio.layouts.group.Group'> Component not a valid output component`
+- **Solution**: `gr.Column` supports visibility updates via `gr.update(visible=...)` in event handlers
+- **Visual difference**: None—both render as container blocks in the UI
+
+### Order Consistency
+
+The order of conditional groups in the outputs list MUST match the order of updates returned:
+
+- `app_builder.py` creates outputs: `[cond_groups_dict[key] for key in sorted(cond_groups_dict.keys())]`
+- `get_conditional_group_updates()` returns: `for condition_value in sorted(conditional_groups.keys())`
+- Both use `sorted()` to ensure consistent ordering
+
 ### Visibility Logic
 
-- Conditional groups start with `visible=False`
+- Conditional columns start with `visible=False`
 - When parent field changes, handler compares `parent_value` with `condition_value`
 - If they match: `gr.update(visible=True)`
 - If they don't match: `gr.update(visible=False)`
@@ -162,7 +182,7 @@ Conditional fields are:
 1. Defined in config.py with all other fields
 2. Removed from BASIC_FIELDS and ADVANCED_FIELDS
 3. Listed in CONDITIONAL_FIELDS structure
-4. Generated in separate gr.Group components
+4. Generated in separate gr.Column containers
 5. All fields still included in component_lists for profile save/load
 
 ## LlamaParse Example
