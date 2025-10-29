@@ -1,18 +1,17 @@
 # Task list
 
-## Fix Docling OCR engine conditional settings display bug
+## ~~Fix Docling OCR engine conditional settings display bug~~ ✅ FIXED
 
-**Priority:** 1
+**Status:** RESOLVED in commit 4907184
 
-### Description
+**Root Cause:**
+- Nested config event handlers were never wired up in app_builder.py
+- gr.Group/gr.Column containers cannot be used as outputs in Gradio
 
-When selecting different OCR engines in Docling configuration (e.g., tesseract, tesseract_cli, ocr_mac, rapid_ocr), only the EasyOCR settings are shown regardless of the selected engine. The nested config sections should show/hide based on the ocr_engine dropdown selection.
-
-### Investigation needed
-
-- Check how nested_groups event handlers are wired up in app_builder.py
-- Verify if the issue is similar to the LlamaParse conditional fields bug (InvalidComponentError with layout containers as outputs)
-- Ensure unified solution for both nested configs (Docling) and conditional fields (LlamaParse)
+**Solution:**
+- Used gr.Row containers which DO support visibility updates
+- Added event handler setup for nested configs
+- Unified approach with conditional fields (LlamaParse)
 
 ## Implement TensorLake extractor engine
 

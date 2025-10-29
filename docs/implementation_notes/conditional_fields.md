@@ -97,12 +97,13 @@ def generate_config_ui_for_extractor(self, metadata):
     if conditional_fields:
         for parent_field, parent_value_conditions in conditional_fields.items():
             for parent_value, dependent_field_names in parent_value_conditions.items():
-                # IMPORTANT: Use gr.Column, not gr.Group!
-                # gr.Column supports visibility updates in event handlers
-                with gr.Column(visible=False) as conditional_group:
-                    # Create UI for dependent fields
-                    for field_name in dependent_field_names:
-                        # Generate component...
+                # IMPORTANT: Use gr.Row as container!
+                # gr.Row supports visibility updates in event handlers
+                with gr.Row(visible=False) as conditional_row:
+                    with gr.Column():
+                        # Create UI for dependent fields
+                        for field_name in dependent_field_names:
+                            # Generate component...
 ```
 
 **Updates:**
@@ -152,14 +153,23 @@ for engine_name, parent_components in conditional_parent_components.items():
 
 Used factory function `make_conditional_handler(eng_name, parent_fld)` to properly capture loop variables in closures, avoiding Python's late binding issue.
 
-### Container Choice: gr.Column vs gr.Group
+### Container Choice: gr.Row
 
-**IMPORTANT**: Conditional field sections use `gr.Column`, NOT `gr.Group`.
+**IMPORTANT**: Conditional field sections use `gr.Row` containers.
 
-- **Why**: Gradio's event handlers can only update components, not layout containers
-- **Error if gr.Group used**: `InvalidComponentError: <class 'gradio.layouts.group.Group'> Component not a valid output component`
-- **Solution**: `gr.Column` supports visibility updates via `gr.update(visible=...)` in event handlers
-- **Visual difference**: None—both render as container blocks in the UI
+- **Why**: Gradio's `gr.Row` supports visibility updates as an output in event handlers
+- **Error if gr.Group/gr.Column used**: `InvalidComponentError: <class 'gradio.layouts.{group|column}.{Group|Column}'> Component not a valid output component`
+- **Solution**: Use `gr.Row` as the container, which CAN be updated with `gr.update(visible=...)`
+- **Pattern**:
+  ```python
+  with gr.Row(visible=False) as conditional_row:
+      with gr.Column():
+          # Fields go here
+  ```
+- **Benefits**:
+  - Update one container instead of many individual components
+  - Cleaner code, simpler event handlers
+  - Works consistently across Gradio versions
 
 ### Order Consistency
 
@@ -182,7 +192,7 @@ Conditional fields are:
 1. Defined in config.py with all other fields
 2. Removed from BASIC_FIELDS and ADVANCED_FIELDS
 3. Listed in CONDITIONAL_FIELDS structure
-4. Generated in separate gr.Column containers
+4. Generated in separate gr.Row containers (with gr.Column inside)
 5. All fields still included in component_lists for profile save/load
 
 ## LlamaParse Example
