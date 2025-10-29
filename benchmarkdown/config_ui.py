@@ -33,6 +33,14 @@ def create_gradio_component_from_field(
     default_value = field_info.default
     is_optional = False
 
+    # Handle default_factory (callable defaults)
+    if callable(default_value):
+        try:
+            default_value = default_value()
+        except Exception:
+            # If calling default_factory fails, use a sensible default based on type
+            default_value = None
+
     # Handle None defaults for Optional types
     if default_value is None:
         origin = get_origin(field_type)
@@ -104,6 +112,10 @@ def create_gradio_component_from_field(
         ge = getattr(field_info, 'ge', None)
         le = getattr(field_info, 'le', None)
 
+        # Ensure default_value is a valid integer
+        if default_value is None or default_value == "":
+            default_value = ge if ge is not None else 0
+
         # For optional fields, use Number input; for required, use Slider
         if is_optional:
             info_text = f"{description} (Leave at 0 or empty for no limit)" if description else "Leave at 0 for no limit"
@@ -117,6 +129,10 @@ def create_gradio_component_from_field(
         else:
             minimum = ge if ge is not None else 0
             maximum = le if le is not None else 100
+            # Ensure value is within bounds
+            if not isinstance(default_value, (int, float)):
+                default_value = minimum
+            default_value = max(minimum, min(default_value, maximum))
             component = gr.Slider(
                 minimum=minimum,
                 maximum=maximum,
@@ -132,6 +148,10 @@ def create_gradio_component_from_field(
         ge = getattr(field_info, 'ge', None)
         le = getattr(field_info, 'le', None)
 
+        # Ensure default_value is a valid float
+        if default_value is None or default_value == "":
+            default_value = ge if ge is not None else 0.0
+
         # For optional fields, use Number input; for required, use Slider
         if is_optional:
             info_text = f"{description} (Leave at 0 or empty for no limit)" if description else "Leave at 0 for no limit"
@@ -145,10 +165,14 @@ def create_gradio_component_from_field(
         else:
             minimum = ge if ge is not None else 0.0
             maximum = le if le is not None else 2.0
+            # Ensure value is within bounds
+            if not isinstance(default_value, (int, float)):
+                default_value = (minimum + maximum) / 2  # Use midpoint as fallback
+            default_value = max(minimum, min(float(default_value), maximum))
             component = gr.Slider(
                 minimum=minimum,
                 maximum=maximum,
-                value=default_value if default_value is not None else 1.0,
+                value=default_value,
                 step=0.1,
                 label=field_name.replace('_', ' ').title(),
                 info=description
