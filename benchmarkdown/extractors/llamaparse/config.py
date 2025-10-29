@@ -440,6 +440,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
 
 # Conditional fields that depend on parent field values
 # Format: {parent_field: {parent_value: [dependent_fields]}}
+# Order matches parent field order in BASIC_FIELDS for UI consistency
 LLAMAPARSE_CONDITIONAL_FIELDS = {
     "auto_mode": {
         True: [
@@ -449,6 +450,10 @@ LLAMAPARSE_CONDITIONAL_FIELDS = {
             "auto_mode_trigger_on_regexp_in_page",
             "auto_mode_configuration_json",
         ]
+    },
+    "parse_mode": {
+        ParsingModeEnum.PARSE_PAGE_WITH_AGENT: ["model"],
+        ParsingModeEnum.PARSE_DOCUMENT_WITH_AGENT: ["model"],
     },
     "use_vendor_multimodal_model": {
         True: [
@@ -462,9 +467,5 @@ LLAMAPARSE_CONDITIONAL_FIELDS = {
             "page_prefix",
             "page_suffix",
         ]
-    },
-    "parse_mode": {
-        ParsingModeEnum.PARSE_PAGE_WITH_AGENT: ["model"],
-        ParsingModeEnum.PARSE_DOCUMENT_WITH_AGENT: ["model"],
     },
 }
