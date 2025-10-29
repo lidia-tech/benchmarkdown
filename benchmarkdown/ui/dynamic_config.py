@@ -161,8 +161,9 @@ class DynamicConfigUI:
                     conditional_groups_for_engine[parent_field_name] = {}
 
                     for parent_value, dependent_field_names in parent_value_conditions.items():
-                        # Create a group for these conditional fields (initially hidden)
-                        with gr.Group(visible=False) as conditional_group:
+                        # Create a column for these conditional fields (initially hidden)
+                        # Note: Using gr.Column instead of gr.Group because Column supports visibility updates in event handlers
+                        with gr.Column(visible=False) as conditional_group:
                             gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options")
 
                             for field_name in dependent_field_names:
@@ -617,8 +618,9 @@ class DynamicConfigUI:
             return []
 
         # Generate updates: show group only if parent value matches
+        # IMPORTANT: Iterate in sorted order to match outputs list order in app_builder.py
         updates = []
-        for condition_value, group in conditional_groups.items():
+        for condition_value in sorted(conditional_groups.keys()):
             visible = (condition_value == parent_value)
             updates.append(gr.update(visible=visible))
 
