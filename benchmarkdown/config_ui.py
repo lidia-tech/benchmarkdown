@@ -41,24 +41,28 @@ def create_gradio_component_from_field(
             # If calling default_factory fails, use a sensible default based on type
             default_value = None
 
-    # Handle None defaults for Optional types
-    if default_value is None:
-        origin = get_origin(field_type)
-        if origin is not None:  # Optional types
-            is_optional = True
-            args = get_args(field_type)
-            if len(args) > 0:
-                # Get the non-None type
-                field_type = next((arg for arg in args if arg is not type(None)), args[0])
-                # Try to get a sensible default for UI
+    # Unwrap Optional types first
+    origin = get_origin(field_type)
+    if origin is Union:
+        # This is an Optional type - unwrap it
+        is_optional = True
+        args = get_args(field_type)
+        if len(args) > 0:
+            # Get the non-None type
+            field_type = next((arg for arg in args if arg is not type(None)), args[0])
+            # Try to get a sensible default for UI if default_value is None
+            if default_value is None:
                 if field_type == float:
                     default_value = 0.0
                 elif field_type == int:
                     default_value = 0
                 elif field_type == str:
                     default_value = ""
+                elif isinstance(field_type, type) and issubclass(field_type, Enum):
+                    # For optional enum, use first enum value as default
+                    default_value = list(field_type)[0].value
 
-    # Determine component type based on field type
+    # Re-evaluate origin after unwrapping Optional types
     origin = get_origin(field_type)
 
     # Handle Enum types
