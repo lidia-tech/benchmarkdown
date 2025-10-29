@@ -195,15 +195,20 @@ TENSORLAKE_ADVANCED_FIELDS = [
 ]
 
 # Conditional fields: show these only when their parent field is enabled
+# Structure: {parent_field: {parent_value: [dependent_fields]}}
 TENSORLAKE_CONDITIONAL_FIELDS = {
-    "figure_summarization": [
-        "figure_summarization_prompt",
-        "include_full_page_image",
-    ],
-    "table_summarization": [
-        "table_summarization_prompt",
-        "include_full_page_image",
-    ],
+    "figure_summarization": {
+        True: [
+            "figure_summarization_prompt",
+            "include_full_page_image",
+        ]
+    },
+    "table_summarization": {
+        True: [
+            "table_summarization_prompt",
+            "include_full_page_image",
+        ]
+    },
 }
 
 # Export names for backward compatibility
