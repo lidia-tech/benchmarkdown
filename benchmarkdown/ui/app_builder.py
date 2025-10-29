@@ -180,14 +180,50 @@ def create_app(registry):
                     # This replaces 197 lines of hardcoded Docling/Textract UI
                     
                     config_ui_data = dynamic_config.generate_all_config_uis()
-                    
+
                     # Store references for event handlers
                     config_areas = config_ui_data['config_areas']
                     component_lists = config_ui_data['component_lists']
                     field_maps = config_ui_data['field_maps']
-                    
+                    conditional_groups = config_ui_data['conditional_groups']
+                    conditional_parent_components = config_ui_data['conditional_parent_components']
+
                     # All config areas are now generated and ready!
                     # No hardcoded engine-specific code needed.
+
+                    # ========== SETUP CONDITIONAL FIELD HANDLERS ==========
+                    # Set up event handlers for conditional fields (show/hide based on parent value)
+                    for engine_name, parent_components in conditional_parent_components.items():
+                        for parent_field, parent_component in parent_components.items():
+                            # Get the conditional groups for this parent field
+                            if engine_name in conditional_groups and parent_field in conditional_groups[engine_name]:
+                                cond_groups_dict = conditional_groups[engine_name][parent_field]
+                                cond_groups_list = [cond_groups_dict[key] for key in sorted(cond_groups_dict.keys())]
+
+                                # Create handler function for this parent field
+                                def make_conditional_handler(eng_name, parent_fld):
+                                    def handler(parent_value):
+                                        # Get the metadata to find display name
+                                        metadata = registry.get_extractor(eng_name)
+                                        if not metadata:
+                                            return [gr.update() for _ in cond_groups_list]
+
+                                        # Get updates from dynamic_config
+                                        updates = dynamic_config.get_conditional_group_updates(
+                                            metadata.display_name,
+                                            parent_fld,
+                                            parent_value
+                                        )
+                                        return updates
+                                    return handler
+
+                                # Bind the handler to the parent component
+                                handler_fn = make_conditional_handler(engine_name, parent_field)
+                                parent_component.change(
+                                    fn=handler_fn,
+                                    inputs=[parent_component],
+                                    outputs=cond_groups_list
+                                )
 
                     # Configuration editor action buttons
                     with gr.Row():
