@@ -4,7 +4,8 @@ A benchmark suite for comparing document-to-markdown extraction technologies wit
 
 ## Features
 
-- 🎯 **Multiple Extractors**: Compare Docling (local) and AWS Textract (cloud)
+- 🎯 **Multiple Extractors**: Compare Docling (local), AWS Textract, TensorLake, and LlamaParse (cloud)
+- 🔌 **Plugin Architecture**: Add new extractors by simply creating a directory—no code changes needed
 - ⚙️ **Configurable**: UI-driven configuration with 15+ parameters per extractor
 - 📊 **Side-by-Side Comparison**: Visual comparison of extraction results
 - 🚀 **Batch Processing**: Process multiple documents with multiple extractors
@@ -20,10 +21,12 @@ A benchmark suite for comparing document-to-markdown extraction technologies wit
 ```bash
 git clone <repository-url>
 cd benchmarkdown
-uv sync --all-groups  # Install all extractors
-# OR
-uv sync --group docling      # Local processing only
-uv sync --group textract     # AWS Textract only
+uv sync --all-groups         # Install all extractors
+# OR install specific extractors:
+uv sync --group docling      # Local processing with Docling
+uv sync --group textract     # AWS Textract cloud service
+uv sync --group tensorlake   # TensorLake cloud service
+uv sync --group llamaparse   # LlamaParse cloud service
 ```
 
 ### Launch the Web UI
@@ -45,7 +48,7 @@ Open http://localhost:7860 in your browser.
 7. **Upload Documents**: Add PDF/DOCX files to process
 8. **Run & Compare**: Process documents and view side-by-side or tabbed comparisons
 
-See [CONFIG_UI_README.md](CONFIG_UI_README.md) for detailed configuration guide.
+See [CONFIG_UI_README.md](CONFIG_UI_README.md) for detailed configuration guide and [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) for system-level settings.
 
 ## Project Structure
 
@@ -53,8 +56,10 @@ See [CONFIG_UI_README.md](CONFIG_UI_README.md) for detailed configuration guide.
   - `/extractors` - **Plugin-based extractor architecture**
     - `base.py` - Protocol definitions
     - `__init__.py` - ExtractorRegistry with automatic discovery
-    - `/docling` - Docling extractor plugin
-    - `/textract` - AWS Textract extractor plugin
+    - `/docling` - Docling extractor plugin (local)
+    - `/textract` - AWS Textract extractor plugin (cloud)
+    - `/tensorlake` - TensorLake extractor plugin (cloud)
+    - `/llamaparse` - LlamaParse extractor plugin (cloud)
   - `config.py` - Re-exports from plugins (backward compatibility)
   - `config_ui.py` - Automatic UI generation from Pydantic models
   - `profile_manager.py` - Configuration profile persistence
@@ -97,16 +102,40 @@ See [tests/README.md](tests/README.md) for detailed test documentation.
 
 ## Configuration
 
-### AWS Textract Setup
+### Extractor Authentication
+
+Each cloud-based extractor requires its own API key or credentials:
 
 ```bash
-export TEXTRACT_S3_WORKSPACE=s3://your-bucket-name/textract-workspace/
+# TensorLake (required for TensorLake extractor)
+export TENSORLAKE_API_KEY="your-tensorlake-api-key"
+
+# LlamaParse (required for LlamaParse extractor)
+export LLAMA_CLOUD_API_KEY="your-llamaparse-api-key"
+
+# AWS Textract (required for Textract extractor)
+export TEXTRACT_S3_WORKSPACE="s3://your-bucket-name/textract-workspace/"
 # Configure AWS credentials via ~/.aws/credentials or environment variables
 ```
 
-### Environment Variables
+### System-Level Settings
 
-Create `.env` from `.env.template` for additional configuration.
+Optional environment variables for advanced performance tuning (timeouts, worker counts, etc.):
+
+```bash
+# TensorLake
+export TENSORLAKE_MAX_TIMEOUT=600  # seconds
+
+# LlamaParse
+export LLAMAPARSE_NUM_WORKERS=8
+export LLAMAPARSE_MAX_TIMEOUT=3000  # seconds
+
+# Docling
+export DOCLING_NUM_THREADS=16
+export DOCLING_DOCUMENT_TIMEOUT=600.0  # seconds
+```
+
+See [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) for complete documentation of all environment variables.
 
 ## Documentation
 
