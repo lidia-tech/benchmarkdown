@@ -16,6 +16,8 @@ from .config import (
     TENSORLAKE_CONDITIONAL_FIELDS,
     ChunkingStrategyEnum,
     TableOutputModeEnum,
+    TableParsingFormatEnum,
+    OcrModelEnum,
 )
 
 # Plugin metadata
@@ -86,4 +88,6 @@ __all__ = [
     'TensorLakeConfig',
     'ChunkingStrategyEnum',
     'TableOutputModeEnum',
+    'TableParsingFormatEnum',
+    'OcrModelEnum',
 ]

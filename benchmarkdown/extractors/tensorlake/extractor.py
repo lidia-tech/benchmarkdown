@@ -9,7 +9,7 @@ import os
 import asyncio
 import logging
 from typing import Optional
-from tensorlake.documentai import DocumentAI, ParsingOptions, EnrichmentOptions, ParseStatus
+from tensorlake.documentai import DocumentAI, ParseStatus
 
 from .config import TensorLakeConfig
 
@@ -89,18 +89,9 @@ class TensorLakeExtractor:
                 # Upload the document
                 file_id = self.doc_ai.upload(path=str(filename))
 
-                # Configure parsing options
-                parsing_options = ParsingOptions(
-                    chunking_strategy=self.config.chunking_strategy,
-                    table_output_mode=self.config.table_output_mode,
-                    signature_detection=self.config.signature_detection,
-                )
-
-                # Configure enrichment options
-                enrichment_options = EnrichmentOptions(
-                    figure_summarization=self.config.figure_summarization,
-                    table_summarization=self.config.table_summarization,
-                )
+                # Convert config to TensorLake options objects
+                parsing_options = self.config.to_parsing_options()
+                enrichment_options = self.config.to_enrichment_options()
 
                 # Submit parse operation (using known-working API pattern)
                 parse_id = self.doc_ai.read(
