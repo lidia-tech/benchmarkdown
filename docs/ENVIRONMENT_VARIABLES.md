@@ -1,165 +1,92 @@
-# Environment Variables
+# Environment Variables Reference
 
-This document lists all environment variables that can be used to configure Benchmarkdown extractors.
+Quick reference for all environment variables used by Benchmarkdown extractors.
 
-## Authentication & Access
+> **Note:** For detailed information about each extractor's configuration options, see the individual README files in `benchmarkdown/extractors/{extractor_name}/README.md`
 
-### TensorLake
-- **`TENSORLAKE_API_KEY`** (required)
-  API key for TensorLake Document Ingestion API
-  Get your key at: https://cloud.tensorlake.ai/
+## Quick Reference Table
 
-### LlamaParse
-- **`LLAMA_CLOUD_API_KEY`** (required)
-  API key for LlamaIndex LlamaParse cloud service
-  Get your key at: https://cloud.llamaindex.ai/
+| Variable | Extractor | Required? | Description |
+|----------|-----------|-----------|-------------|
+| **Authentication** |
+| `TENSORLAKE_API_KEY` | TensorLake | ✅ Required | TensorLake API key ([Get key](https://cloud.tensorlake.ai/)) |
+| `LLAMA_CLOUD_API_KEY` | LlamaParse | ✅ Required | LlamaIndex LlamaParse API key ([Get key](https://cloud.llamaindex.ai/)) |
+| `OPENAI_API_KEY` | LlamaParse | ⚙️ Optional | OpenAI API key for GPT-4o enhanced parsing mode |
+| `TEXTRACT_S3_WORKSPACE` | AWS Textract | ✅ Required | S3 URI for workspace (e.g., `s3://bucket/path/`) |
+| `AWS_PROFILE` | AWS Textract | ⚙️ Optional | AWS CLI profile name (alternative to access keys) |
+| `AWS_ACCESS_KEY_ID` | AWS Textract | ⚙️ Optional | AWS access key (alternative to profile) |
+| `AWS_SECRET_ACCESS_KEY` | AWS Textract | ⚙️ Optional | AWS secret key (alternative to profile) |
+| `AWS_DEFAULT_REGION` | AWS Textract | ⚙️ Optional | AWS region (default: from AWS config) |
+| `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` | Azure | ✅ Required | Azure endpoint URL ([Azure Portal](https://portal.azure.com/)) |
+| `AZURE_DOCUMENT_INTELLIGENCE_KEY` | Azure | ✅ Required | Azure API key |
+| **Performance Tuning** |
+| `DOCLING_NUM_THREADS` | Docling | ⚙️ Optional | CPU threads (default: CPU count, range: 1-32) |
+| `DOCLING_DOCUMENT_TIMEOUT` | Docling | ⚙️ Optional | Processing timeout in seconds (default: None, min: 1.0) |
+| `TENSORLAKE_MAX_TIMEOUT` | TensorLake | ⚙️ Optional | API timeout in seconds (default: 300, range: 30-600) |
+| `LLAMAPARSE_NUM_WORKERS` | LlamaParse | ⚙️ Optional | Parallel workers (default: 4, range: 1-19) |
+| `LLAMAPARSE_MAX_TIMEOUT` | LlamaParse | ⚙️ Optional | API timeout in seconds (default: 2000) |
+| `LLAMAPARSE_VERBOSE` | LlamaParse | ⚙️ Optional | Enable verbose logging (default: false) |
+| `LLAMAPARSE_SHOW_PROGRESS` | LlamaParse | ⚙️ Optional | Show progress bars (default: true) |
+| `LLAMAPARSE_IGNORE_ERRORS` | LlamaParse | ⚙️ Optional | Skip parsing errors (default: false) |
 
-### AWS Textract
-- **`TEXTRACT_S3_WORKSPACE`** (required)
-  Full S3 URI for Textract workspace (e.g., `s3://bucket-name/textract-workspace/`)
-  Also requires AWS credentials via standard AWS SDK methods (`~/.aws/credentials` or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`)
+## Setup Instructions
 
-### Azure Document Intelligence
-- **`AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT`** (required)
-  Azure endpoint URL for your Document Intelligence resource
-  Format: `https://your-resource.cognitiveservices.azure.com/`
-  Get from Azure Portal: https://portal.azure.com/
+### Using .env File (Recommended)
 
-- **`AZURE_DOCUMENT_INTELLIGENCE_KEY`** (required)
-  Azure API key for authentication
-  Get from Azure Portal under your Document Intelligence resource → Keys and Endpoint
+1. Copy `.env.template` to `.env`:
+   ```bash
+   cp .env.template .env
+   ```
 
-## System-Level Performance Settings
+2. Edit `.env` and fill in credentials for the extractors you want to use
 
-These environment variables control system-level settings like timeouts, worker counts, and verbosity. They are not exposed in the UI to keep it clean, but can be configured for advanced use cases.
+3. The app automatically loads `.env` on startup (via python-dotenv)
 
-### TensorLake System Settings
-
-- **`TENSORLAKE_MAX_TIMEOUT`** (optional, default: `300`)
-  Maximum timeout in seconds to wait for parsing to finish
-  Valid range: 30-600 seconds
-  Example: `export TENSORLAKE_MAX_TIMEOUT=600`
-
-### LlamaParse System Settings
-
-- **`LLAMAPARSE_NUM_WORKERS`** (optional, default: `4`)
-  Number of workers for parallel page processing
-  Valid range: 1-19
-  Example: `export LLAMAPARSE_NUM_WORKERS=8`
-
-- **`LLAMAPARSE_MAX_TIMEOUT`** (optional, default: `2000`)
-  Maximum timeout in seconds to wait for parsing to finish
-  Example: `export LLAMAPARSE_MAX_TIMEOUT=3000`
-
-- **`LLAMAPARSE_VERBOSE`** (optional, default: `false`)
-  Enable verbose logging
-  Valid values: `true`, `false`, `1`, `0`, `yes`, `no`
-  Example: `export LLAMAPARSE_VERBOSE=true`
-
-- **`LLAMAPARSE_SHOW_PROGRESS`** (optional, default: `true`)
-  Show progress when parsing multiple files
-  Valid values: `true`, `false`, `1`, `0`, `yes`, `no`
-  Example: `export LLAMAPARSE_SHOW_PROGRESS=false`
-
-- **`LLAMAPARSE_IGNORE_ERRORS`** (optional, default: `false`)
-  Whether to ignore and skip errors raised during parsing
-  Valid values: `true`, `false`, `1`, `0`, `yes`, `no`
-  Example: `export LLAMAPARSE_IGNORE_ERRORS=true`
-
-### Docling System Settings
-
-- **`DOCLING_NUM_THREADS`** (optional, default: CPU count)
-  Number of CPU threads to use for processing
-  Valid range: 1-32
-  Example: `export DOCLING_NUM_THREADS=8`
-
-- **`DOCLING_DOCUMENT_TIMEOUT`** (optional, default: None)
-  Maximum processing time per document in seconds
-  Minimum: 1.0
-  Example: `export DOCLING_DOCUMENT_TIMEOUT=300.0`
-
-## Usage Examples
-
-### Quick Setup (Authentication Only)
+### Using Shell Export
 
 ```bash
-# TensorLake
-export TENSORLAKE_API_KEY="your-tensorlake-key"
-
-# LlamaParse
-export LLAMA_CLOUD_API_KEY="your-llamaparse-key"
-
-# AWS Textract
-export TEXTRACT_S3_WORKSPACE="s3://your-bucket/textract-workspace/"
-export AWS_PROFILE="your-aws-profile"  # or use AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY
-
-# Azure Document Intelligence
-export AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT="https://your-resource.cognitiveservices.azure.com/"
-export AZURE_DOCUMENT_INTELLIGENCE_KEY="your-azure-key"
-```
-
-### Advanced Setup (With System Settings)
-
-```bash
-# TensorLake with increased timeout
-export TENSORLAKE_API_KEY="your-tensorlake-key"
-export TENSORLAKE_MAX_TIMEOUT=600
-
-# LlamaParse with custom performance settings
-export LLAMA_CLOUD_API_KEY="your-llamaparse-key"
+# Example: Set up LlamaParse
+export LLAMA_CLOUD_API_KEY="llx-your-key-here"
 export LLAMAPARSE_NUM_WORKERS=8
-export LLAMAPARSE_MAX_TIMEOUT=3000
-export LLAMAPARSE_VERBOSE=true
 
-# Docling with custom thread count
-export DOCLING_NUM_THREADS=16
-export DOCLING_DOCUMENT_TIMEOUT=600.0
-```
-
-### Setting Environment Variables in .env File
-
-You can also create a `.env` file in the project root:
-
-```bash
-# .env file
-TENSORLAKE_API_KEY=your-tensorlake-key
-TENSORLAKE_MAX_TIMEOUT=600
-
-LLAMA_CLOUD_API_KEY=your-llamaparse-key
-LLAMAPARSE_NUM_WORKERS=8
-LLAMAPARSE_VERBOSE=true
-
-TEXTRACT_S3_WORKSPACE=s3://your-bucket/textract-workspace/
-AWS_PROFILE=your-aws-profile
-
-AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
-AZURE_DOCUMENT_INTELLIGENCE_KEY=your-azure-key
-
-DOCLING_NUM_THREADS=16
-DOCLING_DOCUMENT_TIMEOUT=600.0
-```
-
-Then load it when running the app:
-
-```bash
-source .env
+# Then run the app
 uv run python app.py
 ```
 
-Or use python-dotenv (already included in dependencies):
+## Extractor Availability
 
-```python
-from dotenv import load_dotenv
-load_dotenv()
-```
+Extractors only appear in the UI if their required environment variables are set:
 
-## Notes
+- ✅ **Docling**: Always available (no credentials needed, runs locally)
+- ✅ **AWS Textract**: Available when `TEXTRACT_S3_WORKSPACE` and AWS credentials are set
+- ✅ **LlamaParse**: Available when `LLAMA_CLOUD_API_KEY` is set
+- ✅ **TensorLake**: Available when `TENSORLAKE_API_KEY` is set
+- ✅ **Azure Document Intelligence**: Available when both `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY` are set
 
-- System-level settings (timeouts, workers, verbosity) are **not exposed in the UI** to keep the interface clean and focused on extraction options
-- Authentication variables are **required** for their respective extractors to be available
-- All system settings have **sensible defaults** that work well for most use cases
-- These settings are particularly useful for:
-  - **CI/CD pipelines** where you need consistent behavior
-  - **Large document processing** where you need longer timeouts
-  - **High-performance servers** where you can increase worker counts
-  - **Debugging** where verbose logging is helpful
+## Performance Tuning Guide
+
+**When to adjust performance settings:**
+
+- 🚀 **High-volume processing**: Increase workers (`LLAMAPARSE_NUM_WORKERS`) for parallel processing
+- ⏱️ **Large documents**: Increase timeouts (`*_MAX_TIMEOUT`, `DOCLING_DOCUMENT_TIMEOUT`)
+- 🖥️ **Server deployment**: Set `DOCLING_NUM_THREADS` to match available CPU cores
+- 🐛 **Debugging**: Enable `LLAMAPARSE_VERBOSE=true` for detailed logs
+- 🔄 **CI/CD pipelines**: Set explicit timeouts and disable progress bars
+
+**Default settings work well for most use cases.**
+
+## Cost Considerations
+
+| Extractor | Cost | Notes |
+|-----------|------|-------|
+| Docling | 💚 Free | Open-source, runs locally |
+| AWS Textract | 💰 Paid | Per-page pricing ([pricing](https://aws.amazon.com/textract/pricing/)) |
+| LlamaParse | 💰 Paid | Free tier available ([pricing](https://cloud.llamaindex.ai/pricing)) |
+| TensorLake | 💰 Paid | Contact for pricing ([website](https://cloud.tensorlake.ai/)) |
+| Azure Document Intelligence | 💰 Paid | Per-page pricing ([pricing](https://azure.microsoft.com/pricing/details/form-recognizer/)) |
+
+## See Also
+
+- **Detailed setup**: See individual extractor READMEs in `benchmarkdown/extractors/{extractor_name}/README.md`
+- **Template file**: See `.env.template` for a complete example with all variables
+- **User guide**: See `CONFIG_UI_README.md` for UI configuration instructions
