@@ -137,10 +137,12 @@ class AzureDocIntelExtractor:
             with open(filename, "rb") as f:
                 file_bytes = f.read()
 
-            # Start the analysis
+            # Start the analysis using the correct API
+            # Note: The API expects 'body' parameter (not 'analyze_request')
+            # and uses keyword-only arguments for optional parameters
             poller = self.client.begin_analyze_document(
                 model_id=self.model_id,
-                analyze_request=file_bytes,
+                body=file_bytes,
                 content_type="application/octet-stream",
                 **self.analyze_kwargs
             )
