@@ -79,7 +79,7 @@ def create_gradio_component_from_field(
         if args and isinstance(args[0], type) and issubclass(args[0], Enum):
             # List of enums - use CheckboxGroup
             choices = [e.value for e in args[0]]
-            default = [v.value if isinstance(v, Enum) else v for v in default_value]
+            default = [v.value if isinstance(v, Enum) else v for v in default_value] if default_value else []
             component = gr.CheckboxGroup(
                 choices=choices,
                 value=default,
