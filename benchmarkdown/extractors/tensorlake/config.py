@@ -74,13 +74,9 @@ class TensorLakeConfig(BaseModel):
         description="Detect strike-through text in the document"
     )
 
-    # System options (can be configured via environment variables)
-    max_timeout: int = Field(
-        default_factory=lambda: int(os.getenv("TENSORLAKE_MAX_TIMEOUT", "300")),
-        ge=30,
-        le=600,
-        description="Maximum timeout in seconds to wait for parsing to finish (30-600 seconds). Set via TENSORLAKE_MAX_TIMEOUT env var."
-    )
+    # Note: TensorLake's parse_and_wait() method does not support configurable timeouts.
+    # The API will wait as long as necessary for parsing to complete.
+    # If you need timeout control, you'll need to implement it at the application level.
 
     class Config:
         use_enum_values = True
@@ -98,7 +94,6 @@ TENSORLAKE_ADVANCED_FIELDS = [
     "figure_summarization",
     "table_summarization",
     "strike_through_detection",
-    # Note: max_timeout is a system setting and not exposed in UI (uses default 300s)
 ]
 
 # No conditional fields for TensorLake (simple configuration)

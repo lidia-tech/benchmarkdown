@@ -106,8 +106,7 @@ class TensorLakeExtractor:
                 result = self.doc_ai.parse_and_wait(
                     file_id,
                     parsing_options=parsing_options,
-                    enrichment_options=enrichment_options,
-                    timeout=self.config.max_timeout
+                    enrichment_options=enrichment_options
                 )
 
                 # Check if parsing was successful
@@ -138,7 +137,7 @@ class TensorLakeExtractor:
                     raise ValueError(user_msg) from e
                 elif error_type == "TimeoutError" or "timed out" in error_msg.lower():
                     # Only catch actual timeout errors, not parameter validation errors
-                    user_msg = f"Parsing timeout after {self.config.max_timeout} seconds. Try increasing max_timeout or use a smaller document."
+                    user_msg = "Parsing timeout. Try using a smaller document or contact TensorLake support."
                     logger.error(f"TensorLake timeout error: {user_msg}")
                     raise ValueError(user_msg) from e
                 else:
