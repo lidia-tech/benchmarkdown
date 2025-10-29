@@ -1048,12 +1048,20 @@ def create_app(registry):
         )
 
         # Task Editor Events
+        def engine_change_handler(engine):
+            """Handle engine selection change - show profile group and hide config editor."""
+            profile_group_update, profile_selector_update = toggle_profile_group(engine)
+            return (
+                profile_group_update,     # profile_group
+                profile_selector_update,  # profile_selector
+                gr.update(visible=False), # config_editor (hide settings)
+                gr.update(visible=False), # profile_status (hide status message)
+            )
+
         engine_selector.change(
-            fn=lambda engine: (
-                *toggle_profile_group(engine),
-            ),
+            fn=engine_change_handler,
             inputs=[engine_selector],
-            outputs=[profile_group, profile_selector]
+            outputs=[profile_group, profile_selector, config_editor, profile_status]
         )
 
         profile_selector.change(
