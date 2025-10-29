@@ -423,7 +423,7 @@ LLAMAPARSE_ADVANCED_FIELDS = [
 
     # Vendor Models
     # Note: use_vendor_multimodal_model moved to BASIC_FIELDS (conditional parent)
-    "model",
+    # Note: model moved to conditional fields (shown for agent parsing modes)
 
     # Bounding Box
     "bbox_top",
@@ -462,5 +462,9 @@ LLAMAPARSE_CONDITIONAL_FIELDS = {
             "page_prefix",
             "page_suffix",
         ]
+    },
+    "parse_mode": {
+        ParsingModeEnum.PARSE_PAGE_WITH_AGENT: ["model"],
+        ParsingModeEnum.PARSE_DOCUMENT_WITH_AGENT: ["model"],
     },
 }
