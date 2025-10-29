@@ -124,6 +124,36 @@ class LlamaParseConfig(BaseModel):
         description="Parse documents continuously for better results on tables spanning multiple pages"
     )
 
+    auto_mode: bool = Field(
+        default=False,
+        description="Automatically select the best mode based on content (upgrades pages matching rules to premium mode)"
+    )
+
+    auto_mode_trigger_on_image_in_page: bool = Field(
+        default=False,
+        description="In auto_mode, upgrade pages containing images to premium mode"
+    )
+
+    auto_mode_trigger_on_table_in_page: bool = Field(
+        default=False,
+        description="In auto_mode, upgrade pages containing tables to premium mode"
+    )
+
+    auto_mode_trigger_on_text_in_page: Optional[str] = Field(
+        default=None,
+        description="In auto_mode, upgrade pages containing this text to premium mode"
+    )
+
+    auto_mode_trigger_on_regexp_in_page: Optional[str] = Field(
+        default=None,
+        description="In auto_mode, upgrade pages matching this regex pattern to premium mode"
+    )
+
+    auto_mode_configuration_json: Optional[str] = Field(
+        default=None,
+        description="JSON configuration for auto_mode behavior (advanced)"
+    )
+
     # === Table Extraction ===
     aggressive_table_extraction: bool = Field(
         default=False,
@@ -356,6 +386,12 @@ LLAMAPARSE_ADVANCED_FIELDS = [
     # Mode & Performance
     "fast_mode",
     "continuous_mode",
+    "auto_mode",
+    "auto_mode_trigger_on_image_in_page",
+    "auto_mode_trigger_on_table_in_page",
+    "auto_mode_trigger_on_text_in_page",
+    "auto_mode_trigger_on_regexp_in_page",
+    "auto_mode_configuration_json",
 
     # Table Extraction
     "aggressive_table_extraction",

@@ -75,6 +75,9 @@ class LlamaParseExtractor:
                 "premium_mode": config.premium_mode,
                 "fast_mode": config.fast_mode,
                 "continuous_mode": config.continuous_mode,
+                "auto_mode": config.auto_mode,
+                "auto_mode_trigger_on_image_in_page": config.auto_mode_trigger_on_image_in_page,
+                "auto_mode_trigger_on_table_in_page": config.auto_mode_trigger_on_table_in_page,
 
                 # Table Extraction
                 "aggressive_table_extraction": config.aggressive_table_extraction,
@@ -109,6 +112,12 @@ class LlamaParseExtractor:
             # Add optional fields if set
             if config.parse_mode:
                 parser_kwargs["parse_mode"] = config.parse_mode.value if hasattr(config.parse_mode, 'value') else config.parse_mode
+            if config.auto_mode_trigger_on_text_in_page:
+                parser_kwargs["auto_mode_trigger_on_text_in_page"] = config.auto_mode_trigger_on_text_in_page
+            if config.auto_mode_trigger_on_regexp_in_page:
+                parser_kwargs["auto_mode_trigger_on_regexp_in_page"] = config.auto_mode_trigger_on_regexp_in_page
+            if config.auto_mode_configuration_json:
+                parser_kwargs["auto_mode_configuration_json"] = config.auto_mode_configuration_json
             if config.parsing_instruction:
                 parser_kwargs["parsing_instruction"] = config.parsing_instruction
             if config.target_pages:
