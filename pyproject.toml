@@ -38,3 +38,7 @@ llamaparse = [
 tensorlake = [
     "tensorlake>=0.2.0",
 ]
+azure-document-intelligence = [
+    "azure-ai-documentintelligence>=1.0.0",
+    "azure-core>=1.30.0",
+]

@@ -958,3 +958,77 @@ Successfully redesigned the extraction tasks UI page in `benchmarkdown/ui/app_bu
 
 The new layout provides a more intuitive workflow: users see the task list first, then find all action buttons below in the order they would naturally use them.
 
+## Implement Microsoft DocumentAI based extractor engine
+
+### Clarifications
+
+Azure Document Intelligence (formerly known as Form Recognizer) is Microsoft's cloud-based document processing service. Key characteristics:
+- Official Python library: `azure-ai-documentintelligence`
+- Native markdown output support via `output_content_format="markdown"`
+- Multiple pre-built models available (prebuilt-layout, prebuilt-read, prebuilt-document)
+- Requires Azure subscription with endpoint URL and API key
+- Supports PDF, images, Office documents
+
+### Thoughts, proposed solution
+
+Following the established plugin architecture pattern:
+
+1. **Plugin structure**: Create `benchmarkdown/extractors/azure_document_intelligence/` directory with standard three files (config.py, extractor.py, __init__.py)
+
+2. **Configuration approach**: Use Pydantic model with:
+   - Basic fields: endpoint (from env), api_key (from env), model_id, output_content_format
+   - Advanced fields: pages (range), locale (hint)
+   - Environment variables: AZURE_DOC_INTEL_ENDPOINT, AZURE_DOC_INTEL_KEY
+
+3. **Extractor implementation**:
+   - Use `DocumentIntelligenceClient` from azure-ai-documentintelligence
+   - Async pattern with thread executor (matching existing extractors)
+   - Native markdown output makes conversion simple - just return `result.content`
+
+4. **Advantages over draft code**:
+   - Type-safe configuration with Pydantic validation
+   - Automatic UI generation through plugin system
+   - Profile save/load support
+   - Graceful handling of missing dependencies
+   - Environment-based credential management
+
+5. **Dependency management**: Add optional dependency group to pyproject.toml for clean installation
+
+### What was implemented
+
+**Plugin structure** created at `benchmarkdown/extractors/azure_document_intelligence/`:
+- **config.py**: Pydantic configuration model with enums for model selection and output format
+  - Basic fields: `model_id` (prebuilt-layout/read/document), `output_content_format` (markdown/text)
+  - Advanced fields: `pages` (range), `locale` (hint)
+  - Environment variable support: `AZURE_DOC_INTEL_ENDPOINT`, `AZURE_DOC_INTEL_KEY`
+  - `to_azure_options()` method converts config to Azure SDK format
+
+- **extractor.py**: AzureDocIntelExtractor class implementing MarkdownExtractor protocol
+  - Uses `DocumentIntelligenceClient` from `azure-ai-documentintelligence`
+  - Async pattern with thread executor (matches existing extractors)
+  - Native markdown output via `result.content`
+  - Supports both config-based and parameter-based initialization
+
+- **__init__.py**: Plugin interface with graceful dependency handling
+  - Standard exports: Extractor, Config, BASIC_FIELDS, ADVANCED_FIELDS
+  - Metadata: ENGINE_NAME, ENGINE_DISPLAY_NAME
+  - Lazy imports with stub classes when dependencies missing
+  - `is_available()` checks SDK installation and environment configuration
+
+**Dependency management**:
+- Added `azure-document-intelligence` group to `pyproject.toml`
+- Install with: `uv sync --group azure-document-intelligence`
+
+**Testing**:
+- Created `tests/test_azure_document_intelligence.py` test suite
+- All 5 tests pass (imports, availability, config, instantiation, registry discovery)
+- Gracefully handles missing Azure SDK (tests skip when unavailable)
+- Registry correctly discovers plugin and reports availability status
+
+**Key advantages**:
+- Zero UI code changes needed - automatic discovery and integration
+- Profile save/load works automatically through plugin system
+- Type-safe configuration with Pydantic validation
+- Native markdown output (simpler than conversion-based approaches)
+- Graceful degradation when dependencies unavailable
+

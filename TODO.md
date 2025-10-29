@@ -34,10 +34,6 @@ The dpi should be configurable.
 https://docs.aspose.com/pdf/python-cpp/extract-text/
 
 
-## Implement Microsoft DocumentAI based extractor engine
-
-TBD
-
 ## Implement extracted markdown evaluation metrics
 
 TBD
