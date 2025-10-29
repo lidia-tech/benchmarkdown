@@ -6,6 +6,46 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Benchmarkdown is a benchmark suite for comparing document-to-markdown extraction technologies. It features a **plugin-based architecture** where new extractors can be added by simply creating a directory—no code changes needed. The UI automatically discovers and integrates new extractors at runtime. The system provides both a programmatic API and a web-based Gradio UI that dynamically adapts to available extractors.
 
+## Documentation Guidelines
+
+### Implementation Notes
+
+When implementing significant features or architectural patterns:
+
+1. **Create implementation notes** in `docs/implementation_notes/`:
+   - Use Markdown format
+   - Include: overview, architecture, implementation details, examples, extensibility, testing
+   - Name files descriptively (e.g., `conditional_fields.md`, `plugin_discovery.md`)
+
+2. **Update README** in `docs/implementation_notes/README.md`:
+   - Add entry for the new note
+   - Include status, commits, and use case summary
+
+3. **When to write implementation notes**:
+   - New architectural patterns (e.g., conditional fields, nested configs)
+   - Complex features spanning multiple files
+   - Reusable patterns for extending the system
+   - Significant plugin system changes
+   - Features that need detailed developer documentation
+
+4. **Structure**:
+   ```markdown
+   # Feature Name
+   **Status:** ✅ Complete
+   **Date:** YYYY-MM-DD
+   **Commits:** abc123, def456
+
+   ## Overview
+   ## Architecture
+   ## Implementation Details
+   ## Examples
+   ## Extensibility
+   ## Testing
+   ## Related Files
+   ```
+
+These notes serve as developer reference and onboarding documentation, distinct from user-facing docs.
+
 ## Essential Commands
 
 ### Environment Setup
