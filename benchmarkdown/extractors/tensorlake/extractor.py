@@ -7,10 +7,14 @@ MarkdownExtractor protocol using TensorLake's Document Ingestion API.
 
 import os
 import asyncio
+import logging
 from typing import Optional
 from tensorlake.documentai import DocumentAI, ParsingOptions, EnrichmentOptions, ParseStatus
 
 from .config import TensorLakeConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class TensorLakeExtractor:
@@ -116,29 +120,33 @@ class TensorLakeExtractor:
                 return ""
 
             except Exception as e:
+                # Log the full exception with traceback to server logs
+                logger.error(f"TensorLake extraction failed for {filename}", exc_info=True)
+
                 # Make error messages more user-friendly
                 error_msg = str(e)
                 error_type = type(e).__name__
 
                 # Check for common API errors with more specific matching
                 if "api_key" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
-                    raise ValueError(
-                        "Authentication failed. Please check your TENSORLAKE_API_KEY environment variable."
-                    ) from e
+                    user_msg = "Authentication failed. Please check your TENSORLAKE_API_KEY environment variable."
+                    logger.error(f"TensorLake authentication error: {user_msg}")
+                    raise ValueError(user_msg) from e
                 elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
-                    raise ValueError(
-                        "API quota exceeded or rate limit reached. Please check your TensorLake account."
-                    ) from e
+                    user_msg = "API quota exceeded or rate limit reached. Please check your TensorLake account."
+                    logger.error(f"TensorLake quota error: {user_msg}")
+                    raise ValueError(user_msg) from e
                 elif error_type == "TimeoutError" or "timed out" in error_msg.lower():
                     # Only catch actual timeout errors, not parameter validation errors
-                    raise ValueError(
-                        f"Parsing timeout after {self.config.max_timeout} seconds. "
-                        "Try increasing max_timeout or use a smaller document."
-                    ) from e
+                    user_msg = f"Parsing timeout after {self.config.max_timeout} seconds. Try increasing max_timeout or use a smaller document."
+                    logger.error(f"TensorLake timeout error: {user_msg}")
+                    raise ValueError(user_msg) from e
                 else:
                     # Re-raise with original error for better debugging
                     # Include the error type and message
-                    raise ValueError(f"TensorLake extraction failed: {error_type}: {error_msg}") from e
+                    user_msg = f"TensorLake extraction failed: {error_type}: {error_msg}"
+                    logger.error(f"TensorLake unexpected error: {user_msg}")
+                    raise ValueError(user_msg) from e
 
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, blocking_extract_markdown, filename)

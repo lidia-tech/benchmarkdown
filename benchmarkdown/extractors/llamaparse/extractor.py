@@ -7,10 +7,14 @@ MarkdownExtractor protocol using LlamaIndex's LlamaParse cloud service.
 
 import os
 import asyncio
+import logging
 from typing import Optional
 from llama_parse import LlamaParse
 
 from .config import LlamaParseConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class LlamaParseExtractor:
@@ -178,25 +182,28 @@ class LlamaParseExtractor:
                     return "\n\n".join(doc.text for doc in documents)
                 return ""
             except Exception as e:
+                # Log the full exception with traceback to server logs
+                logger.error(f"LlamaParse extraction failed for {filename}", exc_info=True)
+
                 # Make error messages more user-friendly
                 error_msg = str(e)
 
                 # Check for common API errors
                 if "language" in error_msg.lower() and "input should be" in error_msg.lower():
-                    raise ValueError(
-                        "Invalid language code. Please select a valid language from the dropdown menu. "
-                        "The language field only accepts single language codes (e.g., 'en', 'es', 'fr')."
-                    ) from e
+                    user_msg = "Invalid language code. Please select a valid language from the dropdown menu. The language field only accepts single language codes (e.g., 'en', 'es', 'fr')."
+                    logger.error(f"LlamaParse language validation error: {user_msg}")
+                    raise ValueError(user_msg) from e
                 elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
-                    raise ValueError(
-                        "Authentication failed. Please check your LLAMA_CLOUD_API_KEY environment variable."
-                    ) from e
+                    user_msg = "Authentication failed. Please check your LLAMA_CLOUD_API_KEY environment variable."
+                    logger.error(f"LlamaParse authentication error: {user_msg}")
+                    raise ValueError(user_msg) from e
                 elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
-                    raise ValueError(
-                        "API quota exceeded or rate limit reached. Please check your LlamaParse account."
-                    ) from e
+                    user_msg = "API quota exceeded or rate limit reached. Please check your LlamaParse account."
+                    logger.error(f"LlamaParse quota error: {user_msg}")
+                    raise ValueError(user_msg) from e
                 else:
                     # Re-raise with original error
+                    logger.error(f"LlamaParse unexpected error: {type(e).__name__}: {error_msg}")
                     raise
 
         loop = asyncio.get_running_loop()
