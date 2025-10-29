@@ -46,6 +46,14 @@ When implementing significant features or architectural patterns:
 
 These notes serve as developer reference and onboarding documentation, distinct from user-facing docs.
 
+**For detailed information about specific implementation patterns and features**, see `docs/implementation_notes/README.md` which provides a comprehensive index of all implementation notes including:
+- Plugin architecture and discovery
+- Conditional fields (progressive disclosure UI pattern)
+- Nested configurations (e.g., Docling's OCR engines)
+- Dynamic UI generation
+- Profile management
+- And more...
+
 ## Essential Commands
 
 ### Environment Setup
