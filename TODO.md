@@ -1,22 +1,5 @@
 # Task list
 
-## ~~Fix Docling OCR engine conditional settings display bug~~ ✅ FIXED
-
-**Status:** RESOLVED in commit 4907184
-
-**Root Cause:**
-- Nested config event handlers were never wired up in app_builder.py
-- gr.Group/gr.Column containers cannot be used as outputs in Gradio
-
-**Solution:**
-- Used gr.Row containers which DO support visibility updates
-- Added event handler setup for nested configs
-- Unified approach with conditional fields (LlamaParse)
-
-## Implement TensorLake extractor engine
-
-https://docs.tensorlake.ai/document-ingestion/parsing/read
-
 ## Implement litellm based multi-modal LLM engine
 
 1. Save each page of the PDF into a separate PNG file:
@@ -48,5 +31,13 @@ https://docs.aspose.com/pdf/python-cpp/extract-text/
 
 
 ## Implement Microsoft DocumentAI based extractor engine
+
+TBD
+
+## Implement extracted markdown evaluation metrics
+
+TBD
+
+## Implement price per page estimation
 
 TBD

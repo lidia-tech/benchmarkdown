@@ -824,3 +824,90 @@ markdown = await extractor.extract_markdown("document.pdf")
 5. Configure options and add to extraction queue
 
 The plugin follows the established architecture perfectly - no modifications to core files needed!
+
+## ~~Fix Docling OCR engine conditional settings display bug~~ ✅ FIXED
+
+**Status:** RESOLVED in commit 4907184
+
+**Root Cause:**
+- Nested config event handlers were never wired up in app_builder.py
+- gr.Group/gr.Column containers cannot be used as outputs in Gradio
+
+**Solution:**
+- Used gr.Row containers which DO support visibility updates
+- Added event handler setup for nested configs
+- Unified approach with conditional fields (LlamaParse)
+
+## Implement TensorLake extractor engine
+
+https://docs.tensorlake.ai/document-ingestion/parsing/read
+
+### Clarifications
+
+TensorLake is a cloud-based document parsing service. Based on the documentation URL structure and typical API patterns for document extraction services, I need to:
+1. Find the Python SDK (likely `indexify` or `tensorlake` on PyPI)
+2. Understand authentication (likely API key via environment variable)
+3. Determine API endpoints and configuration options
+
+### Thoughts, proposed solution
+
+Following the plugin architecture pattern used for LlamaParse:
+1. Create `benchmarkdown/extractors/tensorlake/` directory
+2. Implement three files:
+   - `config.py`: Pydantic configuration model with TensorLake-specific options
+   - `extractor.py`: Async extractor implementing MarkdownExtractor protocol
+   - `__init__.py`: Standard plugin interface with metadata and availability check
+3. Add optional dependency group to `pyproject.toml`
+
+I'll need to research the TensorLake/Indexify Python SDK to understand the exact API. If not available, I'll document what's needed for completion.
+
+### What was implemented
+
+✅ Created complete TensorLake extractor plugin at `benchmarkdown/extractors/tensorlake/`:
+
+**Files created:**
+1. `config.py` (benchmarkdown/extractors/tensorlake/config.py): Pydantic configuration model with:
+   - Basic options: chunking_strategy, table_output_mode, signature_detection
+   - Advanced options: figure_summarization, table_summarization, strike_through_detection, max_timeout
+   - Enums for chunking strategy (section/page) and table output mode (markdown/html)
+   - API key loaded from TENSORLAKE_API_KEY environment variable
+
+2. `extractor.py` (benchmarkdown/extractors/tensorlake/extractor.py): TensorLakeExtractor class implementing:
+   - MarkdownExtractor protocol with async extract_markdown method
+   - Uses TensorLake DocumentAI API: upload → parse → wait for completion
+   - Configurable ParsingOptions and EnrichmentOptions
+   - User-friendly error messages for common issues (auth, quota, timeout)
+
+3. `__init__.py` (benchmarkdown/extractors/tensorlake/__init__.py): Standard plugin interface with:
+   - Plugin metadata (ENGINE_NAME="tensorlake", ENGINE_DISPLAY_NAME="TensorLake (Cloud)")
+   - is_available() check for tensorlake package and API key
+   - Graceful degradation if dependencies not installed
+
+4. `pyproject.toml`: Added tensorlake dependency group
+
+5. `tests/test_tensorlake_plugin.py`: Comprehensive plugin test suite with 5 tests:
+   - Config module import and validation
+   - Config instantiation with defaults and custom values
+   - Plugin interface validation
+   - ExtractorRegistry discovery verification
+   - Field groupings validation
+
+**Plugin follows the established architecture:**
+- Zero-code integration: UI automatically discovers and integrates the extractor
+- Profile-based workflow: Users can save/load TensorLake configurations
+- Task queueing: Can mix TensorLake with other extractors in extraction queue
+
+**Test results:** ✅ All 5 tests passed
+- Plugin is successfully discovered by ExtractorRegistry
+- Configuration model validated (7 fields: 3 basic, 4 advanced)
+- All required plugin interface methods present
+- No field overlaps between basic and advanced groups
+
+**Installation:**
+```bash
+uv sync --group tensorlake
+export TENSORLAKE_API_KEY="your-api-key"
+```
+
+**Related commits:** [Will be added after git commit]
+

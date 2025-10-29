@@ -35,3 +35,6 @@ textract = [
 llamaparse = [
     "llama-parse>=0.5.0",
 ]
+tensorlake = [
+    "tensorlake>=0.2.0",
+]
