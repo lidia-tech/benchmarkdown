@@ -118,9 +118,10 @@ class TensorLakeExtractor:
             except Exception as e:
                 # Make error messages more user-friendly
                 error_msg = str(e)
+                error_type = type(e).__name__
 
-                # Check for common API errors
-                if "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
+                # Check for common API errors with more specific matching
+                if "api_key" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
                     raise ValueError(
                         "Authentication failed. Please check your TENSORLAKE_API_KEY environment variable."
                     ) from e
@@ -128,14 +129,16 @@ class TensorLakeExtractor:
                     raise ValueError(
                         "API quota exceeded or rate limit reached. Please check your TensorLake account."
                     ) from e
-                elif "timeout" in error_msg.lower():
+                elif error_type == "TimeoutError" or "timed out" in error_msg.lower():
+                    # Only catch actual timeout errors, not parameter validation errors
                     raise ValueError(
                         f"Parsing timeout after {self.config.max_timeout} seconds. "
                         "Try increasing max_timeout or use a smaller document."
                     ) from e
                 else:
-                    # Re-raise with original error
-                    raise
+                    # Re-raise with original error for better debugging
+                    # Include the error type and message
+                    raise ValueError(f"TensorLake extraction failed: {error_type}: {error_msg}") from e
 
         loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
