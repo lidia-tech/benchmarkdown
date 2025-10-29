@@ -65,9 +65,9 @@ class AzureDocIntelExtractor:
     def __init__(
         self,
         config: Optional[AzureDocIntelConfig] = None,
-        endpoint: str = None,
-        api_key: str = None,
-        model_id: str = None,
+        endpoint: Optional[str] = None,
+        api_key: Optional[str] = None,
+        model_id: Optional[str] = None,
         **kwargs
     ):
         """
