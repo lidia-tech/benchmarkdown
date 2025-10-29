@@ -16,19 +16,17 @@ This guide provides step-by-step instructions for completing the app_builder.py 
 
 ### Current (Hardcoded):
 ```python
-from benchmarkdown.docling import DoclingExtractor
-from benchmarkdown.config import (
-    DoclingConfig,
-    TextractConfig,
+from benchmarkdown.extractors.docling import Extractor as DoclingExtractor
+from benchmarkdown.extractors.docling import Config as DoclingConfig
+from benchmarkdown.extractors.docling.config import (
     EasyOcrConfig,
-    # ... 7 more imports
+    # ... more imports
 )
 from benchmarkdown.config_ui import (
     create_gradio_component_from_field,
     build_config_from_ui_values,
-    DOCLING_BASIC_FIELDS,
-    # ... 16 more field imports
 )
+# Field constants now imported from extractor modules
 ```
 
 ### Replace With:

@@ -8,8 +8,8 @@ This script tests the full flow: create config -> create extractor -> extract do
 import asyncio
 from pathlib import Path
 
-from benchmarkdown.config import DoclingConfig, TableFormerModeEnum
-from benchmarkdown.docling import DoclingExtractor
+from benchmarkdown.extractors.docling import Config as DoclingConfig, Extractor as DoclingExtractor
+from benchmarkdown.extractors.docling.config import TableFormerModeEnum
 
 
 async def main():

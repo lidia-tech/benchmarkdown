@@ -23,26 +23,18 @@
 
 #### 1. Hardcoded Imports (app_builder.py:15-42)
 ```python
-# HARDCODED - should be dynamic
-from benchmarkdown.docling import DoclingExtractor
-from benchmarkdown.config import (
-    DoclingConfig,
-    TextractConfig,
+# HARDCODED - should be dynamic (now replaced by plugin system)
+from benchmarkdown.extractors.docling import Extractor as DoclingExtractor, Config as DoclingConfig
+from benchmarkdown.extractors.docling.config import (
     EasyOcrConfig,
     TesseractOcrConfig,
     TesseractCliOcrConfig,
     OcrMacConfig,
     RapidOcrConfig
 )
-from benchmarkdown.config_ui import (
-    DOCLING_BASIC_FIELDS,
-    DOCLING_ADVANCED_FIELDS,
-    TEXTRACT_BASIC_FIELDS,
-    TEXTRACT_ADVANCED_FIELDS,
-    EASYOCR_BASIC_FIELDS,
-    EASYOCR_ADVANCED_FIELDS,
-    # ... etc - 16 hardcoded imports!
-)
+# Field constants now come from plugin metadata
+# from benchmarkdown.extractors.docling import BASIC_FIELDS, ADVANCED_FIELDS
+# from benchmarkdown.extractors.textract import BASIC_FIELDS, ADVANCED_FIELDS
 ```
 
 **Should be:**

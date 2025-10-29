@@ -14,7 +14,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from benchmarkdown.profile_manager import ProfileManager
-from benchmarkdown.config import DoclingConfig, TableFormerModeEnum
+from benchmarkdown.extractors.docling import Config as DoclingConfig
+from benchmarkdown.extractors.docling.config import TableFormerModeEnum
 
 
 def test_profile_manager():

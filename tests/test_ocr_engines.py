@@ -6,15 +6,14 @@ This test demonstrates how to use different OCR engines with Docling.
 
 import asyncio
 from pathlib import Path
-from benchmarkdown.config import (
-    DoclingConfig,
+from benchmarkdown.extractors.docling import Config as DoclingConfig, Extractor as DoclingExtractor
+from benchmarkdown.extractors.docling.config import (
     OcrEngineEnum,
     EasyOcrConfig,
     TesseractOcrConfig,
     TesseractCliOcrConfig,
     RapidOcrConfig
 )
-from benchmarkdown.docling import DoclingExtractor
 
 
 async def test_easyocr_engine():

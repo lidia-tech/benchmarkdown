@@ -6,12 +6,11 @@ This script tests that Gradio components can be generated from Pydantic models
 and that config objects can be built from UI values.
 """
 
-from benchmarkdown.config import DoclingConfig, TableFormerModeEnum
+from benchmarkdown.extractors.docling import Config as DoclingConfig, BASIC_FIELDS as DOCLING_BASIC_FIELDS, ADVANCED_FIELDS as DOCLING_ADVANCED_FIELDS
+from benchmarkdown.extractors.docling.config import TableFormerModeEnum
 from benchmarkdown.config_ui import (
     create_gradio_component_from_field,
-    build_config_from_ui_values,
-    DOCLING_BASIC_FIELDS,
-    DOCLING_ADVANCED_FIELDS
+    build_config_from_ui_values
 )
 from pydantic import BaseModel
 import gradio as gr

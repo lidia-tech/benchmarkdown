@@ -10,13 +10,9 @@ This tests that the app can:
 """
 
 from benchmarkdown.ui import BenchmarkUI
-from benchmarkdown.docling import DoclingExtractor
-from benchmarkdown.config import DoclingConfig, TableFormerModeEnum
-from benchmarkdown.config_ui import (
-    build_config_from_ui_values,
-    DOCLING_BASIC_FIELDS,
-    DOCLING_ADVANCED_FIELDS
-)
+from benchmarkdown.extractors.docling import Config as DoclingConfig, Extractor as DoclingExtractor
+from benchmarkdown.extractors.docling.config import TableFormerModeEnum
+from benchmarkdown.config_ui import build_config_from_ui_values
 
 
 def test_integrated_workflow():

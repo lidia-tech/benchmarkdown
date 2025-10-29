@@ -6,7 +6,7 @@ Quick test script for the Benchmarkdown UI components.
 import asyncio
 import os
 from pathlib import Path
-from benchmarkdown.docling import DoclingExtractor
+from benchmarkdown.extractors.docling import Extractor as DoclingExtractor
 from benchmarkdown.ui import BenchmarkUI
 
 async def test_extraction():

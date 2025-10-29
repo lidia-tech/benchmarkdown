@@ -13,8 +13,8 @@ import asyncio
 import os
 from pathlib import Path
 
-from benchmarkdown.config import TextractConfig, TextractFeaturesEnum
-from benchmarkdown.textract import TextractExtractor
+from benchmarkdown.extractors.textract import Config as TextractConfig, Extractor as TextractExtractor
+from benchmarkdown.extractors.textract.config import TextractFeaturesEnum
 
 
 def test_config_creation():

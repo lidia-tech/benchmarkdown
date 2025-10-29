@@ -10,7 +10,7 @@ import asyncio
 import os
 from pathlib import Path
 from benchmarkdown.ui import BenchmarkUI
-from benchmarkdown.docling import DoclingExtractor
+from benchmarkdown.extractors.docling import Extractor as DoclingExtractor
 
 
 async def main():

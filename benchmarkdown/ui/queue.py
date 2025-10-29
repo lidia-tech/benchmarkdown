@@ -16,41 +16,42 @@ def load_queue_from_disk(extractor_queue: list, ui_instance):
         extractor_queue: List to populate with loaded tasks
         ui_instance: BenchmarkUI instance to register extractors with
     """
-    from benchmarkdown.docling import DoclingExtractor
-    from benchmarkdown.config import DoclingConfig, TextractConfig
     from benchmarkdown.config_ui import build_config_from_ui_values
+    from benchmarkdown.extractors import ExtractorRegistry
 
     if not os.path.exists(QUEUE_FILE):
         return
 
     try:
+        # Get registry to look up extractors dynamically
+        registry = ExtractorRegistry()
+        registry.discover_extractors()
+
         with open(QUEUE_FILE, 'r') as f:
             saved_queue = json.load(f)
             for task_data in saved_queue:
-                # Recreate extractor from config
+                # Recreate extractor from config using registry
                 engine = task_data['engine']
                 config_name = task_data['config_name']
                 config_dict = task_data['config_dict']
 
-                if engine == "Docling":
-                    config = build_config_from_ui_values(DoclingConfig, config_dict)
-                    extractor = DoclingExtractor(config=config)
-                    full_name = f"Docling ({config_name})"
+                # Look up extractor in registry by display name
+                extractor_metadata = None
+                for name, metadata in registry.get_available_extractors().items():
+                    if metadata.display_name == engine:
+                        extractor_metadata = metadata
+                        break
 
-                    task = {
-                        'engine': engine,
-                        'config_name': config_name,
-                        'extractor': extractor,
-                        'config_dict': config_dict
-                    }
-                    extractor_queue.append(task)
-                    ui_instance.register_extractor(full_name, extractor)
+                if extractor_metadata:
+                    # Build config from dict using the extractor's config class
+                    config = build_config_from_ui_values(
+                        extractor_metadata.config_class,
+                        config_dict
+                    )
 
-                elif engine == "AWS Textract":
-                    config = build_config_from_ui_values(TextractConfig, config_dict)
-                    from benchmarkdown.textract import TextractExtractor
-                    extractor = TextractExtractor(config=config)
-                    full_name = f"AWS Textract ({config_name})"
+                    # Create extractor instance
+                    extractor = extractor_metadata.extractor_class(config=config)
+                    full_name = f"{engine} ({config_name})"
 
                     task = {
                         'engine': engine,

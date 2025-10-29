@@ -126,8 +126,8 @@ Name: Image Mode
 You can also create configurations programmatically:
 
 ```python
-from benchmarkdown.config import DoclingConfig, TableFormerModeEnum
-from benchmarkdown.docling import DoclingExtractor
+from benchmarkdown.extractors.docling import Config as DoclingConfig, Extractor as DoclingExtractor
+from benchmarkdown.extractors.docling.config import TableFormerModeEnum
 
 # Create configuration
 config = DoclingConfig(

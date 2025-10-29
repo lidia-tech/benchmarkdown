@@ -334,27 +334,8 @@ def build_config_from_ui_values(
 
 
 # =================================================================
-# Backward compatibility: Re-export field groupings from plugins
+# Note: Field groupings are now managed within each extractor plugin.
+# Access them via the extractor registry or import directly from plugins:
+#   from benchmarkdown.extractors.docling import BASIC_FIELDS, ADVANCED_FIELDS
+#   from benchmarkdown.extractors.textract import BASIC_FIELDS, ADVANCED_FIELDS
 # =================================================================
-
-# Re-export Docling field groupings
-from benchmarkdown.extractors.docling.config import (
-    DOCLING_BASIC_FIELDS,
-    DOCLING_ADVANCED_FIELDS,
-    EASYOCR_BASIC_FIELDS,
-    EASYOCR_ADVANCED_FIELDS,
-    TESSERACT_BASIC_FIELDS,
-    TESSERACT_ADVANCED_FIELDS,
-    TESSERACT_CLI_BASIC_FIELDS,
-    TESSERACT_CLI_ADVANCED_FIELDS,
-    OCR_MAC_BASIC_FIELDS,
-    OCR_MAC_ADVANCED_FIELDS,
-    RAPIDOCR_BASIC_FIELDS,
-    RAPIDOCR_ADVANCED_FIELDS,
-)
-
-# Re-export Textract field groupings
-from benchmarkdown.extractors.textract.config import (
-    TEXTRACT_BASIC_FIELDS,
-    TEXTRACT_ADVANCED_FIELDS,
-)

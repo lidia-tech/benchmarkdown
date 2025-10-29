@@ -15,15 +15,14 @@ Benchmarkdown now supports selecting and configuring different OCR engines for D
 ### Using Python API
 
 ```python
-from benchmarkdown.config import (
-    DoclingConfig,
+from benchmarkdown.extractors.docling import Config as DoclingConfig, Extractor as DoclingExtractor
+from benchmarkdown.extractors.docling.config import (
     OcrEngineEnum,
     EasyOcrConfig,
     TesseractOcrConfig,
     TesseractCliOcrConfig,
     RapidOcrConfig
 )
-from benchmarkdown.docling import DoclingExtractor
 
 # Example 1: Using EasyOCR (default)
 easyocr_config = EasyOcrConfig(
