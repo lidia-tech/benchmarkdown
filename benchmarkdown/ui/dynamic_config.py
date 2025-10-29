@@ -25,9 +25,9 @@ class DynamicConfigUI:
         self.config_areas = {}  # engine_name -> gr.Column
         self.component_lists = {}  # engine_name -> list of gr.Components
         self.component_field_maps = {}  # engine_name -> list of field names
-        self.nested_groups = {}  # engine_name -> {parent_field: {option_value: gr.Group}}
+        self.nested_groups = {}  # engine_name -> {parent_field: {option_value: gr.Row}}
         self.parent_components = {}  # engine_name -> {parent_field: gr.Component}
-        self.conditional_groups = {}  # engine_name -> {parent_field: {parent_value: gr.Group}}
+        self.conditional_groups = {}  # engine_name -> {parent_field: {parent_value: gr.Row}}
         self.conditional_parent_components = {}  # engine_name -> {parent_field: gr.Component}
 
     def generate_engine_choices(self) -> List[str]:
@@ -117,42 +117,44 @@ class DynamicConfigUI:
                             # Determine default visibility (show first option by default)
                             is_first = list(nested_options.keys())[0] == option_value
 
-                            with gr.Group(visible=is_first) as nested_group:
-                                gr.Markdown(f"##### {display_name}")
+                            # Use gr.Row as container - it supports visibility updates!
+                            with gr.Row(visible=is_first) as nested_row:
+                                with gr.Column():
+                                    gr.Markdown(f"##### {display_name}")
 
-                                # Basic nested fields
-                                for field_name in basic_fields:
-                                    if field_name not in config_class.model_fields:
-                                        continue
+                                    # Basic nested fields
+                                    for field_name in basic_fields:
+                                        if field_name not in config_class.model_fields:
+                                            continue
 
-                                    field_info = config_class.model_fields[field_name]
-                                    field_type = field_info.annotation
+                                        field_info = config_class.model_fields[field_name]
+                                        field_type = field_info.annotation
 
-                                    component, _ = create_gradio_component_from_field(
-                                        field_name, field_info, field_type
-                                    )
-                                    components.append(component)
-                                    # Use nested field name format: config_field.field_name
-                                    field_names.append(f"{option_meta['config_field']}.{field_name}")
+                                        component, _ = create_gradio_component_from_field(
+                                            field_name, field_info, field_type
+                                        )
+                                        components.append(component)
+                                        # Use nested field name format: config_field.field_name
+                                        field_names.append(f"{option_meta['config_field']}.{field_name}")
 
-                                # Advanced nested fields
-                                if advanced_fields:
-                                    with gr.Accordion(f"Advanced {display_name}", open=False):
-                                        for field_name in advanced_fields:
-                                            if field_name not in config_class.model_fields:
-                                                continue
+                                    # Advanced nested fields
+                                    if advanced_fields:
+                                        with gr.Accordion(f"Advanced {display_name}", open=False):
+                                            for field_name in advanced_fields:
+                                                if field_name not in config_class.model_fields:
+                                                    continue
 
-                                            field_info = config_class.model_fields[field_name]
-                                            field_type = field_info.annotation
+                                                field_info = config_class.model_fields[field_name]
+                                                field_type = field_info.annotation
 
-                                            component, _ = create_gradio_component_from_field(
-                                                field_name, field_info, field_type
-                                            )
-                                            components.append(component)
-                                            field_names.append(f"{option_meta['config_field']}.{field_name}")
+                                                component, _ = create_gradio_component_from_field(
+                                                    field_name, field_info, field_type
+                                                )
+                                                components.append(component)
+                                                field_names.append(f"{option_meta['config_field']}.{field_name}")
 
-                            # Store the nested group for show/hide logic
-                            nested_groups_for_engine[parent_field_name][option_value] = nested_group
+                            # Store the Row container for show/hide logic
+                            nested_groups_for_engine[parent_field_name][option_value] = nested_row
 
             # Generate conditional field sections if present
             conditional_fields = getattr(metadata, 'conditional_fields', None)
@@ -161,26 +163,26 @@ class DynamicConfigUI:
                     conditional_groups_for_engine[parent_field_name] = {}
 
                     for parent_value, dependent_field_names in parent_value_conditions.items():
-                        # Create a column for these conditional fields (initially hidden)
-                        # Note: Using gr.Column instead of gr.Group because Column supports visibility updates in event handlers
-                        with gr.Column(visible=False) as conditional_group:
-                            gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options")
+                        # Use gr.Row as container - it supports visibility updates!
+                        with gr.Row(visible=False) as conditional_row:
+                            with gr.Column():
+                                gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options")
 
-                            for field_name in dependent_field_names:
-                                if field_name not in metadata.config_class.model_fields:
-                                    continue
+                                for field_name in dependent_field_names:
+                                    if field_name not in metadata.config_class.model_fields:
+                                        continue
 
-                                field_info = metadata.config_class.model_fields[field_name]
-                                field_type = field_info.annotation
+                                    field_info = metadata.config_class.model_fields[field_name]
+                                    field_type = field_info.annotation
 
-                                component, _ = create_gradio_component_from_field(
-                                    field_name, field_info, field_type
-                                )
-                                components.append(component)
-                                field_names.append(field_name)
+                                    component, _ = create_gradio_component_from_field(
+                                        field_name, field_info, field_type
+                                    )
+                                    components.append(component)
+                                    field_names.append(field_name)
 
-                        # Store the conditional group for show/hide logic
-                        conditional_groups_for_engine[parent_field_name][parent_value] = conditional_group
+                        # Store the Row container for show/hide logic
+                        conditional_groups_for_engine[parent_field_name][parent_value] = conditional_row
 
             # Advanced fields section
             if metadata.advanced_fields:
@@ -549,7 +551,7 @@ class DynamicConfigUI:
         selected_value: str
     ) -> List[gr.update]:
         """
-        Generate gr.update() objects for nested group visibility based on parent field value.
+        Generate gr.update() objects for nested Row visibility based on parent field value.
 
         Args:
             engine_display_name: Display name of the engine
@@ -557,7 +559,7 @@ class DynamicConfigUI:
             selected_value: Selected value of the parent field (e.g., "easyocr")
 
         Returns:
-            List of gr.update() objects for each nested group
+            List of gr.update() objects for each nested Row container
         """
         engine_name = self.engine_name_from_display(engine_display_name)
         if not engine_name or engine_name not in self.nested_groups:
@@ -567,9 +569,10 @@ class DynamicConfigUI:
         if not nested_groups:
             return []
 
-        # Generate updates: show only the selected nested group, hide others
+        # Generate updates: show selected Row, hide all others
+        # Must return updates in sorted order to match outputs list
         updates = []
-        for option_value, group in nested_groups.items():
+        for option_value in sorted(nested_groups.keys()):
             visible = (option_value == selected_value)
             updates.append(gr.update(visible=visible))
 
@@ -599,7 +602,7 @@ class DynamicConfigUI:
         parent_value: Any
     ) -> List[gr.update]:
         """
-        Generate gr.update() objects for conditional group visibility based on parent field value.
+        Generate gr.update() objects for conditional Row visibility based on parent field value.
 
         Args:
             engine_display_name: Display name of the engine
@@ -607,7 +610,7 @@ class DynamicConfigUI:
             parent_value: Value of the parent field (e.g., True/False)
 
         Returns:
-            List of gr.update() objects for conditional groups (one update per parent_value condition)
+            List of gr.update() objects for each conditional Row container
         """
         engine_name = self.engine_name_from_display(engine_display_name)
         if not engine_name or engine_name not in self.conditional_groups:
@@ -617,7 +620,7 @@ class DynamicConfigUI:
         if not conditional_groups:
             return []
 
-        # Generate updates: show group only if parent value matches
+        # Generate updates: show Row if parent value matches, hide otherwise
         # IMPORTANT: Iterate in sorted order to match outputs list order in app_builder.py
         updates = []
         for condition_value in sorted(conditional_groups.keys()):

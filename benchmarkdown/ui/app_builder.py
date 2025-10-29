@@ -185,6 +185,8 @@ def create_app(registry):
                     config_areas = config_ui_data['config_areas']
                     component_lists = config_ui_data['component_lists']
                     field_maps = config_ui_data['field_maps']
+                    nested_groups = config_ui_data['nested_groups']
+                    parent_components = config_ui_data['parent_components']
                     conditional_groups = config_ui_data['conditional_groups']
                     conditional_parent_components = config_ui_data['conditional_parent_components']
 
@@ -193,12 +195,13 @@ def create_app(registry):
 
                     # ========== SETUP CONDITIONAL FIELD HANDLERS ==========
                     # Set up event handlers for conditional fields (show/hide based on parent value)
-                    for engine_name, parent_components in conditional_parent_components.items():
-                        for parent_field, parent_component in parent_components.items():
-                            # Get the conditional groups for this parent field
+                    for engine_name, parent_components_dict in conditional_parent_components.items():
+                        for parent_field, parent_component in parent_components_dict.items():
+                            # Get the conditional Row containers for this parent field
                             if engine_name in conditional_groups and parent_field in conditional_groups[engine_name]:
-                                cond_groups_dict = conditional_groups[engine_name][parent_field]
-                                cond_groups_list = [cond_groups_dict[key] for key in sorted(cond_groups_dict.keys())]
+                                cond_rows_dict = conditional_groups[engine_name][parent_field]
+                                # Get Row containers in sorted order
+                                cond_rows_list = [cond_rows_dict[key] for key in sorted(cond_rows_dict.keys())]
 
                                 # Create handler function for this parent field
                                 def make_conditional_handler(eng_name, parent_fld):
@@ -206,7 +209,7 @@ def create_app(registry):
                                         # Get the metadata to find display name
                                         metadata = registry.get_extractor(eng_name)
                                         if not metadata:
-                                            return [gr.update() for _ in cond_groups_list]
+                                            return [gr.update() for _ in cond_rows_list]
 
                                         # Get updates from dynamic_config
                                         updates = dynamic_config.get_conditional_group_updates(
@@ -222,7 +225,42 @@ def create_app(registry):
                                 parent_component.change(
                                     fn=handler_fn,
                                     inputs=[parent_component],
-                                    outputs=cond_groups_list
+                                    outputs=cond_rows_list
+                                )
+
+                    # ========== SETUP NESTED CONFIG HANDLERS ==========
+                    # Set up event handlers for nested configs (e.g., Docling OCR engine selection)
+                    for engine_name, nested_parent_components_dict in parent_components.items():
+                        for parent_field, parent_component in nested_parent_components_dict.items():
+                            # Get the nested Row containers for this parent field
+                            if engine_name in nested_groups and parent_field in nested_groups[engine_name]:
+                                nested_rows_dict = nested_groups[engine_name][parent_field]
+                                # Get Row containers in sorted order
+                                nested_rows_list = [nested_rows_dict[key] for key in sorted(nested_rows_dict.keys())]
+
+                                # Create handler function for this parent field
+                                def make_nested_handler(eng_name, parent_fld):
+                                    def handler(parent_value):
+                                        # Get the metadata to find display name
+                                        metadata = registry.get_extractor(eng_name)
+                                        if not metadata:
+                                            return [gr.update() for _ in nested_rows_list]
+
+                                        # Get updates from dynamic_config
+                                        updates = dynamic_config.get_nested_group_updates(
+                                            metadata.display_name,
+                                            parent_fld,
+                                            parent_value
+                                        )
+                                        return updates
+                                    return handler
+
+                                # Bind the handler to the parent component
+                                handler_fn = make_nested_handler(engine_name, parent_field)
+                                parent_component.change(
+                                    fn=handler_fn,
+                                    inputs=[parent_component],
+                                    outputs=nested_rows_list
                                 )
 
                     # Configuration editor action buttons
