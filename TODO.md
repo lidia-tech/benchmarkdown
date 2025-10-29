@@ -1,5 +1,9 @@
 # Task list
 
+## BUG: changing extractor engine should close settings
+
+Currently, if the user changes extractor engine with the config section opened (previously clicked "new profile" or "edit profile"), the config page stays on the old engine. Close at least the old engine's settings if the engine has changed from the dropdown list.
+
 ## Implement litellm based multi-modal LLM engine
 
 1. Save each page of the PDF into a separate PNG file:

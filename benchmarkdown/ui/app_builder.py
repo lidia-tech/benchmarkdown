@@ -93,10 +93,6 @@ def create_app(registry):
             with gr.Column(scale=1) as task_list_column:
                 gr.Markdown("## 📋 Extraction Tasks")
 
-                with gr.Row():
-                    add_task_btn = gr.Button("➕ Add Task", variant="primary", size="sm")
-                    launch_btn = gr.Button("🚀 Launch Extraction", variant="secondary", size="sm")
-
                 task_list_display = gr.HTML(
                     value=generate_task_list_html(extractor_queue)
                 )
@@ -120,9 +116,11 @@ def create_app(registry):
                         min_width=1
                     )
 
-                # Clear All button - shown when tasks exist
-                with gr.Row(visible=bool(extractor_queue)) as delete_controls:
-                    clear_all_btn = gr.Button("🗑️ Clear All", size="sm", variant="stop", min_width=120)
+                # All action buttons below the task list in workflow order
+                with gr.Row():
+                    add_task_btn = gr.Button("➕ Add Task", variant="primary", size="sm")
+                    clear_all_btn = gr.Button("🗑️ Clear All", size="sm", variant="stop", visible=bool(extractor_queue))
+                    launch_btn = gr.Button("🚀 Launch Extraction", variant="secondary", size="sm")
 
             # RIGHT COLUMN: Task Editor (hidden by default)
             with gr.Column(scale=2, visible=False) as task_editor_column:
@@ -641,12 +639,12 @@ def create_app(registry):
                 editing_task_index[0] = None
                 current_profile_data[0] = None
 
-                # Show delete controls if we have tasks
+                # Show Clear All button if we have tasks
                 return (
                     gr.update(value=generate_task_list_html(extractor_queue)),
                     gr.update(visible=False),  # hide editor
                     message,
-                    gr.update(visible=True)  # show delete_controls
+                    gr.update(visible=True)  # show clear_all_btn
                 )
 
             except Exception as e:
@@ -1035,7 +1033,7 @@ def create_app(registry):
 
         demo.load(
             fn=reload_page,
-            outputs=[task_list_display, delete_controls]
+            outputs=[task_list_display, clear_all_btn]
         )
 
         # Task List Events
@@ -1122,7 +1120,7 @@ def create_app(registry):
         save_task_btn.click(
             fn=save_task,
             inputs=[engine_selector, profile_selector],
-            outputs=[task_list_display, task_editor_column, editor_status, delete_controls]
+            outputs=[task_list_display, task_editor_column, editor_status, clear_all_btn]
         )
 
         cancel_editor_btn.click(
@@ -1133,12 +1131,12 @@ def create_app(registry):
         hidden_delete_trigger.click(
             fn=delete_task_handler,
             inputs=[hidden_task_index],
-            outputs=[task_list_display, delete_controls]
+            outputs=[task_list_display, clear_all_btn]
         )
 
         clear_all_btn.click(
             fn=clear_all_tasks_handler,
-            outputs=[task_list_display, delete_controls]
+            outputs=[task_list_display, clear_all_btn]
         )
 
         # Results View Events

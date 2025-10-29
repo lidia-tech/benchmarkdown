@@ -1,0 +1,12 @@
+{
+  "engine": "TensorLake (Cloud)",
+  "profile_name": "basic",
+  "config_data": {
+    "chunking_strategy": "section",
+    "table_output_mode": "markdown",
+    "signature_detection": false,
+    "figure_summarization": false,
+    "table_summarization": false,
+    "strike_through_detection": false
+  }
+}

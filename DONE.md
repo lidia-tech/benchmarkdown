@@ -911,3 +911,50 @@ export TENSORLAKE_API_KEY="your-api-key"
 
 **Related commits:** 9eb9598
 
+## Improvement: redesign extraction tasks UI page
+
+currently there're two buttons (add task, launch extraction) above the task list, and one (clear all) below the list. Put all buttons under the list in an order that is natural to the workflow.
+
+### Clarifications
+
+Current layout (in `benchmarkdown/ui/app_builder.py` lines 96-126):
+- "Add Task" and "Launch Extraction" buttons are ABOVE the task list (lines 96-98)
+- Task list display (lines 100-102)
+- "Clear All" button is BELOW the task list (lines 124-126)
+
+Desired layout:
+- Task list display (first)
+- All three buttons BELOW the task list
+- Natural workflow order: "Add Task" → "Clear All" → "Launch Extraction"
+
+### Thoughts, proposed solution
+
+The change is straightforward:
+1. Move the button row (lines 96-98) to after the task list display (after line 102)
+2. Combine all buttons in a logical order in a single row
+3. Keep the hidden controls in their current position
+4. The "Clear All" button should remain conditionally visible based on whether tasks exist
+
+Workflow-natural order:
+1. **Add Task** - Primary action to build the queue
+2. **Clear All** - Secondary action to reset if needed
+3. **Launch Extraction** - Final action to proceed once queue is ready
+
+### What was implemented
+
+Successfully redesigned the extraction tasks UI page in `benchmarkdown/ui/app_builder.py`:
+
+**Changes made:**
+1. Moved all three action buttons (Add Task, Clear All, Launch Extraction) from above the task list to below it
+2. Reorganized buttons in workflow-natural order: Add Task → Clear All → Launch Extraction
+3. Consolidated all buttons into a single row for cleaner layout
+4. Updated all event handler outputs to reference `clear_all_btn` instead of the removed `delete_controls` container
+
+**Files modified:**
+- `benchmarkdown/ui/app_builder.py`:
+  - Lines 96-123: Restructured task list column with buttons below the list
+  - Line 647: Updated comment to reflect new structure
+  - Lines 1036, 1123, 1134, 1139: Updated event handler outputs
+
+The new layout provides a more intuitive workflow: users see the task list first, then find all action buttons below in the order they would naturally use them.
+
