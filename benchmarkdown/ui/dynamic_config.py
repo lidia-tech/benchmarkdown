@@ -169,12 +169,24 @@ class DynamicConfigUI:
                 for parent_field_name, parent_value_conditions in conditional_fields.items():
                     conditional_groups_for_engine[parent_field_name] = {}
 
+                    # Get parent field's default value to set initial visibility
+                    parent_default_value = None
+                    if parent_field_name in metadata.config_class.model_fields:
+                        parent_field_info = metadata.config_class.model_fields[parent_field_name]
+                        parent_default_value = parent_field_info.default
+
                     for parent_value, dependent_field_names in parent_value_conditions.items():
                         # Track all components in this conditional section
                         conditional_section_components = []
 
+                        # Determine initial visibility based on parent field's default value
+                        is_initially_visible = (parent_default_value == parent_value)
+
                         # Don't use gr.Group() - it shows borders even when hidden
-                        section_label = gr.Markdown(f"##### {parent_field_name.replace('_', ' ').title()} Options", visible=False)
+                        section_label = gr.Markdown(
+                            f"##### {parent_field_name.replace('_', ' ').title()} Options",
+                            visible=is_initially_visible
+                        )
                         conditional_section_components.append(section_label)
 
                         for field_name in dependent_field_names:
@@ -187,7 +199,7 @@ class DynamicConfigUI:
                             component, _ = create_gradio_component_from_field(
                                 field_name, field_info, field_type
                             )
-                            component.visible = False  # Initially hidden
+                            component.visible = is_initially_visible  # Set based on parent's default
                             components.append(component)
                             conditional_section_components.append(component)
                             field_names.append(field_name)
