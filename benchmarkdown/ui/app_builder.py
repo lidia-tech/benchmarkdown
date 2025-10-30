@@ -1036,6 +1036,9 @@ def create_app(registry):
 
         def run_extraction_handler(files, progress=gr.Progress()):
             """Process documents with all queued extractors."""
+            # Clear old validation data when starting new extraction
+            validation_ui.clear_validation_results()
+
             if not files:
                 return (
                     gr.update(visible=False),  # extraction_results_section
@@ -1049,6 +1052,9 @@ def create_app(registry):
                     gr.update(choices=[]),  # val_extractor_selector
                     gr.update(choices=[]),  # val_metric_selector
                     gr.update(value="❌ No files uploaded.", visible=True),  # extraction_status
+                    gr.update(visible=False),  # validation_results_section
+                    "",  # validation_results_view
+                    "",  # validation_status
                 )
 
             # Get all extractor names from queue
@@ -1085,7 +1091,7 @@ def create_app(registry):
             return (
                 gr.update(visible=True),  # extraction_results_section
                 result[0],  # results_table
-                gr.update(visible=True),  # markdown_preview_accordion
+                gr.update(visible=True, open=False),  # markdown_preview_accordion (collapsed by default)
                 comparison,  # comparison_view
                 gr.update(choices=filenames, value=first_filename),  # document_selector
                 gr.update(visible=True),  # validation_section
@@ -1094,6 +1100,9 @@ def create_app(registry):
                 gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
                 gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
                 gr.update(value=f"✅ Extraction complete! Processed {num_files} document(s) with {num_extractors} extractor(s).", visible=True),  # extraction_status
+                gr.update(visible=False),  # validation_results_section (keep hidden until validation runs)
+                "<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>",  # validation_results_view (reset content)
+                "",  # validation_status (clear any previous validation messages)
             )
 
         def update_comparison(filename, view_mode_val):
@@ -1328,7 +1337,10 @@ def create_app(registry):
                 val_document_selector,
                 val_extractor_selector,
                 val_metric_selector,
-                extraction_status
+                extraction_status,
+                validation_results_section,
+                validation_results_view,
+                validation_status
             ]
         )
 
