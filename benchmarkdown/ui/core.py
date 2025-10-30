@@ -91,6 +91,7 @@ class BenchmarkUI:
         self,
         files: list,
         selected_extractors: list[str],
+        progress_callback=None,
     ):
         """Process multiple documents with selected extractors."""
         if not files:
@@ -101,7 +102,13 @@ class BenchmarkUI:
 
         self.results = {}
 
-        for file_obj in files:
+        # Calculate total operations for progress tracking
+        num_files = len(files)
+        num_extractors = len(selected_extractors)
+        total_operations = num_files * num_extractors
+        completed_operations = 0
+
+        for file_idx, file_obj in enumerate(files, 1):
             file_path = file_obj.name
             filename = os.path.basename(file_path)
             self.results[filename] = {}
@@ -115,6 +122,15 @@ class BenchmarkUI:
 
             for result in results:
                 self.results[filename][result.extractor_name] = result
+                completed_operations += 1
+
+                # Report progress after each extractor completes
+                if progress_callback:
+                    progress_value = completed_operations / total_operations
+                    progress_callback(
+                        progress_value,
+                        desc=f"Processing: {filename} ({file_idx}/{num_files}) - {completed_operations}/{total_operations} tasks complete"
+                    )
 
         # Generate results table
         from .results import generate_results_table
