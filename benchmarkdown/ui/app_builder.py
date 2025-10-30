@@ -392,10 +392,10 @@ def create_app(registry):
 
                 validation_status = gr.Markdown("")
 
-                gr.Markdown("### 📊 Validation Results")
-                validation_results_view = gr.HTML(
-                    value="<p style='color: #666;'>Validation results will appear here.</p>"
-                )
+                with gr.Accordion("📊 Validation Results", open=False):
+                    validation_results_view = gr.HTML(
+                        value="<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>"
+                    )
 
         # ============================================================
         # Event Handlers
