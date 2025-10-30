@@ -93,13 +93,13 @@ def create_app(registry):
         gr.Markdown("# 📄 Benchmarkdown - Document Extraction Comparison")
 
         # ============================================================
-        # MAIN VIEW: Two-column layout (Task List | Task Editor)
+        # MAIN VIEW: Task List and Editor (always visible)
         # ============================================================
-        with gr.Row() as main_view:
+        gr.Markdown("## 📋 Extraction Tasks")
+
+        with gr.Row():
             # LEFT COLUMN: Task List (always visible)
             with gr.Column(scale=1) as task_list_column:
-                gr.Markdown("## 📋 Extraction Tasks")
-
                 task_list_display = gr.HTML(
                     value=generate_task_list_html(extractor_queue)
                 )
@@ -127,7 +127,6 @@ def create_app(registry):
                 with gr.Row():
                     add_task_btn = gr.Button("➕ Add Task", variant="primary", size="sm")
                     clear_all_btn = gr.Button("🗑️ Clear All", size="sm", variant="stop", visible=bool(extractor_queue))
-                    launch_btn = gr.Button("🚀 Launch Extraction", variant="secondary", size="sm")
 
             # RIGHT COLUMN: Task Editor (hidden by default)
             with gr.Column(scale=2, visible=False) as task_editor_column:
@@ -283,28 +282,29 @@ def create_app(registry):
                 cancel_editor_btn = gr.Button("✖️ Cancel", size="lg")
 
         # ============================================================
-        # RESULTS VIEW: Full-width (hidden by default)
+        # UPLOAD AND EXTRACTION SECTION (always visible)
         # ============================================================
-        with gr.Column(visible=False) as results_view:
-            with gr.Row():
-                back_to_tasks_btn = gr.Button("← Back to Tasks", size="sm")
+        gr.Markdown("---")
+        gr.Markdown("## 📤 Upload Documents")
+        gr.Markdown("Upload the documents you want to extract with the configured tasks.")
 
-            gr.Markdown("## 📤 Upload Documents")
-            gr.Markdown("Upload the documents you want to extract with the configured tasks.")
+        file_upload = gr.File(
+            label="Select Documents",
+            file_count="multiple",
+            file_types=[".pdf", ".docx", ".doc", ".txt"]
+        )
 
-            file_upload = gr.File(
-                label="Select Documents",
-                file_count="multiple",
-                file_types=[".pdf", ".docx", ".doc", ".txt"]
-            )
+        run_extraction_btn = gr.Button(
+            "▶️ Run Extraction",
+            variant="primary",
+            size="lg"
+        )
 
-            run_extraction_btn = gr.Button(
-                "▶️ Run Extraction",
-                variant="primary",
-                size="lg"
-            )
-
-            gr.Markdown("---")
+        # ============================================================
+        # EXTRACTION RESULTS SECTION (appears after extraction)
+        # ============================================================
+        gr.Markdown("---")
+        with gr.Column(visible=False) as extraction_results_section:
             gr.Markdown("## 📊 Extraction Results")
 
             results_table = gr.HTML(
@@ -337,71 +337,72 @@ def create_app(registry):
                 # Comparison view
                 comparison_view = gr.HTML(value="")
 
-            # ============================================================
-            # VALIDATION SECTION (appears after extraction)
-            # ============================================================
-            gr.Markdown("---")
+        # ============================================================
+        # VALIDATION SECTION (appears after extraction)
+        # ============================================================
+        gr.Markdown("---")
+        with gr.Column(visible=False) as validation_section:
+            gr.Markdown("## 🎯 Validation (Compare Against Ground Truth)")
+            gr.Markdown("""
+            Upload ground truth markdown files to validate extraction results using metrics like word count similarity,
+            character count similarity, and more.
+            """)
 
-            with gr.Column(visible=False) as validation_section:
-                gr.Markdown("## 🎯 Validation (Compare Against Ground Truth)")
-                gr.Markdown("""
-                Upload ground truth markdown files to validate extraction results using metrics like word count similarity,
-                character count similarity, and more.
-                """)
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### 1. Upload Ground Truth")
+                    gt_document_selector = gr.Dropdown(
+                        label="Select Document",
+                        choices=[],
+                        interactive=True
+                    )
+                    gt_file_upload = gr.File(
+                        label="Upload Ground Truth Markdown",
+                        file_types=[".md", ".txt"],
+                        type="filepath"
+                    )
+                    gt_upload_status = gr.Markdown("")
 
-                with gr.Row():
-                    with gr.Column(scale=1):
-                        gr.Markdown("### 1. Upload Ground Truth")
-                        gt_document_selector = gr.Dropdown(
-                            label="Select Document",
-                            choices=[],
-                            interactive=True
-                        )
-                        gt_file_upload = gr.File(
-                            label="Upload Ground Truth Markdown",
-                            file_types=[".md", ".txt"],
-                            type="filepath"
-                        )
-                        gt_upload_status = gr.Markdown("")
+                    # Persistent list of uploaded ground truth files
+                    gr.Markdown("**Uploaded Ground Truth Files:**")
+                    gt_uploaded_list = gr.HTML(
+                        value="<p style='color: var(--body-text-color-subdued, #666); font-size: 0.9em; font-style: italic;'>No ground truth files uploaded yet.</p>"
+                    )
 
-                        # Persistent list of uploaded ground truth files
-                        gr.Markdown("**Uploaded Ground Truth Files:**")
-                        gt_uploaded_list = gr.HTML(
-                            value="<p style='color: var(--body-text-color-subdued, #666); font-size: 0.9em; font-style: italic;'>No ground truth files uploaded yet.</p>"
-                        )
+                with gr.Column(scale=1):
+                    gr.Markdown("### 2. Select What to Validate")
+                    val_document_selector = gr.CheckboxGroup(
+                        label="Documents",
+                        choices=[],
+                        interactive=True
+                    )
+                    val_extractor_selector = gr.CheckboxGroup(
+                        label="Extractors",
+                        choices=[],
+                        interactive=True
+                    )
+                    val_metric_selector = gr.CheckboxGroup(
+                        label="Metrics",
+                        choices=[],
+                        value=[],  # Will be set based on available metrics
+                        interactive=True
+                    )
 
-                    with gr.Column(scale=1):
-                        gr.Markdown("### 2. Select What to Validate")
-                        val_document_selector = gr.CheckboxGroup(
-                            label="Documents",
-                            choices=[],
-                            interactive=True
-                        )
-                        val_extractor_selector = gr.CheckboxGroup(
-                            label="Extractors",
-                            choices=[],
-                            interactive=True
-                        )
-                        val_metric_selector = gr.CheckboxGroup(
-                            label="Metrics",
-                            choices=[],
-                            value=[],  # Will be set based on available metrics
-                            interactive=True
-                        )
+            with gr.Row():
+                run_validation_btn = gr.Button("▶️ Run Validation", variant="primary", size="lg")
+                clear_validation_btn = gr.Button("🗑️ Clear Results", size="sm")
 
-                with gr.Row():
-                    run_validation_btn = gr.Button("▶️ Run Validation", variant="primary", size="lg")
-                    clear_validation_btn = gr.Button("🗑️ Clear Results", size="sm")
+            validation_status = gr.Markdown("")
 
-                validation_status = gr.Markdown("")
-
-            # Validation results section (separate, always visible after validation)
-            gr.Markdown("---")
-            with gr.Column(visible=False) as validation_results_section:
-                gr.Markdown("## 📊 Validation Results")
-                validation_results_view = gr.HTML(
-                    value="<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>"
-                )
+        # ============================================================
+        # VALIDATION RESULTS SECTION (appears after validation)
+        # ============================================================
+        gr.Markdown("---")
+        with gr.Column(visible=False) as validation_results_section:
+            gr.Markdown("## 📊 Validation Results")
+            validation_results_view = gr.HTML(
+                value="<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>"
+            )
 
         # ============================================================
         # Event Handlers
@@ -1002,33 +1003,12 @@ def create_app(registry):
             except Exception as e:
                 return gr.update(visible=True, value=f"❌ Error deleting profile: {e}"), gr.update()
 
-        def show_results_view():
-            """Switch to results view."""
-            if not extractor_queue:
-                return (
-                    gr.update(visible=True),  # main_view stays visible
-                    gr.update(visible=False),  # results_view hidden
-                    "<p style='color: red;'>❌ No tasks configured. Please add at least one extraction task.</p>"
-                )
-
-            return (
-                gr.update(visible=False),  # main_view hidden
-                gr.update(visible=True),  # results_view visible
-                "<p>Upload documents and click 'Run Extraction' to begin.</p>"
-            )
-
-        def back_to_tasks_handler():
-            """Switch back to task management view."""
-            return (
-                gr.update(visible=True),  # main_view
-                gr.update(visible=False),  # results_view
-            )
-
         def run_extraction_handler(files):
             """Process documents with all queued extractors."""
             if not files:
                 return (
-                    "<p style='color: red;'>❌ No files uploaded.</p>",
+                    gr.update(visible=False),  # extraction_results_section
+                    "<p style='color: red;'>❌ No files uploaded.</p>",  # results_table
                     gr.update(visible=False),  # markdown_preview_accordion
                     "",  # comparison_view
                     gr.update(choices=[], value=None),  # document_selector
@@ -1064,6 +1044,7 @@ def create_app(registry):
             metric_choices = [m[0] for m in validation_ui.get_available_metrics()]
 
             return (
+                gr.update(visible=True),  # extraction_results_section
                 result[0],  # results_table
                 gr.update(visible=True),  # markdown_preview_accordion
                 comparison,  # comparison_view
@@ -1191,11 +1172,6 @@ def create_app(registry):
             outputs=[task_editor_column, editor_status, engine_selector, profile_group, config_editor]
         )
 
-        launch_btn.click(
-            fn=show_results_view,
-            outputs=[main_view, results_view, results_table]
-        )
-
         # Task Editor Events
         def engine_change_handler(engine):
             """Handle engine selection change - show profile group and hide config editor."""
@@ -1296,16 +1272,12 @@ def create_app(registry):
             outputs=[task_list_display, clear_all_btn]
         )
 
-        # Results View Events
-        back_to_tasks_btn.click(
-            fn=back_to_tasks_handler,
-            outputs=[main_view, results_view]
-        )
-
+        # Extraction Events
         run_extraction_btn.click(
             fn=run_extraction_handler,
             inputs=[file_upload],
             outputs=[
+                extraction_results_section,
                 results_table,
                 markdown_preview_accordion,
                 comparison_view,
