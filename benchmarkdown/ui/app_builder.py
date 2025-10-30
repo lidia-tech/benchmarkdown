@@ -342,10 +342,11 @@ def create_app(registry):
             # ============================================================
             gr.Markdown("---")
 
-            with gr.Accordion("🎯 Validation (Compare Against Ground Truth)", open=False, visible=False) as validation_section:
+            with gr.Column(visible=False) as validation_section:
+                gr.Markdown("## 🎯 Validation (Compare Against Ground Truth)")
                 gr.Markdown("""
-                Upload ground truth markdown files to validate extraction results using metrics like word count difference,
-                character count difference, and more.
+                Upload ground truth markdown files to validate extraction results using metrics like word count similarity,
+                character count similarity, and more.
                 """)
 
                 with gr.Row():
