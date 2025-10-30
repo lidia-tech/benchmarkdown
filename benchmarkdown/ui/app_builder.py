@@ -11,6 +11,7 @@ No hardcoded extractor-specific code!
 """
 
 import asyncio
+import os
 import gradio as gr
 from benchmarkdown.ui.core import BenchmarkUI
 from benchmarkdown.ui.queue import load_queue_from_disk, save_queue_to_disk, generate_task_list_html
@@ -1034,13 +1035,13 @@ def create_app(registry):
             except Exception as e:
                 return gr.update(visible=True, value=f"❌ Error deleting profile: {e}"), gr.update()
 
-        def run_extraction_handler(files):
+        async def run_extraction_handler(files):
             """Process documents with all queued extractors."""
             # Clear old validation data when starting new extraction
             validation_ui.clear_validation_results()
 
             if not files:
-                return (
+                yield (
                     gr.update(visible=False),  # extraction_results_section
                     "<p style='color: red;'>❌ No files uploaded.</p>",  # results_table
                     gr.update(visible=False),  # markdown_preview_accordion
@@ -1056,6 +1057,7 @@ def create_app(registry):
                     "",  # validation_results_view
                     "",  # validation_status
                 )
+                return
 
             # Get all extractor names from queue
             extractor_names = [f"{task['engine']} ({task['config_name']})" for task in extractor_queue]
@@ -1083,14 +1085,57 @@ def create_app(registry):
                 "",  # validation_status
             )
 
-            # Track progress with status updates
-            progress_messages = []
-
+            # Define status callback that yields updates to UI
             def update_status(message):
-                progress_messages.append(message)
+                # This will be called from within the async function
+                # We'll collect these and yield them
+                pass  # Placeholder - we'll yield directly from process_documents
 
-            # Process documents with status callback
-            result = asyncio.run(ui.process_documents(files, extractor_names, status_callback=update_status))
+            # Process documents with direct yielding of status updates
+            # We'll modify this to yield updates as we go
+            ui.results = {}
+
+            # Build list of all (file, extractor) combinations
+            all_tasks = []
+            for file_obj in files:
+                for extractor_name in extractor_names:
+                    all_tasks.append((file_obj, extractor_name))
+
+            total_tasks = len(all_tasks)
+
+            # Process each task and yield progress updates
+            for idx, (file_obj, extractor_name) in enumerate(all_tasks, 1):
+                file_path = file_obj.name
+                filename = os.path.basename(file_path)
+
+                if filename not in ui.results:
+                    ui.results[filename] = {}
+
+                # Yield progress update BEFORE processing
+                yield (
+                    gr.update(visible=False),  # extraction_results_section
+                    "",  # results_table
+                    gr.update(visible=False),  # markdown_preview_accordion
+                    "",  # comparison_view
+                    gr.update(),  # document_selector
+                    gr.update(visible=False),  # validation_section
+                    gr.update(),  # gt_document_selector
+                    gr.update(),  # val_document_selector
+                    gr.update(),  # val_extractor_selector
+                    gr.update(),  # val_metric_selector
+                    gr.update(value=f"⏳ Processing {filename} with {extractor_name} ({idx}/{total_tasks})...", visible=True),  # extraction_status
+                    gr.update(visible=False),  # validation_results_section
+                    "",  # validation_results_view
+                    "",  # validation_status
+                )
+
+                # Process this document with this extractor
+                result = await ui.process_document(file_path, extractor_name)
+                ui.results[filename][result.extractor_name] = result
+
+            # Generate results table
+            from .results import generate_results_table
+            result_table = generate_results_table(ui.results)
 
             # Get filenames for dropdown
             filenames = list(ui.results.keys()) if ui.results else []
@@ -1110,12 +1155,10 @@ def create_app(registry):
             # Get available metrics
             metric_choices = [m[0] for m in validation_ui.get_available_metrics()]
 
-            # Show final completion status with last progress message
-            completion_msg = progress_messages[-1] if progress_messages else "Extraction complete!"
-
+            # Show final completion status
             yield (
                 gr.update(visible=True),  # extraction_results_section
-                result[0],  # results_table
+                result_table,  # results_table
                 gr.update(visible=True, open=False),  # markdown_preview_accordion (collapsed by default)
                 comparison,  # comparison_view
                 gr.update(choices=filenames, value=first_filename),  # document_selector
@@ -1124,7 +1167,7 @@ def create_app(registry):
                 gr.update(choices=filenames, value=filenames),  # val_document_selector
                 gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
                 gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
-                gr.update(value=f"✅ {completion_msg}", visible=True),  # extraction_status - show completion
+                gr.update(value=f"✅ Extraction complete! Processed {total_tasks} task(s)", visible=True),  # extraction_status - show completion
                 gr.update(visible=False),  # validation_results_section (keep hidden until validation runs)
                 "<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>",  # validation_results_view (reset content)
                 "",  # validation_status (clear any previous validation messages)
