@@ -6,7 +6,7 @@ from extractor plugin metadata, eliminating the need for hardcoded config sectio
 """
 
 import gradio as gr
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Type
 from benchmarkdown.extractors import ExtractorRegistry, ExtractorMetadata
 from benchmarkdown.config_ui import create_gradio_component_from_field
 
@@ -549,9 +549,16 @@ class DynamicConfigUI:
         # Build config dictionary
         field_names = self.component_field_maps.get(engine_name, [])
 
+        # Get extractor metadata to check field types
+        extractor_meta = self.registry.get_extractor(engine_name)
+        config_class = extractor_meta.config_class if extractor_meta else None
+
         # Handle nested field names (e.g., "easyocr_config.lang")
         config_dict = {}
         for field_name, value in zip(field_names, engine_values):
+            # Sanitize value based on expected field type
+            sanitized_value = self._sanitize_value(field_name, value, engine_name, config_class)
+
             if '.' in field_name:
                 # Nested field
                 parts = field_name.split('.')
@@ -560,12 +567,90 @@ class DynamicConfigUI:
 
                 if nested_config_name not in config_dict:
                     config_dict[nested_config_name] = {}
-                config_dict[nested_config_name][nested_field_name] = value
+                config_dict[nested_config_name][nested_field_name] = sanitized_value
             else:
                 # Top-level field
-                config_dict[field_name] = value
+                config_dict[field_name] = sanitized_value
 
         return engine_values, config_dict
+
+    def _sanitize_value(self, field_name: str, value: Any, engine_name: str, config_class: Any) -> Any:
+        """
+        Sanitize a value based on the expected field type.
+
+        Handles cases like:
+        - Empty string from CheckboxGroup -> empty list
+        - Comma-separated string -> list of strings
+
+        Args:
+            field_name: Name of the field (may include dots for nested fields)
+            value: Raw value from UI component
+            engine_name: Name of the engine
+            config_class: Pydantic config class for the engine
+
+        Returns:
+            Sanitized value
+        """
+        if not config_class:
+            return value
+
+        # Handle nested fields
+        if '.' in field_name:
+            parts = field_name.split('.')
+            nested_config_name = parts[0]
+            nested_field_name = parts[1]
+
+            # Find nested config class
+            extractor_meta = self.registry.get_extractor(engine_name)
+            nested_configs = extractor_meta.nested_configs if extractor_meta else {}
+
+            target_config_class = None
+            for parent_field, nested_options in nested_configs.items():
+                for option_value, option_meta in nested_options.items():
+                    if option_meta.get('config_field') == nested_config_name:
+                        target_config_class = option_meta['config_class']
+                        break
+                if target_config_class:
+                    break
+
+            if target_config_class and nested_field_name in target_config_class.model_fields:
+                field_info = target_config_class.model_fields[nested_field_name]
+                return self._sanitize_by_type(value, field_info.annotation)
+        else:
+            # Top-level field
+            if field_name in config_class.model_fields:
+                field_info = config_class.model_fields[field_name]
+                return self._sanitize_by_type(value, field_info.annotation)
+
+        return value
+
+    def _sanitize_by_type(self, value: Any, field_type: Type) -> Any:
+        """
+        Sanitize a value based on its expected type.
+
+        Args:
+            value: Raw value from UI
+            field_type: Expected Pydantic field type
+
+        Returns:
+            Sanitized value
+        """
+        from typing import get_origin, get_args
+
+        origin = get_origin(field_type)
+
+        # Handle list types
+        if origin is list:
+            # Empty string from CheckboxGroup with no selections -> empty list
+            if value == '' or value is None:
+                return []
+            # Already a list
+            if isinstance(value, list):
+                return value
+            # Single value -> wrap in list
+            return [value]
+
+        return value
 
     def get_nested_group_updates(
         self,
