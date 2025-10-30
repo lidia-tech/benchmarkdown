@@ -313,6 +313,14 @@ def create_app(registry):
                 value="<p style='color: #666;'>Results will appear here after extraction completes.</p>"
             )
 
+            # Download buttons
+            with gr.Row():
+                download_zip_btn = gr.Button("📦 Download All Markdown", size="sm")
+                download_report_btn = gr.Button("📊 Download Report", size="sm")
+
+            download_zip_file = gr.File(label="ZIP Download", visible=False)
+            download_report_file = gr.File(label="Report Download", visible=False)
+
             # Markdown preview section in collapsible accordion
             with gr.Accordion("📄 View Extracted Markdown", open=False, visible=False) as markdown_preview_accordion:
                 # Results controls
@@ -327,14 +335,6 @@ def create_app(registry):
                         value="Tabbed",
                         label="View Mode"
                     )
-
-                # Download buttons
-                with gr.Row() as download_row:
-                    download_zip_btn = gr.Button("📦 Download All (ZIP)", size="sm")
-                    download_report_btn = gr.Button("📊 Generate Report (HTML)", size="sm")
-
-                download_zip_file = gr.File(label="ZIP Download", visible=False)
-                download_report_file = gr.File(label="Report Download", visible=False)
 
                 # Comparison view
                 comparison_view = gr.HTML(value="")
