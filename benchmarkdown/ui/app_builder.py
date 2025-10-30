@@ -16,8 +16,10 @@ from benchmarkdown.ui.core import BenchmarkUI
 from benchmarkdown.ui.queue import load_queue_from_disk, save_queue_to_disk, generate_task_list_html
 from benchmarkdown.ui.results import generate_comparison_view_tabbed, generate_comparison_view_sidebyside
 from benchmarkdown.ui.dynamic_config import DynamicConfigUI
+from benchmarkdown.ui.validation import ValidationUI
 from benchmarkdown.config_ui import build_config_from_ui_values
 from benchmarkdown.profile_manager import ProfileManager
+from benchmarkdown.metrics import MetricRegistry
 
 
 def create_app(registry):
@@ -37,6 +39,11 @@ def create_app(registry):
     ui = BenchmarkUI()
     profile_manager = ProfileManager()
     dynamic_config = DynamicConfigUI(registry)
+
+    # Initialize metrics and validation
+    metric_registry = MetricRegistry()
+    metric_registry.discover_metrics()
+    validation_ui = ValidationUI(metric_registry=metric_registry)
 
     # State for extractor queue - list of dicts with keys: engine, config_name, extractor, cost
     extractor_queue = []
@@ -327,6 +334,62 @@ def create_app(registry):
 
             # Comparison view
             comparison_view = gr.HTML(value="")
+
+            # ============================================================
+            # VALIDATION SECTION (appears after extraction)
+            # ============================================================
+            gr.Markdown("---")
+
+            with gr.Accordion("🎯 Validation (Compare Against Ground Truth)", open=False, visible=False) as validation_section:
+                gr.Markdown("""
+                Upload ground truth markdown files to validate extraction results using metrics like word count difference,
+                character count difference, and more.
+                """)
+
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        gr.Markdown("### 1. Upload Ground Truth")
+                        gt_document_selector = gr.Dropdown(
+                            label="Select Document",
+                            choices=[],
+                            interactive=True
+                        )
+                        gt_file_upload = gr.File(
+                            label="Upload Ground Truth Markdown",
+                            file_types=[".md", ".txt"],
+                            type="filepath"
+                        )
+                        gt_upload_status = gr.Markdown("")
+
+                    with gr.Column(scale=1):
+                        gr.Markdown("### 2. Select What to Validate")
+                        val_document_selector = gr.CheckboxGroup(
+                            label="Documents",
+                            choices=[],
+                            interactive=True
+                        )
+                        val_extractor_selector = gr.CheckboxGroup(
+                            label="Extractors",
+                            choices=[],
+                            interactive=True
+                        )
+                        val_metric_selector = gr.CheckboxGroup(
+                            label="Metrics",
+                            choices=[],
+                            value=[],  # Will be set based on available metrics
+                            interactive=True
+                        )
+
+                with gr.Row():
+                    run_validation_btn = gr.Button("▶️ Run Validation", variant="primary", size="lg")
+                    clear_validation_btn = gr.Button("🗑️ Clear Results", size="sm")
+
+                validation_status = gr.Markdown("")
+
+                gr.Markdown("### 📊 Validation Results")
+                validation_results_view = gr.HTML(
+                    value="<p style='color: #666;'>Validation results will appear here.</p>"
+                )
 
         # ============================================================
         # Event Handlers
@@ -957,7 +1020,12 @@ def create_app(registry):
                     gr.update(visible=False),  # results_controls
                     gr.update(visible=False),  # download_row
                     "",  # comparison_view
-                    gr.update(choices=[], value=None)  # document_selector
+                    gr.update(choices=[], value=None),  # document_selector
+                    gr.update(visible=False),  # validation_section
+                    gr.update(choices=[]),  # gt_document_selector
+                    gr.update(choices=[]),  # val_document_selector
+                    gr.update(choices=[]),  # val_extractor_selector
+                    gr.update(choices=[]),  # val_metric_selector
                 )
 
             # Get all extractor names from queue
@@ -975,12 +1043,26 @@ def create_app(registry):
             if first_filename:
                 comparison = generate_comparison_view_tabbed(ui.results, first_filename)
 
+            # Get unique extractor names from results
+            extractor_set = set()
+            for doc_results in ui.results.values():
+                extractor_set.update(doc_results.keys())
+            extractor_list = sorted(list(extractor_set))
+
+            # Get available metrics
+            metric_choices = [m[0] for m in validation_ui.get_available_metrics()]
+
             return (
                 result[0],  # results_table
                 gr.update(visible=True),  # results_controls
                 gr.update(visible=True),  # download_row
                 comparison,  # comparison_view
-                gr.update(choices=filenames, value=first_filename)  # document_selector
+                gr.update(choices=filenames, value=first_filename),  # document_selector
+                gr.update(visible=True),  # validation_section
+                gr.update(choices=filenames, value=first_filename if filenames else None),  # gt_document_selector
+                gr.update(choices=filenames, value=filenames),  # val_document_selector
+                gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
+                gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
             )
 
         def update_comparison(filename, view_mode_val):
@@ -991,6 +1073,41 @@ def create_app(registry):
                 return generate_comparison_view_sidebyside(ui.results, filename)
             else:
                 return generate_comparison_view_tabbed(ui.results, filename)
+
+        # ============================================================
+        # Validation Event Handlers
+        # ============================================================
+
+        def upload_ground_truth_handler(file_path, document_name):
+            """Handle ground truth file upload."""
+            if not file_path:
+                return "⚠️ Please select a file to upload"
+            if not document_name:
+                return "⚠️ Please select a document"
+
+            status = validation_ui.upload_ground_truth(file_path, document_name)
+            return status
+
+        def run_validation_handler(selected_docs, selected_extractors, selected_metrics):
+            """Handle validation execution."""
+            # Run validation
+            status = asyncio.run(validation_ui.run_validation(
+                ui_results=ui.results,
+                selected_documents=selected_docs,
+                selected_extractors=selected_extractors,
+                selected_metrics=selected_metrics
+            ))
+
+            # Generate HTML results
+            html = validation_ui.generate_validation_results_html()
+
+            return status, html
+
+        def clear_validation_handler():
+            """Handle clearing validation results."""
+            status = validation_ui.clear_validation_results()
+            html = validation_ui.generate_validation_results_html()
+            return status, html
 
         # ============================================================
         # Wire up events
@@ -1156,13 +1273,42 @@ def create_app(registry):
         run_extraction_btn.click(
             fn=run_extraction_handler,
             inputs=[file_upload],
-            outputs=[results_table, results_controls, download_row, comparison_view, document_selector]
+            outputs=[
+                results_table,
+                results_controls,
+                download_row,
+                comparison_view,
+                document_selector,
+                validation_section,
+                gt_document_selector,
+                val_document_selector,
+                val_extractor_selector,
+                val_metric_selector
+            ]
         )
 
         document_selector.change(
             fn=update_comparison,
             inputs=[document_selector, view_mode],
             outputs=[comparison_view]
+        )
+
+        # Validation Events
+        gt_file_upload.change(
+            fn=upload_ground_truth_handler,
+            inputs=[gt_file_upload, gt_document_selector],
+            outputs=[gt_upload_status]
+        )
+
+        run_validation_btn.click(
+            fn=run_validation_handler,
+            inputs=[val_document_selector, val_extractor_selector, val_metric_selector],
+            outputs=[validation_status, validation_results_view]
+        )
+
+        clear_validation_btn.click(
+            fn=clear_validation_handler,
+            outputs=[validation_status, validation_results_view]
         )
 
         view_mode.change(

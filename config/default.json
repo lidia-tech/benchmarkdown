@@ -1,0 +1,20 @@
+{
+  "engine": "TensorLake (Cloud)",
+  "profile_name": "default",
+  "config_data": {
+    "chunking_strategy": "page",
+    "table_output_mode": "markdown",
+    "table_parsing_format": null,
+    "signature_detection": false,
+    "figure_summarization_prompt": null,
+    "include_full_page_image": false,
+    "table_summarization_prompt": null,
+    "figure_summarization": false,
+    "table_summarization": false,
+    "remove_strikethrough_lines": false,
+    "skew_detection": false,
+    "disable_layout_detection": false,
+    "cross_page_header_detection": false,
+    "ocr_model": null
+  }
+}

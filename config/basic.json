@@ -1,12 +1,14 @@
 {
-  "engine": "TensorLake (Cloud)",
+  "engine": "Azure Document Intelligence",
   "profile_name": "basic",
   "config_data": {
-    "chunking_strategy": "section",
-    "table_output_mode": "markdown",
-    "signature_detection": false,
-    "figure_summarization": false,
-    "table_summarization": false,
-    "strike_through_detection": false
+    "model_id": "prebuilt-layout",
+    "output_content_format": "markdown",
+    "pages": "",
+    "locale": "",
+    "features": [],
+    "query_fields": "",
+    "output": [],
+    "string_index_type": null
   }
 }
