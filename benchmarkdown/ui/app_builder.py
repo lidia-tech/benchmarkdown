@@ -1081,12 +1081,13 @@ def create_app(registry):
         def upload_ground_truth_handler(file_path, document_name):
             """Handle ground truth file upload."""
             if not file_path:
-                return "⚠️ Please select a file to upload"
+                return "⚠️ Please select a file to upload", gr.update()
             if not document_name:
-                return "⚠️ Please select a document"
+                return "⚠️ Please select a document", gr.update()
 
             status = validation_ui.upload_ground_truth(file_path, document_name)
-            return status
+            # Clear the file upload control so user can upload another file
+            return status, gr.update(value=None)
 
         def run_validation_handler(selected_docs, selected_extractors, selected_metrics):
             """Handle validation execution."""
@@ -1297,7 +1298,7 @@ def create_app(registry):
         gt_file_upload.change(
             fn=upload_ground_truth_handler,
             inputs=[gt_file_upload, gt_document_selector],
-            outputs=[gt_upload_status]
+            outputs=[gt_upload_status, gt_file_upload]
         )
 
         run_validation_btn.click(
