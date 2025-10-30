@@ -1060,15 +1060,19 @@ def create_app(registry):
             # Get all extractor names from queue
             extractor_names = [f"{task['engine']} ({task['config_name']})" for task in extractor_queue]
 
-            # Show progress - this triggers Gradio's built-in spinner (two rotating diamonds)
+            # Calculate total operations
             num_files = len(files) if isinstance(files, list) else 1
             num_extractors = len(extractor_names)
-            progress(0, desc=f"Running extraction for {num_files} document(s) with {num_extractors} extractor(s)...")
+            total_operations = num_files * num_extractors
+
+            # Initial progress
+            progress(0, desc=f"Starting extraction: {num_files} document(s) × {num_extractors} extractor(s)...")
 
             # Process documents
             result = asyncio.run(ui.process_documents(files, extractor_names))
 
-            progress(1.0, desc="Generating results...")
+            # Final progress
+            progress(1.0, desc="Extraction complete, generating results...")
 
             # Get filenames for dropdown
             filenames = list(ui.results.keys()) if ui.results else []
@@ -1341,7 +1345,8 @@ def create_app(registry):
                 validation_results_section,
                 validation_results_view,
                 validation_status
-            ]
+            ],
+            show_progress="full"  # Show full progress indicator with spinner and message
         )
 
         document_selector.change(
