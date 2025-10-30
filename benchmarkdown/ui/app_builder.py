@@ -395,10 +395,13 @@ def create_app(registry):
 
                 validation_status = gr.Markdown("")
 
-                with gr.Accordion("📊 Validation Results", open=False):
-                    validation_results_view = gr.HTML(
-                        value="<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>"
-                    )
+            # Validation results section (separate, always visible after validation)
+            gr.Markdown("---")
+            with gr.Column(visible=False) as validation_results_section:
+                gr.Markdown("## 📊 Validation Results")
+                validation_results_view = gr.HTML(
+                    value="<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>"
+                )
 
         # ============================================================
         # Event Handlers
@@ -1128,13 +1131,15 @@ def create_app(registry):
             # Generate HTML results
             html = validation_ui.generate_validation_results_html()
 
-            return status, html
+            # Show results section
+            return status, html, gr.update(visible=True)
 
         def clear_validation_handler():
             """Handle clearing validation results."""
             status = validation_ui.clear_validation_results()
             html = validation_ui.generate_validation_results_html()
-            return status, html
+            # Hide results section
+            return status, html, gr.update(visible=False)
 
         # ============================================================
         # Wire up events
@@ -1329,12 +1334,12 @@ def create_app(registry):
         run_validation_btn.click(
             fn=run_validation_handler,
             inputs=[val_document_selector, val_extractor_selector, val_metric_selector],
-            outputs=[validation_status, validation_results_view]
+            outputs=[validation_status, validation_results_view, validation_results_section]
         )
 
         clear_validation_btn.click(
             fn=clear_validation_handler,
-            outputs=[validation_status, validation_results_view]
+            outputs=[validation_status, validation_results_view, validation_results_section]
         )
 
         view_mode.change(
