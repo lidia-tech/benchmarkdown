@@ -1073,3 +1073,111 @@ Following the established plugin architecture pattern:
 - Native markdown output (simpler than conversion-based approaches)
 - Graceful degradation when dependencies unavailable
 
+
+## Implement extracted markdown evaluation metrics
+
+Create a framework for extracted markdown evaluation. The evaluation compares the extracted text from different models with a "ground truth" (GT) markdown uploaded by the user. Let's reason if it is better to ask the GT from the user at the moment when they're uploading the PDF files, or after the extraction step, as a new "validation" step.
+
+The GT is compared to the markdown results of each extraction task based on different metrics. The metrics are also pluggable, and reside in a new metrics/ folder. As a test and dummy metrics, implement a simple metrics that compares the percentual difference of word/character count of the extracted markdown and the GT.
+
+### Clarifications
+
+1. **When to collect GT**: Implement as a separate validation step after extraction (not during PDF upload):
+   - More flexible - users may not have GT ready upfront
+   - Users can extract first, review results, then validate what matters
+   - Optional workflow - not all users need validation
+
+2. **GT scope**: One GT markdown file per source document, compared against all extractor results for that document
+
+3. **Metrics display**: Show results in a table comparing all extractors against GT for each selected metric
+
+4. **Metrics architecture**: Follow the same plugin pattern as extractors for consistency and extensibility
+
+### Thoughts, proposed solution
+
+**Architecture Design:**
+
+1. **Metrics Plugin System** (mirrors extractor architecture):
+   - `benchmarkdown/metrics/` base directory
+   - `benchmarkdown/metrics/base.py` - Protocol definition
+   - `benchmarkdown/metrics/__init__.py` - MetricRegistry for discovery
+   - Each metric in `benchmarkdown/metrics/{name}/` with standard structure
+
+2. **Metric Protocol**:
+   ```python
+   class Metric(Protocol):
+       async def compute(self, ground_truth: str, extracted: str) -> MetricResult
+   ```
+
+   MetricResult dataclass contains: score/value, description, and optional details
+
+3. **Initial Metrics**:
+   - `word_count_diff`: Percentage difference in word count
+   - `char_count_diff`: Percentage difference in character count
+   - Both grouped as "text_stats" metric family
+
+4. **UI Integration**:
+   - New "Validation" tab/section (appears after extraction completes)
+   - Upload GT markdown file(s) - one per document
+   - Select documents + extractors to validate
+   - Select metrics to apply
+   - Display results in comparison table
+
+5. **Data Flow**:
+   - User uploads GT markdown → stored in memory/temp
+   - User selects extraction results to validate
+   - System applies all selected metrics
+   - Results shown in table: Document | Extractor | Metric | Score
+
+**Implementation Plan:**
+1. Create metrics base protocol and registry
+2. Implement word_count_diff and char_count_diff metrics
+3. Add validation UI section to app_builder.py
+4. Test with sample documents
+5. Document in implementation notes
+
+### What was implemented
+
+**Complete plugin-based metrics framework with UI integration** (Commit: 103b85b)
+
+**1. Metrics Plugin System** (`benchmarkdown/metrics/`):
+- **Base Protocol** (`base.py`): Defined `Metric` protocol with async `compute()` method and `MetricResult` dataclass
+- **MetricRegistry** (`__init__.py`): Automatic plugin discovery system that mirrors extractor architecture
+- **Text Stats Plugin** (`text_stats/`): First metric implementation with word count and character count difference calculations
+
+**2. Validation Logic** (`benchmarkdown/ui/validation.py`):
+- `ValidationUI` class manages entire validation workflow
+- Ground truth upload and storage (document_name → gt_text mapping)
+- Validation execution across document×extractor×metric combinations
+- HTML results generation with color-coded percentage differences
+- Support for multiple documents validated simultaneously
+
+**3. UI Integration** (`benchmarkdown/ui/app_builder.py`):
+- Added collapsible "Validation" accordion section (appears after extraction completes)
+- Three-part workflow UI:
+  1. Upload ground truth markdown with document selector
+  2. Select documents, extractors, and metrics via checkboxes
+  3. Run validation button + results display
+- Validation section automatically populated with available documents/extractors/metrics
+- Event handlers for GT upload, validation execution, and results clearing
+
+**4. Test Coverage** (13 tests, all passing):
+- `tests/test_metrics_basic.py`: 5 tests for MetricRegistry and text_stats metrics
+- `tests/test_validation_workflow.py`: 7 tests for ValidationUI (upload, execution, HTML generation, error handling, multi-doc)
+- `tests/test_app_with_validation.py`: Integration test verifying app creation with validation UI
+
+**Key Features Delivered**:
+- ✅ Plugin-based metrics (add new metrics by creating folder with `__init__.py` + `metric.py`)
+- ✅ Automatic metric discovery via registry pattern
+- ✅ Word count and character count difference metrics (percentage-based)
+- ✅ Color-coded results display (green < 5%, orange < 15%, red ≥ 15%)
+- ✅ Validation as optional post-extraction step (not during upload)
+- ✅ One GT per document, compared against all selected extractors
+- ✅ Async metric computation for scalability
+- ✅ Multiple documents validated in parallel
+
+**Architecture Decisions**:
+- Followed extractor plugin pattern for consistency and extensibility
+- Validation triggered post-extraction for flexibility (users may not have GT ready)
+- Clean separation: metrics (compute logic), validation (orchestration), UI (presentation)
+- Async design supports future complex metrics (e.g., LLM-based similarity)
