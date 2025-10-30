@@ -158,38 +158,37 @@ class ValidationUI:
             HTML string with formatted validation results
         """
         if not self.validation_results:
-            return "<p style='color: #666;'>No validation results yet. Upload ground truth and run validation.</p>"
+            return "<p style='color: var(--body-text-color-subdued, #666);'>No validation results yet. Upload ground truth and run validation.</p>"
 
-        html = ["<div style='font-family: system-ui, -apple-system, sans-serif;'>"]
+        html = ["<div style='font-family: monospace;'>"]
 
         # For each document
         for doc_name in sorted(self.validation_results.keys()):
-            html.append(f"<h3 style='color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;'>📄 {doc_name}</h3>")
+            html.append(f"<h3>📋 {doc_name}</h3>")
 
             # Create a table for this document
-            html.append("<table style='width: 100%; border-collapse: collapse; margin-bottom: 30px;'>")
-            html.append("<thead>")
-            html.append("<tr style='background-color: #34495e; color: white;'>")
-            html.append("<th style='padding: 12px; text-align: left; border: 1px solid #ddd;'>Extractor</th>")
+            html.append("<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>")
 
             # Get all unique metrics across all extractors for this document
             all_metrics = set()
             for extractor_results in self.validation_results[doc_name].values():
                 all_metrics.update(extractor_results.keys())
 
+            # Table header
+            html.append("<tr style='background: var(--background-fill-secondary); border-bottom: 2px solid var(--border-color-primary); color: var(--body-text-color);'>")
+            html.append("<th style='padding: 8px; text-align: left;'>Extractor</th>")
+
             for metric_name in sorted(all_metrics):
-                html.append(f"<th style='padding: 12px; text-align: center; border: 1px solid #ddd;'>{metric_name.replace('_', ' ').title()}</th>")
+                html.append(f"<th style='padding: 8px; text-align: center;'>{metric_name.replace('_', ' ').title()}</th>")
 
             html.append("</tr>")
-            html.append("</thead>")
-            html.append("<tbody>")
 
             # For each extractor
             for extractor_name in sorted(self.validation_results[doc_name].keys()):
                 extractor_results = self.validation_results[doc_name][extractor_name]
 
-                html.append("<tr style='background-color: #f8f9fa;'>")
-                html.append(f"<td style='padding: 12px; border: 1px solid #ddd; font-weight: bold;'>{extractor_name}</td>")
+                html.append("<tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color);'>")
+                html.append(f"<td style='padding: 8px;'>{extractor_name}</td>")
 
                 for metric_name in sorted(all_metrics):
                     if metric_name in extractor_results:
@@ -207,30 +206,29 @@ class ValidationUI:
                                 else:
                                     color = '#e74c3c'  # Red
                             except:
-                                color = '#666'
+                                color = 'var(--body-text-color)'
                         else:
-                            color = '#666'
+                            color = 'var(--body-text-color)'
 
-                        html.append(f"<td style='padding: 12px; border: 1px solid #ddd; text-align: center; color: {color}; font-weight: bold;'>{formatted}</td>")
+                        html.append(f"<td style='padding: 8px; text-align: center; color: {color}; font-weight: bold;'>{formatted}</td>")
                     else:
-                        html.append("<td style='padding: 12px; border: 1px solid #ddd; text-align: center; color: #999;'>—</td>")
+                        html.append("<td style='padding: 8px; text-align: center; color: var(--body-text-color-subdued, #999);'>—</td>")
 
                 html.append("</tr>")
 
                 # Add a detail row with descriptions
-                html.append("<tr style='background-color: #ffffff;'>")
-                html.append("<td style='padding: 8px 12px; border: 1px solid #ddd; font-size: 0.85em; color: #666;'></td>")
+                html.append("<tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color-subdued, #666);'>")
+                html.append("<td style='padding: 8px; font-size: 0.85em;'></td>")
 
                 for metric_name in sorted(all_metrics):
                     if metric_name in extractor_results:
                         result = extractor_results[metric_name]
-                        html.append(f"<td style='padding: 8px 12px; border: 1px solid #ddd; font-size: 0.85em; color: #666; text-align: center;'>{result.description}</td>")
+                        html.append(f"<td style='padding: 8px; font-size: 0.85em; text-align: center;'>{result.description}</td>")
                     else:
-                        html.append("<td style='padding: 8px 12px; border: 1px solid #ddd;'></td>")
+                        html.append("<td style='padding: 8px;'></td>")
 
                 html.append("</tr>")
 
-            html.append("</tbody>")
             html.append("</table>")
 
         html.append("</div>")
