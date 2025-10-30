@@ -1091,47 +1091,70 @@ def create_app(registry):
                 # We'll collect these and yield them
                 pass  # Placeholder - we'll yield directly from process_documents
 
-            # Process documents with direct yielding of status updates
-            # We'll modify this to yield updates as we go
+            # Process documents with PARALLEL execution and real-time progress updates
             ui.results = {}
 
             # Build list of all (file, extractor) combinations
             all_tasks = []
             for file_obj in files:
                 for extractor_name in extractor_names:
-                    all_tasks.append((file_obj, extractor_name))
+                    file_path = file_obj.name
+                    filename = os.path.basename(file_path)
+                    all_tasks.append({
+                        'file_path': file_path,
+                        'filename': filename,
+                        'extractor_name': extractor_name
+                    })
 
             total_tasks = len(all_tasks)
 
-            # Process each task and yield progress updates
-            for idx, (file_obj, extractor_name) in enumerate(all_tasks, 1):
-                file_path = file_obj.name
-                filename = os.path.basename(file_path)
+            # Initialize results structure
+            for task in all_tasks:
+                if task['filename'] not in ui.results:
+                    ui.results[task['filename']] = {}
 
-                if filename not in ui.results:
-                    ui.results[filename] = {}
-
-                # Yield progress update BEFORE processing
-                yield (
-                    gr.update(visible=False),  # extraction_results_section
-                    "",  # results_table
-                    gr.update(visible=False),  # markdown_preview_accordion
-                    "",  # comparison_view
-                    gr.update(),  # document_selector
-                    gr.update(visible=False),  # validation_section
-                    gr.update(),  # gt_document_selector
-                    gr.update(),  # val_document_selector
-                    gr.update(),  # val_extractor_selector
-                    gr.update(),  # val_metric_selector
-                    gr.update(value=f"⏳ Processing {filename} with {extractor_name} ({idx}/{total_tasks})...", visible=True),  # extraction_status
-                    gr.update(visible=False),  # validation_results_section
-                    "",  # validation_results_view
-                    "",  # validation_status
+            # Start all extraction tasks in PARALLEL using asyncio.Task
+            pending_tasks = {}
+            for task in all_tasks:
+                async_task = asyncio.create_task(
+                    ui.process_document(task['file_path'], task['extractor_name'])
                 )
+                pending_tasks[async_task] = task
 
-                # Process this document with this extractor
-                result = await ui.process_document(file_path, extractor_name)
-                ui.results[filename][result.extractor_name] = result
+            # Process tasks as they complete (in any order) and yield progress updates
+            completed_count = 0
+            for completed_task in asyncio.as_completed(pending_tasks.keys()):
+                result = await completed_task
+                completed_count += 1
+
+                # Find the task info by matching the result
+                task_info = None
+                for async_task, info in pending_tasks.items():
+                    if info['filename'] == result.filename and info['extractor_name'] == result.extractor_name:
+                        task_info = info
+                        break
+
+                # Store result
+                if task_info:
+                    ui.results[task_info['filename']][result.extractor_name] = result
+
+                    # Yield progress update AFTER each task completes
+                    yield (
+                        gr.update(visible=False),  # extraction_results_section
+                        "",  # results_table
+                        gr.update(visible=False),  # markdown_preview_accordion
+                        "",  # comparison_view
+                        gr.update(),  # document_selector
+                        gr.update(visible=False),  # validation_section
+                        gr.update(),  # gt_document_selector
+                        gr.update(),  # val_document_selector
+                        gr.update(),  # val_extractor_selector
+                        gr.update(),  # val_metric_selector
+                        gr.update(value=f"✅ Completed {task_info['filename']} with {task_info['extractor_name']} ({completed_count}/{total_tasks})", visible=True),  # extraction_status
+                        gr.update(visible=False),  # validation_results_section
+                        "",  # validation_results_view
+                        "",  # validation_status
+                    )
 
             # Generate results table
             from .results import generate_results_table
