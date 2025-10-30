@@ -1104,7 +1104,8 @@ def create_app(registry):
         def upload_ground_truth_handler(file_path, document_name):
             """Handle ground truth file upload."""
             if not file_path:
-                return "⚠️ Please select a file to upload", gr.update(), generate_gt_uploaded_list_html()
+                # Don't show error - file control is empty because we cleared it
+                return "", gr.update(), generate_gt_uploaded_list_html()
             if not document_name:
                 return "⚠️ Please select a document", gr.update(), generate_gt_uploaded_list_html()
 
