@@ -311,29 +311,31 @@ def create_app(registry):
                 value="<p style='color: #666;'>Results will appear here after extraction completes.</p>"
             )
 
-            # Results controls (hidden initially)
-            with gr.Row(visible=False) as results_controls:
-                document_selector = gr.Dropdown(
-                    label="Select Document to View",
-                    choices=[],
-                    interactive=True
-                )
-                view_mode = gr.Radio(
-                    choices=["Tabbed", "Side-by-Side"],
-                    value="Tabbed",
-                    label="View Mode"
-                )
+            # Markdown preview section in collapsible accordion
+            with gr.Accordion("📄 View Extracted Markdown", open=False, visible=False) as markdown_preview_accordion:
+                # Results controls
+                with gr.Row() as results_controls:
+                    document_selector = gr.Dropdown(
+                        label="Select Document to View",
+                        choices=[],
+                        interactive=True
+                    )
+                    view_mode = gr.Radio(
+                        choices=["Tabbed", "Side-by-Side"],
+                        value="Tabbed",
+                        label="View Mode"
+                    )
 
-            # Download buttons
-            with gr.Row(visible=False) as download_row:
-                download_zip_btn = gr.Button("📦 Download All (ZIP)", size="sm")
-                download_report_btn = gr.Button("📊 Generate Report (HTML)", size="sm")
+                # Download buttons
+                with gr.Row() as download_row:
+                    download_zip_btn = gr.Button("📦 Download All (ZIP)", size="sm")
+                    download_report_btn = gr.Button("📊 Generate Report (HTML)", size="sm")
 
-            download_zip_file = gr.File(label="ZIP Download", visible=False)
-            download_report_file = gr.File(label="Report Download", visible=False)
+                download_zip_file = gr.File(label="ZIP Download", visible=False)
+                download_report_file = gr.File(label="Report Download", visible=False)
 
-            # Comparison view
-            comparison_view = gr.HTML(value="")
+                # Comparison view
+                comparison_view = gr.HTML(value="")
 
             # ============================================================
             # VALIDATION SECTION (appears after extraction)
@@ -1023,8 +1025,7 @@ def create_app(registry):
             if not files:
                 return (
                     "<p style='color: red;'>❌ No files uploaded.</p>",
-                    gr.update(visible=False),  # results_controls
-                    gr.update(visible=False),  # download_row
+                    gr.update(visible=False),  # markdown_preview_accordion
                     "",  # comparison_view
                     gr.update(choices=[], value=None),  # document_selector
                     gr.update(visible=False),  # validation_section
@@ -1060,8 +1061,7 @@ def create_app(registry):
 
             return (
                 result[0],  # results_table
-                gr.update(visible=True),  # results_controls
-                gr.update(visible=True),  # download_row
+                gr.update(visible=True),  # markdown_preview_accordion
                 comparison,  # comparison_view
                 gr.update(choices=filenames, value=first_filename),  # document_selector
                 gr.update(visible=True),  # validation_section
@@ -1300,8 +1300,7 @@ def create_app(registry):
             inputs=[file_upload],
             outputs=[
                 results_table,
-                results_controls,
-                download_row,
+                markdown_preview_accordion,
                 comparison_view,
                 document_selector,
                 validation_section,
