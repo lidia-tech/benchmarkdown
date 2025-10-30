@@ -361,6 +361,12 @@ def create_app(registry):
                         )
                         gt_upload_status = gr.Markdown("")
 
+                        # Persistent list of uploaded ground truth files
+                        gr.Markdown("**Uploaded Ground Truth Files:**")
+                        gt_uploaded_list = gr.HTML(
+                            value="<p style='color: var(--body-text-color-subdued, #666); font-size: 0.9em; font-style: italic;'>No ground truth files uploaded yet.</p>"
+                        )
+
                     with gr.Column(scale=1):
                         gr.Markdown("### 2. Select What to Validate")
                         val_document_selector = gr.CheckboxGroup(
@@ -1078,16 +1084,34 @@ def create_app(registry):
         # Validation Event Handlers
         # ============================================================
 
+        def generate_gt_uploaded_list_html():
+            """Generate HTML list of uploaded ground truth files."""
+            if not validation_ui.ground_truths:
+                return "<p style='color: var(--body-text-color-subdued, #666); font-size: 0.9em; font-style: italic;'>No ground truth files uploaded yet.</p>"
+
+            html = ["<ul style='list-style: none; padding: 0; margin: 0; font-size: 0.9em;'>"]
+            for doc_name in sorted(validation_ui.ground_truths.keys()):
+                gt_text = validation_ui.ground_truths[doc_name]
+                word_count = len(gt_text.split())
+                char_count = len(gt_text)
+                html.append(f"<li style='padding: 4px 0; color: var(--body-text-color);'>")
+                html.append(f"✅ <strong>{doc_name}</strong>")
+                html.append(f" <span style='color: var(--body-text-color-subdued, #666);'>({word_count} words, {char_count} chars)</span>")
+                html.append("</li>")
+            html.append("</ul>")
+            return "".join(html)
+
         def upload_ground_truth_handler(file_path, document_name):
             """Handle ground truth file upload."""
             if not file_path:
-                return "⚠️ Please select a file to upload", gr.update()
+                return "⚠️ Please select a file to upload", gr.update(), generate_gt_uploaded_list_html()
             if not document_name:
-                return "⚠️ Please select a document", gr.update()
+                return "⚠️ Please select a document", gr.update(), generate_gt_uploaded_list_html()
 
             status = validation_ui.upload_ground_truth(file_path, document_name)
             # Clear the file upload control so user can upload another file
-            return status, gr.update(value=None)
+            # Also update the list of uploaded GTs
+            return status, gr.update(value=None), generate_gt_uploaded_list_html()
 
         def run_validation_handler(selected_docs, selected_extractors, selected_metrics):
             """Handle validation execution."""
@@ -1298,7 +1322,7 @@ def create_app(registry):
         gt_file_upload.change(
             fn=upload_ground_truth_handler,
             inputs=[gt_file_upload, gt_document_selector],
-            outputs=[gt_upload_status, gt_file_upload]
+            outputs=[gt_upload_status, gt_file_upload, gt_uploaded_list]
         )
 
         run_validation_btn.click(
