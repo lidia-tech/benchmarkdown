@@ -370,6 +370,7 @@ class DynamicConfigUI:
             return []
 
         field_names = self.component_field_maps.get(engine_name, [])
+        components = self.component_lists.get(engine_name, [])
         extractor_meta = self.registry.get_extractor(engine_name)
         if not extractor_meta:
             return []
@@ -378,7 +379,9 @@ class DynamicConfigUI:
         nested_configs = extractor_meta.nested_configs or {}
         updates = []
 
-        for field_name in field_names:
+        for idx, field_name in enumerate(field_names):
+            component = components[idx] if idx < len(components) else None
+
             # Check if this is a nested field (e.g., "easyocr_config.lang")
             if '.' in field_name:
                 parts = field_name.split('.')
@@ -410,9 +413,15 @@ class DynamicConfigUI:
                 field_info = config_class.model_fields[field_name]
                 default_value = field_info.default
 
-            # Handle list defaults - convert to comma-separated string for UI
+            # Handle list defaults based on component type
             if isinstance(default_value, list):
-                default_value = ", ".join(str(v) for v in default_value)
+                # CheckboxGroup expects lists, Textbox expects comma-separated strings
+                if isinstance(component, gr.CheckboxGroup):
+                    # Ensure enum values are strings, not enum objects
+                    default_value = [v.value if hasattr(v, 'value') else str(v) for v in default_value]
+                else:
+                    # Convert to comma-separated string for Textbox
+                    default_value = ", ".join(str(v) for v in default_value)
 
             updates.append(gr.update(value=default_value))
 
@@ -438,6 +447,7 @@ class DynamicConfigUI:
             return []
 
         field_names = self.component_field_maps.get(engine_name, [])
+        components = self.component_lists.get(engine_name, [])
         extractor_meta = self.registry.get_extractor(engine_name)
         if not extractor_meta:
             return []
@@ -446,8 +456,21 @@ class DynamicConfigUI:
         nested_configs = extractor_meta.nested_configs or {}
         updates = []
 
-        def normalize_list_value(value):
-            """Convert list values to comma-separated strings for UI display."""
+        def normalize_value_for_component(value, component):
+            """
+            Normalize value based on component type.
+
+            - CheckboxGroup: Keep as list
+            - Textbox with list values: Convert to comma-separated string
+            """
+            # If it's a CheckboxGroup, keep lists as-is
+            if isinstance(component, gr.CheckboxGroup):
+                # Ensure enum values are strings, not enum objects
+                if isinstance(value, list):
+                    return [v.value if hasattr(v, 'value') else str(v) for v in value]
+                return value
+
+            # For Textbox components, convert lists to comma-separated strings
             if isinstance(value, list):
                 return ", ".join(str(v) for v in value)
             elif isinstance(value, str) and value.startswith("[") and value.endswith("]"):
@@ -460,7 +483,8 @@ class DynamicConfigUI:
                     pass
             return value
 
-        for field_name in field_names:
+        for idx, field_name in enumerate(field_names):
+            component = components[idx] if idx < len(components) else None
             # Check if this is a nested field (e.g., "easyocr_config.lang")
             if '.' in field_name:
                 parts = field_name.split('.')
@@ -485,14 +509,14 @@ class DynamicConfigUI:
                 if nested_config_name in config_data and isinstance(config_data[nested_config_name], dict):
                     nested_data = config_data[nested_config_name]
                     if nested_field_name in nested_data:
-                        value = normalize_list_value(nested_data[nested_field_name])
+                        value = normalize_value_for_component(nested_data[nested_field_name], component)
                         updates.append(gr.update(value=value))
                         continue
 
                 # Fall back to default from nested config class
                 if nested_field_name in nested_config_class.model_fields:
                     field_info = nested_config_class.model_fields[nested_field_name]
-                    default_value = normalize_list_value(field_info.default)
+                    default_value = normalize_value_for_component(field_info.default, component)
                     updates.append(gr.update(value=default_value))
                 else:
                     updates.append(gr.update())
@@ -506,12 +530,12 @@ class DynamicConfigUI:
 
                 # Try to get value from config_data
                 if field_name in config_data:
-                    value = normalize_list_value(config_data[field_name])
+                    value = normalize_value_for_component(config_data[field_name], component)
                     updates.append(gr.update(value=value))
                 else:
                     # Fall back to default
                     default_value = field_info.default
-                    default_value = normalize_list_value(default_value)
+                    default_value = normalize_value_for_component(default_value, component)
                     updates.append(gr.update(value=default_value))
 
         return updates
