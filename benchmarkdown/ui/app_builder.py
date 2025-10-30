@@ -54,6 +54,9 @@ def create_app(registry):
     # State for editing - None or index of task being edited
     editing_task_index = [None]  # Use list to make it mutable in closures
 
+    # State for tracking if files are uploaded
+    files_uploaded = [False]  # Use list to make it mutable in closures
+
     with gr.Blocks(
         title="Benchmarkdown - Document Extraction Comparison",
         head="""
@@ -298,7 +301,21 @@ def create_app(registry):
             "▶️ Run Extraction",
             variant="primary",
             size="lg",
-            interactive=bool(extractor_queue)  # Disabled if no tasks configured
+            interactive=bool(extractor_queue)  # Disabled if no tasks configured or no files uploaded
+        )
+
+        # Update button state when files are uploaded/cleared
+        def update_run_button_state(files):
+            """Enable/disable run button based on files and tasks."""
+            has_files = files is not None and (len(files) > 0 if isinstance(files, list) else True)
+            files_uploaded[0] = has_files
+            has_tasks = bool(extractor_queue)
+            return gr.update(interactive=has_files and has_tasks)
+
+        file_upload.change(
+            fn=update_run_button_state,
+            inputs=[file_upload],
+            outputs=[run_extraction_btn]
         )
 
         extraction_status = gr.Markdown("", visible=False)
@@ -640,7 +657,7 @@ def create_app(registry):
                     gr.update(visible=False),  # hide editor
                     "❌ Please select an extractor engine",
                     gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                    gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                    gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                 )
 
             # Use currently loaded profile data or ask user to select
@@ -650,7 +667,7 @@ def create_app(registry):
                     gr.update(visible=True),  # keep editor open
                     "❌ Please select a profile or create a new one",
                     gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                    gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                    gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                 )
 
             if not selected_profile:
@@ -659,7 +676,7 @@ def create_app(registry):
                     gr.update(visible=True),  # keep editor open
                     "❌ Please select a profile",
                     gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                    gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                    gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                 )
 
             try:
@@ -671,7 +688,7 @@ def create_app(registry):
                         gr.update(visible=True),
                         f"❌ Unknown engine: {engine_display}",
                         gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                        gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                        gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                     )
 
                 # Get extractor metadata from registry
@@ -682,7 +699,7 @@ def create_app(registry):
                         gr.update(visible=True),
                         f"❌ Extractor not found: {engine_name}",
                         gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                        gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                        gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                     )
 
                 # Build config from current profile data
@@ -729,7 +746,7 @@ def create_app(registry):
                     gr.update(visible=False),  # hide editor
                     message,
                     gr.update(visible=True),  # show clear_all_btn
-                    gr.update(interactive=True)  # enable run_extraction_btn
+                    gr.update(interactive=files_uploaded[0])  # enable run_extraction_btn only if files uploaded
                 )
 
             except Exception as e:
@@ -741,7 +758,7 @@ def create_app(registry):
                     gr.update(visible=True),
                     f"❌ Error: {e}",
                     gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                    gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                    gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                 )
 
         def delete_task_handler(task_number):
@@ -750,7 +767,7 @@ def create_app(registry):
                 return (
                     gr.update(value=generate_task_list_html(extractor_queue)),
                     gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                    gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                    gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
                 )
 
             try:
@@ -771,7 +788,7 @@ def create_app(registry):
                     return (
                         gr.update(value=generate_task_list_html(extractor_queue)),
                         gr.update(visible=bool(extractor_queue)),  # Hide clear_all_btn if queue is now empty
-                        gr.update(interactive=bool(extractor_queue))  # Disable run_extraction_btn if queue is now empty
+                        gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # Disable run_extraction_btn if queue is now empty
                     )
             except (ValueError, IndexError):
                 pass
@@ -779,7 +796,7 @@ def create_app(registry):
             return (
                 gr.update(value=generate_task_list_html(extractor_queue)),
                 gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
             )
 
         def clear_all_tasks_handler():
@@ -1160,7 +1177,7 @@ def create_app(registry):
             return (
                 gr.update(value=generate_task_list_html(extractor_queue)),
                 gr.update(visible=bool(extractor_queue)),  # clear_all_btn
-                gr.update(interactive=bool(extractor_queue))  # run_extraction_btn
+                gr.update(interactive=bool(extractor_queue) and files_uploaded[0])  # run_extraction_btn
             )
 
         def ocr_engine_change_handler(ocr_engine_value):
