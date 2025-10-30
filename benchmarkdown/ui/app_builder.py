@@ -323,8 +323,8 @@ def create_app(registry):
         # ============================================================
         # EXTRACTION RESULTS SECTION (appears after extraction)
         # ============================================================
-        gr.Markdown("---")
         with gr.Column(visible=False) as extraction_results_section:
+            gr.Markdown("---")
             gr.Markdown("## 📊 Extraction Results")
 
             results_table = gr.HTML(
@@ -360,8 +360,8 @@ def create_app(registry):
         # ============================================================
         # VALIDATION SECTION (appears after extraction)
         # ============================================================
-        gr.Markdown("---")
         with gr.Column(visible=False) as validation_section:
+            gr.Markdown("---")
             gr.Markdown("## 🎯 Validation (Compare Against Ground Truth)")
             gr.Markdown("""
             Upload ground truth markdown files to validate extraction results using metrics like word count similarity,
@@ -417,8 +417,8 @@ def create_app(registry):
         # ============================================================
         # VALIDATION RESULTS SECTION (appears after validation)
         # ============================================================
-        gr.Markdown("---")
         with gr.Column(visible=False) as validation_results_section:
+            gr.Markdown("---")
             gr.Markdown("## 📊 Validation Results")
             validation_results_view = gr.HTML(
                 value="<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>"
