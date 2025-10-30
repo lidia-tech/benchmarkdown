@@ -1034,7 +1034,7 @@ def create_app(registry):
             except Exception as e:
                 return gr.update(visible=True, value=f"❌ Error deleting profile: {e}"), gr.update()
 
-        def run_extraction_handler(files, progress=gr.Progress()):
+        def run_extraction_handler(files, progress=gr.Progress(track_tqdm=True)):
             """Process documents with all queued extractors."""
             # Clear old validation data when starting new extraction
             validation_ui.clear_validation_results()
@@ -1103,7 +1103,7 @@ def create_app(registry):
                 gr.update(choices=filenames, value=filenames),  # val_document_selector
                 gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
                 gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
-                gr.update(value=f"✅ Extraction complete! Processed {num_files} document(s) with {num_extractors} extractor(s).", visible=True),  # extraction_status
+                gr.update(value="", visible=False),  # extraction_status (hidden - progress indicator shows status)
                 gr.update(visible=False),  # validation_results_section (keep hidden until validation runs)
                 "<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>",  # validation_results_view (reset content)
                 "",  # validation_status (clear any previous validation messages)
