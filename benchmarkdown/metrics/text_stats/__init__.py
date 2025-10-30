@@ -1,8 +1,10 @@
 """Text statistics metrics plugin.
 
-This plugin provides basic text statistics metrics for evaluating extracted markdown:
-- Word count difference
-- Character count difference
+This plugin provides basic text statistics similarity metrics for evaluating extracted markdown:
+- Word count similarity (normalized 0.0-1.0)
+- Character count similarity (normalized 0.0-1.0)
+
+All metrics return normalized scores where 1.0 is a perfect match and 0.0 is the worst.
 """
 
 from typing import Tuple
@@ -14,7 +16,7 @@ from .metric import TextStatsMetric
 # The registry will discover this as a category, and we'll provide both metrics
 METRIC_NAME = "text_stats"
 METRIC_DISPLAY_NAME = "Text Statistics"
-METRIC_DESCRIPTION = "Compares word count and character count between ground truth and extracted text"
+METRIC_DESCRIPTION = "Compares word count and character count similarity (normalized 0.0-1.0, higher is better)"
 METRIC_CATEGORY = "basic"
 
 # For now, expose as the base class - we'll handle the two variants in the UI

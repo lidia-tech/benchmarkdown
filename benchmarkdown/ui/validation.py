@@ -195,20 +195,15 @@ class ValidationUI:
                         result = extractor_results[metric_name]
                         formatted = result.formatted_value if result.formatted_value else str(result.value)
 
-                        # Color code based on percentage (for diff metrics, lower is better)
-                        if '%' in formatted:
-                            try:
-                                pct_value = float(formatted.rstrip('%'))
-                                if pct_value < 5:
-                                    color = '#27ae60'  # Green
-                                elif pct_value < 15:
-                                    color = '#f39c12'  # Orange
-                                else:
-                                    color = '#e74c3c'  # Red
-                            except:
-                                color = 'var(--body-text-color)'
-                        else:
-                            color = 'var(--body-text-color)'
+                        # Color code based on similarity score (higher is better)
+                        # result.value is normalized to [0.0, 1.0] where 1.0 is perfect
+                        similarity = result.value
+                        if similarity >= 0.95:  # >= 95%
+                            color = '#27ae60'  # Green
+                        elif similarity >= 0.85:  # >= 85%
+                            color = '#f39c12'  # Orange
+                        else:  # < 85%
+                            color = '#e74c3c'  # Red
 
                         html.append(f"<td style='padding: 8px; text-align: center; color: {color}; font-weight: bold;'>{formatted}</td>")
                     else:

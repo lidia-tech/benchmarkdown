@@ -1,8 +1,10 @@
 """Text statistics metrics implementation.
 
-Computes basic text statistics comparing extracted text to ground truth:
-- Word count difference (percentage)
-- Character count difference (percentage)
+Computes basic text statistics similarity scores comparing extracted text to ground truth:
+- Word count similarity (normalized 0.0-1.0, where 1.0 is perfect match)
+- Character count similarity (normalized 0.0-1.0, where 1.0 is perfect match)
+
+All scores are normalized using: similarity = max(0.0, 1.0 - abs_diff / gt_count)
 """
 
 import asyncio
@@ -14,8 +16,11 @@ from benchmarkdown.metrics.base import MetricResult
 class TextStatsMetric:
     """Metric that compares basic text statistics (word count, character count).
 
-    This is a simple baseline metric that measures the percentage difference
-    in word count and character count between ground truth and extracted text.
+    Returns normalized similarity scores in range [0.0, 1.0]:
+    - 1.0 = perfect match (identical counts)
+    - 0.0 = worst match (very different counts)
+
+    Similarity calculation: max(0.0, 1.0 - abs(extracted - gt) / gt)
     """
 
     def __init__(self, metric_type: str = "word_count"):
@@ -49,56 +54,76 @@ class TextStatsMetric:
             return self._compute_char_count_diff(ground_truth, extracted)
 
     def _compute_word_count_diff(self, ground_truth: str, extracted: str) -> MetricResult:
-        """Compute word count difference percentage."""
+        """Compute word count similarity score.
+
+        Returns a normalized similarity score where:
+        - 1.0 = perfect match (same word count)
+        - 0.0 = worst match (very different word counts)
+        """
         gt_words = len(ground_truth.split())
         ext_words = len(extracted.split())
 
         if gt_words == 0:
-            percentage_diff = 100.0 if ext_words > 0 else 0.0
+            # If ground truth is empty, only perfect if extracted is also empty
+            similarity = 1.0 if ext_words == 0 else 0.0
             description = "Ground truth is empty"
         else:
-            percentage_diff = abs(ext_words - gt_words) / gt_words * 100.0
-            description = f"Word count difference: {abs(ext_words - gt_words)} words"
+            # Similarity = 1 - (absolute_difference / ground_truth_count)
+            # Clamped to [0.0, 1.0]
+            abs_diff = abs(ext_words - gt_words)
+            similarity = max(0.0, 1.0 - (abs_diff / gt_words))
+            description = f"Word count: {ext_words} / {gt_words} ({abs_diff} words difference)"
 
         details = {
             "ground_truth_word_count": gt_words,
             "extracted_word_count": ext_words,
             "absolute_difference": abs(ext_words - gt_words),
-            "relative_difference": (ext_words - gt_words) / gt_words * 100.0 if gt_words > 0 else 0.0
+            "relative_difference_pct": (ext_words - gt_words) / gt_words * 100.0 if gt_words > 0 else 0.0,
+            "similarity_score": similarity
         }
 
-        formatted_value = f"{percentage_diff:.2f}%"
+        formatted_value = f"{similarity * 100:.1f}%"
 
         return MetricResult(
-            value=percentage_diff,
+            value=similarity,
             description=description,
             details=details,
             formatted_value=formatted_value
         )
 
     def _compute_char_count_diff(self, ground_truth: str, extracted: str) -> MetricResult:
-        """Compute character count difference percentage."""
+        """Compute character count similarity score.
+
+        Returns a normalized similarity score where:
+        - 1.0 = perfect match (same character count)
+        - 0.0 = worst match (very different character counts)
+        """
         gt_chars = len(ground_truth)
         ext_chars = len(extracted)
 
         if gt_chars == 0:
-            percentage_diff = 100.0 if ext_chars > 0 else 0.0
+            # If ground truth is empty, only perfect if extracted is also empty
+            similarity = 1.0 if ext_chars == 0 else 0.0
             description = "Ground truth is empty"
         else:
-            percentage_diff = abs(ext_chars - gt_chars) / gt_chars * 100.0
-            description = f"Character count difference: {abs(ext_chars - gt_chars)} characters"
+            # Similarity = 1 - (absolute_difference / ground_truth_count)
+            # Clamped to [0.0, 1.0]
+            abs_diff = abs(ext_chars - gt_chars)
+            similarity = max(0.0, 1.0 - (abs_diff / gt_chars))
+            description = f"Character count: {ext_chars} / {gt_chars} ({abs_diff} chars difference)"
 
         details = {
             "ground_truth_char_count": gt_chars,
             "extracted_char_count": ext_chars,
             "absolute_difference": abs(ext_chars - gt_chars),
-            "relative_difference": (ext_chars - gt_chars) / gt_chars * 100.0 if gt_chars > 0 else 0.0
+            "relative_difference_pct": (ext_chars - gt_chars) / gt_chars * 100.0 if gt_chars > 0 else 0.0,
+            "similarity_score": similarity
         }
 
-        formatted_value = f"{percentage_diff:.2f}%"
+        formatted_value = f"{similarity * 100:.1f}%"
 
         return MetricResult(
-            value=percentage_diff,
+            value=similarity,
             description=description,
             details=details,
             formatted_value=formatted_value

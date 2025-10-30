@@ -43,7 +43,10 @@ async def test_word_count_metric():
     print(f"Description: {result.description}")
     print(f"Details: {result.details}")
 
-    assert result.value > 0, "Difference should be positive"
+    # GT has 10 words, extracted has 7 words, diff is 3
+    # Similarity = 1.0 - 3/10 = 0.7 (70%)
+    assert 0.0 <= result.value <= 1.0, "Similarity should be in range [0.0, 1.0]"
+    assert result.value == 0.7, f"Expected 0.7 (70% similarity), got {result.value}"
     print("\n✅ Word count metric works correctly")
 
 
@@ -66,14 +69,17 @@ async def test_char_count_metric():
     print(f"Description: {result.description}")
     print(f"Details: {result.details}")
 
-    assert result.value > 0, "Difference should be positive"
+    # GT has 24 chars, extracted has 15 chars, diff is 9
+    # Similarity = 1.0 - 9/24 = 0.625 (62.5%)
+    assert 0.0 <= result.value <= 1.0, "Similarity should be in range [0.0, 1.0]"
+    assert result.value == 0.625, f"Expected 0.625 (62.5% similarity), got {result.value}"
     print("\n✅ Character count metric works correctly")
 
 
 async def test_perfect_match():
     """Test metrics with identical texts."""
     print("\n" + "="*60)
-    print("Test 4: Perfect Match (0% difference)")
+    print("Test 4: Perfect Match (100% similarity)")
     print("="*60)
 
     text = "This is exactly the same text."
@@ -84,11 +90,11 @@ async def test_perfect_match():
     word_result = await word_metric.compute(text, text)
     char_result = await char_metric.compute(text, text)
 
-    print(f"\nWord count difference: {word_result.formatted_value}")
-    print(f"Character count difference: {char_result.formatted_value}")
+    print(f"\nWord count similarity: {word_result.formatted_value}")
+    print(f"Character count similarity: {char_result.formatted_value}")
 
-    assert word_result.value == 0.0, "Word count should be 0% for identical texts"
-    assert char_result.value == 0.0, "Char count should be 0% for identical texts"
+    assert word_result.value == 1.0, "Word count should be 1.0 (100%) for identical texts"
+    assert char_result.value == 1.0, "Char count should be 1.0 (100%) for identical texts"
 
     print("\n✅ Perfect match detection works correctly")
 
@@ -111,6 +117,8 @@ async def test_empty_ground_truth():
     print(f"Result: {result.formatted_value}")
     print(f"Description: {result.description}")
 
+    # Empty GT with non-empty extracted = 0.0 similarity (0%)
+    assert result.value == 0.0, f"Expected 0.0 (0% similarity), got {result.value}"
     print("\n✅ Empty ground truth handled correctly")
 
 
