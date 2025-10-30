@@ -1068,8 +1068,8 @@ def create_app(registry):
             # Initial progress
             progress(0, desc=f"Starting extraction: {num_files} document(s) × {num_extractors} extractor(s)...")
 
-            # Process documents with progress callback
-            result = asyncio.run(ui.process_documents(files, extractor_names, progress_callback=progress))
+            # Process documents - tqdm progress is tracked automatically via track_tqdm=True
+            result = asyncio.run(ui.process_documents(files, extractor_names))
 
             # Final progress
             progress(1.0, desc="Extraction complete, generating results...")

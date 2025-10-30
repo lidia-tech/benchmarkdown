@@ -11,6 +11,7 @@ from typing import Optional
 import tempfile
 
 import markdown
+from tqdm import tqdm
 
 
 @dataclass
@@ -91,7 +92,6 @@ class BenchmarkUI:
         self,
         files: list,
         selected_extractors: list[str],
-        progress_callback=None,
     ):
         """Process multiple documents with selected extractors."""
         if not files:
@@ -102,35 +102,22 @@ class BenchmarkUI:
 
         self.results = {}
 
-        # Calculate total operations for progress tracking
-        num_files = len(files)
-        num_extractors = len(selected_extractors)
-        total_operations = num_files * num_extractors
-        completed_operations = 0
+        # Build list of all (file, extractor) combinations for tqdm
+        all_tasks = []
+        for file_obj in files:
+            for extractor_name in selected_extractors:
+                all_tasks.append((file_obj, extractor_name))
 
-        for file_idx, file_obj in enumerate(files, 1):
+        # Use tqdm for progress - Gradio tracks this automatically via track_tqdm=True
+        for file_obj, extractor_name in tqdm(all_tasks, desc="Extracting documents"):
             file_path = file_obj.name
             filename = os.path.basename(file_path)
-            self.results[filename] = {}
 
-            # Process with all selected extractors in parallel
-            tasks = []
-            for extractor_name in selected_extractors:
-                tasks.append(self.process_document(file_path, extractor_name))
+            if filename not in self.results:
+                self.results[filename] = {}
 
-            results = await asyncio.gather(*tasks)
-
-            for result in results:
-                self.results[filename][result.extractor_name] = result
-                completed_operations += 1
-
-                # Report progress after each extractor completes
-                if progress_callback:
-                    progress_value = completed_operations / total_operations
-                    progress_callback(
-                        progress_value,
-                        desc=f"Processing: {filename} ({file_idx}/{num_files}) - {completed_operations}/{total_operations} tasks complete"
-                    )
+            result = await self.process_document(file_path, extractor_name)
+            self.results[filename][result.extractor_name] = result
 
         # Generate results table
         from .results import generate_results_table
