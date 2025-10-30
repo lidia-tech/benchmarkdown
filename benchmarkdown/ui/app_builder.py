@@ -300,6 +300,8 @@ def create_app(registry):
             size="lg"
         )
 
+        extraction_status = gr.Markdown("", visible=False)
+
         # ============================================================
         # EXTRACTION RESULTS SECTION (appears after extraction)
         # ============================================================
@@ -1003,7 +1005,7 @@ def create_app(registry):
             except Exception as e:
                 return gr.update(visible=True, value=f"❌ Error deleting profile: {e}"), gr.update()
 
-        def run_extraction_handler(files):
+        def run_extraction_handler(files, progress=gr.Progress()):
             """Process documents with all queued extractors."""
             if not files:
                 return (
@@ -1017,13 +1019,21 @@ def create_app(registry):
                     gr.update(choices=[]),  # val_document_selector
                     gr.update(choices=[]),  # val_extractor_selector
                     gr.update(choices=[]),  # val_metric_selector
+                    gr.update(value="❌ No files uploaded.", visible=True),  # extraction_status
                 )
 
             # Get all extractor names from queue
             extractor_names = [f"{task['engine']} ({task['config_name']})" for task in extractor_queue]
 
+            # Show progress
+            num_files = len(files) if isinstance(files, list) else 1
+            num_extractors = len(extractor_names)
+            progress(0, desc=f"🚀 Starting extraction for {num_files} document(s) with {num_extractors} extractor(s)...")
+
             # Process documents
             result = asyncio.run(ui.process_documents(files, extractor_names))
+
+            progress(0.9, desc="✅ Extraction complete, generating results...")
 
             # Get filenames for dropdown
             filenames = list(ui.results.keys()) if ui.results else []
@@ -1054,6 +1064,7 @@ def create_app(registry):
                 gr.update(choices=filenames, value=filenames),  # val_document_selector
                 gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
                 gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
+                gr.update(value=f"✅ Extraction complete! Processed {num_files} document(s) with {num_extractors} extractor(s).", visible=True),  # extraction_status
             )
 
         def update_comparison(filename, view_mode_val):
@@ -1286,7 +1297,8 @@ def create_app(registry):
                 gt_document_selector,
                 val_document_selector,
                 val_extractor_selector,
-                val_metric_selector
+                val_metric_selector,
+                extraction_status
             ]
         )
 
