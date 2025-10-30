@@ -1034,7 +1034,7 @@ def create_app(registry):
             except Exception as e:
                 return gr.update(visible=True, value=f"❌ Error deleting profile: {e}"), gr.update()
 
-        def run_extraction_handler(files, progress=gr.Progress(track_tqdm=True)):
+        def run_extraction_handler(files):
             """Process documents with all queued extractors."""
             # Clear old validation data when starting new extraction
             validation_ui.clear_validation_results()
@@ -1065,14 +1065,32 @@ def create_app(registry):
             num_extractors = len(extractor_names)
             total_operations = num_files * num_extractors
 
-            # Initial progress
-            progress(0, desc=f"Starting extraction: {num_files} document(s) × {num_extractors} extractor(s)...")
+            # Show initial status
+            yield (
+                gr.update(visible=False),  # extraction_results_section
+                "",  # results_table
+                gr.update(visible=False),  # markdown_preview_accordion
+                "",  # comparison_view
+                gr.update(),  # document_selector
+                gr.update(visible=False),  # validation_section
+                gr.update(),  # gt_document_selector
+                gr.update(),  # val_document_selector
+                gr.update(),  # val_extractor_selector
+                gr.update(),  # val_metric_selector
+                gr.update(value=f"⏳ Starting extraction: {num_files} document(s) × {num_extractors} extractor(s)...", visible=True),  # extraction_status
+                gr.update(visible=False),  # validation_results_section
+                "",  # validation_results_view
+                "",  # validation_status
+            )
 
-            # Process documents - tqdm progress is tracked automatically via track_tqdm=True
-            result = asyncio.run(ui.process_documents(files, extractor_names))
+            # Track progress with status updates
+            progress_messages = []
 
-            # Final progress
-            progress(1.0, desc="Extraction complete, generating results...")
+            def update_status(message):
+                progress_messages.append(message)
+
+            # Process documents with status callback
+            result = asyncio.run(ui.process_documents(files, extractor_names, status_callback=update_status))
 
             # Get filenames for dropdown
             filenames = list(ui.results.keys()) if ui.results else []
@@ -1092,7 +1110,10 @@ def create_app(registry):
             # Get available metrics
             metric_choices = [m[0] for m in validation_ui.get_available_metrics()]
 
-            return (
+            # Show final completion status with last progress message
+            completion_msg = progress_messages[-1] if progress_messages else "Extraction complete!"
+
+            yield (
                 gr.update(visible=True),  # extraction_results_section
                 result[0],  # results_table
                 gr.update(visible=True, open=False),  # markdown_preview_accordion (collapsed by default)
@@ -1103,7 +1124,7 @@ def create_app(registry):
                 gr.update(choices=filenames, value=filenames),  # val_document_selector
                 gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
                 gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
-                gr.update(value="", visible=False),  # extraction_status (hidden - progress indicator shows status)
+                gr.update(value=f"✅ {completion_msg}", visible=True),  # extraction_status - show completion
                 gr.update(visible=False),  # validation_results_section (keep hidden until validation runs)
                 "<p style='color: var(--body-text-color-subdued, #666);'>Validation results will appear here.</p>",  # validation_results_view (reset content)
                 "",  # validation_status (clear any previous validation messages)

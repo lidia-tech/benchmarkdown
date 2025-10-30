@@ -11,7 +11,6 @@ from typing import Optional
 import tempfile
 
 import markdown
-from tqdm import tqdm
 
 
 @dataclass
@@ -92,6 +91,7 @@ class BenchmarkUI:
         self,
         files: list,
         selected_extractors: list[str],
+        status_callback=None,
     ):
         """Process multiple documents with selected extractors."""
         if not files:
@@ -102,19 +102,25 @@ class BenchmarkUI:
 
         self.results = {}
 
-        # Build list of all (file, extractor) combinations for tqdm
+        # Build list of all (file, extractor) combinations
         all_tasks = []
         for file_obj in files:
             for extractor_name in selected_extractors:
                 all_tasks.append((file_obj, extractor_name))
 
-        # Use tqdm for progress - Gradio tracks this automatically via track_tqdm=True
-        for file_obj, extractor_name in tqdm(all_tasks, desc="Extracting documents"):
+        total_tasks = len(all_tasks)
+
+        # Process each task and report progress via status callback
+        for idx, (file_obj, extractor_name) in enumerate(all_tasks, 1):
             file_path = file_obj.name
             filename = os.path.basename(file_path)
 
             if filename not in self.results:
                 self.results[filename] = {}
+
+            # Update status before processing
+            if status_callback:
+                status_callback(f"Processing {filename} with {extractor_name} ({idx}/{total_tasks})...")
 
             result = await self.process_document(file_path, extractor_name)
             self.results[filename][result.extractor_name] = result
