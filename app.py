@@ -21,11 +21,6 @@ logger = logging.getLogger("benchmarkdown")
 # Set level to INFO only for this logger and its descendants
 logger.setLevel(log_level)
 
-# logging.basicConfig(
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#     datefmt='%Y-%m-%d %H:%M:%S'
-# )
-
 # Discover all available extractors via plugin system
 logger.info("🔍 Discovering extractor plugins...")
 registry = get_global_registry()

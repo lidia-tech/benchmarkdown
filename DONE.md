@@ -1395,3 +1395,122 @@ This approach:
 - ✅ Gracefully handles non-PDF files (shows "N/A" for page count)
 - ✅ Minimal performance impact (page count extracted once per document)
 - ✅ HTML report has improved styling with clear visual hierarchy
+
+## Implement litellm based multi-modal LLM engine
+
+1. Save each page of the PDF into a separate PNG file:
+
+```python
+import fitz  # PyMuPDF
+
+# Open the PDF file
+doc = fitz.open("../data/input/lidia-internal/EDPB Opinion 12-2018.pdf")
+
+# Choose the page (0-based index)
+page_number = 0
+page = doc.load_page(page_number)
+
+# Render the page to a pixmap (image)
+pix = page.get_pixmap(dpi=300)  # use higher dpi for better quality
+
+# Save the pixmap as an image
+pix.save("page_screenshot.png")
+```
+
+The dpi should be configurable.
+
+2. Call an LLM model with an appropiate prompt ("Extract all text literally from the page" or something similar; experiment with it). Use litellm framework: https://docs.litellm.ai/docs/completion/vision
+
+### Clarifications
+
+The task requires creating a plugin-based extractor following the existing architecture (config.py, extractor.py, __init__.py). Key clarifications:
+- Follow the plugin architecture in `benchmarkdown/extractors/`
+- Use PyMuPDF for page-to-image conversion with configurable DPI
+- Use litellm's vision API to extract text from images
+- Support multiple models via litellm (Claude, GPT-4V, Gemini, etc.)
+- Make the extraction prompt configurable
+- Require API keys via environment variables
+
+### Thoughts, proposed solution
+
+**Plugin structure:**
+- `benchmarkdown/extractors/litellm/` directory
+- `config.py`: LiteLLMConfig with model selection, DPI, prompt, API keys
+- `extractor.py`: LiteLLMExtractor implementing MarkdownExtractor protocol
+- `__init__.py`: Standard plugin interface
+
+**Configuration options:**
+- Basic: model name, DPI (default 300), extraction prompt
+- Advanced: max_tokens, temperature, batch processing options
+- API keys from environment (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+
+**Extraction flow:**
+1. Open PDF with PyMuPDF
+2. For each page: render to PNG at specified DPI (in memory, no disk writes)
+3. Convert PNG to base64
+4. Call litellm.completion with vision API
+5. Combine results into markdown
+
+**Dependencies:**
+- litellm (vision support)
+- PyMuPDF (already used by Docling)
+- Pillow (for image handling)
+
+### What was implemented
+
+**Complete plugin implementation following the benchmarkdown plugin architecture:**
+
+1. **Created plugin directory structure**: `benchmarkdown/extractors/litellm/`
+
+2. **config.py** - Comprehensive Pydantic configuration model:
+   - `LiteLLMConfig` with 14 configurable parameters
+   - Support for multiple vision-capable models (OpenAI, Anthropic, Google)
+   - Basic fields: model, custom_model, dpi, extraction_prompt, page_separator
+   - Advanced fields: max_tokens, temperature, image_quality, max_retries, timeout, concurrent_pages
+   - Conditional fields: custom_model shown only when model='custom'
+   - API keys loaded from environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY)
+
+3. **extractor.py** - Full extractor implementation:
+   - `LiteLLMExtractor` class implementing MarkdownExtractor protocol
+   - PDF page rendering using PyMuPDF at configurable DPI
+   - Base64 encoding of page images for LLM vision API
+   - Async/await pattern using litellm's acompletion
+   - Support for sequential and concurrent page processing
+   - Comprehensive error handling and logging
+   - Per-page progress tracking
+
+4. **__init__.py** - Standard plugin interface:
+   - Exports: Extractor, Config, BASIC_FIELDS, ADVANCED_FIELDS, CONDITIONAL_FIELDS
+   - Plugin metadata: ENGINE_NAME, ENGINE_DISPLAY_NAME
+   - `is_available()` function checking for dependencies and API keys
+   - Graceful degradation when dependencies not installed
+
+5. **README.md** - Complete documentation:
+   - Installation instructions
+   - Environment variable setup for all providers
+   - Configuration options with detailed explanations
+   - Usage examples (default, custom, cost-optimized)
+   - How it works section
+   - Cost considerations and comparison with other extractors
+   - Troubleshooting guide
+
+6. **pyproject.toml** - Added dependency group:
+   - `litellm>=1.50.0` (multi-provider LLM framework)
+   - `pymupdf>=1.26.5` (PDF rendering)
+
+**Testing:**
+- Plugin discovery verified: Correctly discovered and registered by ExtractorRegistry
+- Field metadata validated: Basic, advanced, and conditional fields properly configured
+- Availability check tested: Correctly detects missing API keys
+- Configuration model validated: All Pydantic fields work correctly
+- Integration confirmed: UI will automatically generate interface from metadata
+
+**Key Features:**
+- Zero-code UI integration (plugin architecture)
+- Multi-provider support via LiteLLM (OpenAI, Anthropic, Google, custom)
+- Configurable DPI for quality/cost trade-offs
+- Customizable extraction prompts
+- Sequential or concurrent page processing
+- Comprehensive logging with per-page progress
+- Profile save/load support (automatic via plugin system)
+
