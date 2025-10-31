@@ -14,8 +14,10 @@ from benchmarkdown.ui import create_app
 from benchmarkdown.extractors import get_global_registry
 
 # Configure logging
+# Get log level from environment, default to WARNING
+log_level = os.getenv('BENCHMARKDOWN_LOG_LEVEL', 'WARNING').upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level, logging.WARNING),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )

@@ -19,6 +19,8 @@ Quick reference for all environment variables used by Benchmarkdown extractors.
 | `AWS_DEFAULT_REGION` | AWS Textract | ⚙️ Optional | AWS region (default: from AWS config) |
 | `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` | Azure | ✅ Required | Azure endpoint URL ([Azure Portal](https://portal.azure.com/)) |
 | `AZURE_DOCUMENT_INTELLIGENCE_KEY` | Azure | ✅ Required | Azure API key |
+| **Application Settings** |
+| `BENCHMARKDOWN_LOG_LEVEL` | Application | ⚙️ Optional | Logging verbosity: DEBUG, INFO, WARNING, ERROR, CRITICAL (default: WARNING) |
 | **Performance Tuning** |
 | `DOCLING_NUM_THREADS` | Docling | ⚙️ Optional | CPU threads (default: CPU count, range: 1-32) |
 | `DOCLING_DOCUMENT_TIMEOUT` | Docling | ⚙️ Optional | Processing timeout in seconds (default: None, min: 1.0) |
@@ -63,6 +65,30 @@ Extractors only appear in the UI if their required environment variables are set
 - ✅ **TensorLake**: Available when `TENSORLAKE_API_KEY` is set
 - ✅ **Azure Document Intelligence**: Available when both `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY` are set
 
+## Logging Configuration
+
+**`BENCHMARKDOWN_LOG_LEVEL`** controls the verbosity of operational logs:
+
+- **`DEBUG`**: Very detailed logs including internal state and API calls
+- **`INFO`**: Extraction start/completion with timing and job IDs
+- **`WARNING`** (default): Only warnings and errors
+- **`ERROR`**: Only error messages
+- **`CRITICAL`**: Only critical failures
+
+**Examples:**
+```bash
+# Default: minimal logging
+uv run python app.py
+
+# Enable info logs to see extraction progress
+BENCHMARKDOWN_LOG_LEVEL=INFO uv run python app.py
+
+# Debug mode for troubleshooting
+BENCHMARKDOWN_LOG_LEVEL=DEBUG uv run python app.py
+```
+
+**Tip:** Use `INFO` level to see extraction timing and cloud job IDs. Use `DEBUG` for troubleshooting API issues.
+
 ## Performance Tuning Guide
 
 **When to adjust performance settings:**
@@ -70,7 +96,7 @@ Extractors only appear in the UI if their required environment variables are set
 - 🚀 **High-volume processing**: Increase workers (`LLAMAPARSE_NUM_WORKERS`) for parallel processing
 - ⏱️ **Large documents**: Increase timeouts (`*_MAX_TIMEOUT`, `DOCLING_DOCUMENT_TIMEOUT`)
 - 🖥️ **Server deployment**: Set `DOCLING_NUM_THREADS` to match available CPU cores
-- 🐛 **Debugging**: Enable `LLAMAPARSE_VERBOSE=true` for detailed logs
+- 🐛 **Debugging**: Set `BENCHMARKDOWN_LOG_LEVEL=INFO` or `DEBUG` for detailed operational logs
 - 🔄 **CI/CD pipelines**: Set explicit timeouts and disable progress bars
 
 **Default settings work well for most use cases.**

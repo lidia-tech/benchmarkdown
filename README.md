@@ -123,6 +123,9 @@ export TEXTRACT_S3_WORKSPACE="s3://your-bucket-name/textract-workspace/"
 Optional environment variables for advanced performance tuning (timeouts, worker counts, etc.):
 
 ```bash
+# Logging (controls operational log verbosity)
+export BENCHMARKDOWN_LOG_LEVEL=WARNING  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 # TensorLake
 export TENSORLAKE_MAX_TIMEOUT=600  # seconds
 
