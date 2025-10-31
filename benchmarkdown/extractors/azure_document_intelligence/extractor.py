@@ -7,12 +7,17 @@ MarkdownExtractor protocol using Azure Document Intelligence service.
 
 import os
 import asyncio
+import logging
+import time
 from typing import Optional
 
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
 
 from .config import AzureDocIntelConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class AzureDocIntelExtractor:
@@ -132,20 +137,34 @@ class AzureDocIntelExtractor:
         Raises:
             Exception: If extraction fails
         """
+        # Log extraction start with config summary
+        # Extract hostname from endpoint for cleaner logs
+        endpoint_host = self.endpoint.split('/')[2] if '//' in self.endpoint else self.endpoint
+        features = self.analyze_kwargs.get('features', [])
+        features_str = ', '.join(features) if features else 'default'
+        config_summary = f"model={self.model_id}, endpoint={endpoint_host}, features=[{features_str}]"
+
+        logger.info(f"[Azure DI] Starting extraction: {os.path.basename(filename)} ({config_summary})")
+        start_time = time.time()
+
         def blocking_extract_markdown(filename):
             # Read the file
             with open(filename, "rb") as f:
-                file_bytes = f.read()
+                # Start the analysis using the correct API
+                # Note: The API expects 'body' parameter (not 'analyze_request')
+                # and uses keyword-only arguments for optional parameters
+                poller = self.client.begin_analyze_document(
+                    model_id=self.model_id,
+                    body=f,
+                    content_type="application/octet-stream",
+                    **self.analyze_kwargs
+                )
 
-            # Start the analysis using the correct API
-            # Note: The API expects 'body' parameter (not 'analyze_request')
-            # and uses keyword-only arguments for optional parameters
-            poller = self.client.begin_analyze_document(
-                model_id=self.model_id,
-                body=file_bytes,
-                content_type="application/octet-stream",
-                **self.analyze_kwargs
-            )
+            # Log operation ID if available
+            # Azure uses operation-location header which contains the operation ID
+            if hasattr(poller, '_operation_location'):
+                operation_id = poller._operation_location.split('/')[-1].split('?')[0]
+                logger.info(f"[Azure DI] Operation ID: {operation_id} for {os.path.basename(filename)}")
 
             # Wait for completion
             result = poller.result()
@@ -153,6 +172,20 @@ class AzureDocIntelExtractor:
             # Return the markdown content
             return result.content if result.content else ""
 
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
-        return result
+        try:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
+
+            # Log successful completion with duration
+            duration = time.time() - start_time
+            logger.info(f"[Azure DI] Completed extraction: {os.path.basename(filename)} (duration: {duration:.2f}s)")
+
+            return result
+        except Exception as e:
+            # Log error with details
+            duration = time.time() - start_time
+            logger.error(
+                f"[Azure DI] Extraction failed: {os.path.basename(filename)} "
+                f"(duration: {duration:.2f}s, error: {type(e).__name__}: {str(e)})"
+            )
+            raise

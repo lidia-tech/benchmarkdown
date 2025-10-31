@@ -33,3 +33,21 @@ https://docs.aspose.com/pdf/python-cpp/extract-text/
 ## Implement price per page estimation
 
 TBD
+
+## Extraction report improvements
+
+1. in the beginning of the downloadable HTML report, add an initial summary table that lists all documents present in the table
+
+2. use fitz (pymupdf) to open the pdf before the extraction tasks and get the number of pages. Include the number of pages in the beginning of the report.
+
+## Implement improved valutation metrics
+
+TBD
+
+## Add a configurable timeout for the single tasks
+
+If the task do not finish before a global timeout (settable from ui), kill it and mark it as failed.
+
+AND/OR
+
+Add a "stop" button that stops all running tasks and marks the non-finished as failed.

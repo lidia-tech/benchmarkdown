@@ -8,6 +8,7 @@ MarkdownExtractor protocol using TensorLake's Document Ingestion API.
 import os
 import asyncio
 import logging
+import time
 from typing import Optional
 from tensorlake.documentai import DocumentAI, ParseStatus
 
@@ -84,10 +85,29 @@ class TensorLakeExtractor:
         Raises:
             Exception: If extraction fails
         """
+        # Log extraction start with config summary
+        config_summary = "default config"
+        if self.config:
+            chunking = self.config.chunking_strategy
+            table_mode = self.config.table_output_mode
+            features = []
+            if self.config.figure_summarization:
+                features.append("figures")
+            if self.config.table_summarization:
+                features.append("tables")
+            if self.config.signature_detection:
+                features.append("signatures")
+            features_str = "+".join(features) if features else "none"
+            config_summary = f"chunking={chunking}, tables={table_mode}, features=[{features_str}]"
+
+        logger.info(f"[TensorLake] Starting extraction: {os.path.basename(filename)} ({config_summary})")
+        start_time = time.time()
+
         def blocking_extract_markdown(filename: os.PathLike) -> str:
             try:
                 # Upload the document
                 file_id = self.doc_ai.upload(path=str(filename))
+                logger.info(f"[TensorLake] File uploaded: {os.path.basename(filename)} (file_id: {file_id})")
 
                 # Convert config to TensorLake options objects
                 parsing_options = self.config.to_parsing_options()
@@ -99,6 +119,7 @@ class TensorLakeExtractor:
                     parsing_options=parsing_options,
                     enrichment_options=enrichment_options
                 )
+                logger.info(f"[TensorLake] Parse job submitted: {os.path.basename(filename)} (parse_id: {parse_id})")
 
                 # Wait for parsing to complete
                 result = self.doc_ai.wait_for_completion(parse_id)
@@ -113,9 +134,6 @@ class TensorLakeExtractor:
                 return ""
 
             except Exception as e:
-                # Log the full exception with traceback to server logs
-                logger.error(f"TensorLake extraction failed for {filename}", exc_info=True)
-
                 # Make error messages more user-friendly
                 error_msg = str(e)
                 error_type = type(e).__name__
@@ -123,24 +141,35 @@ class TensorLakeExtractor:
                 # Check for common API errors with more specific matching
                 if "api_key" in error_msg.lower() or "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
                     user_msg = "Authentication failed. Please check your TENSORLAKE_API_KEY environment variable."
-                    logger.error(f"TensorLake authentication error: {user_msg}")
                     raise ValueError(user_msg) from e
                 elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
                     user_msg = "API quota exceeded or rate limit reached. Please check your TensorLake account."
-                    logger.error(f"TensorLake quota error: {user_msg}")
                     raise ValueError(user_msg) from e
                 elif error_type == "TimeoutError" or "timed out" in error_msg.lower():
                     # Only catch actual timeout errors, not parameter validation errors
                     user_msg = "Parsing timeout. Try using a smaller document or contact TensorLake support."
-                    logger.error(f"TensorLake timeout error: {user_msg}")
                     raise ValueError(user_msg) from e
                 else:
                     # Re-raise with original error for better debugging
                     # Include the error type and message
                     user_msg = f"TensorLake extraction failed: {error_type}: {error_msg}"
-                    logger.error(f"TensorLake unexpected error: {user_msg}")
                     raise ValueError(user_msg) from e
 
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
-        return result
+        try:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
+
+            # Log successful completion with duration
+            duration = time.time() - start_time
+            logger.info(f"[TensorLake] Completed extraction: {os.path.basename(filename)} (duration: {duration:.2f}s)")
+
+            return result
+        except Exception as e:
+            # Log error with duration
+            duration = time.time() - start_time
+            logger.error(
+                f"[TensorLake] Extraction failed: {os.path.basename(filename)} "
+                f"(duration: {duration:.2f}s, error: {type(e).__name__}: {str(e)})",
+                exc_info=True
+            )
+            raise

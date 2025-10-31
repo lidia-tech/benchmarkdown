@@ -8,6 +8,7 @@ MarkdownExtractor protocol using LlamaIndex's LlamaParse cloud service.
 import os
 import asyncio
 import logging
+import time
 from typing import Optional
 from llama_parse import LlamaParse
 
@@ -171,10 +172,33 @@ class LlamaParseExtractor:
         Raises:
             Exception: If extraction fails
         """
+        # Log extraction start with config summary
+        config_summary = "default config"
+        if self.config:
+            mode = []
+            if self.config.premium_mode:
+                mode.append("premium")
+            if self.config.fast_mode:
+                mode.append("fast")
+            if not mode:
+                mode.append("standard")
+            mode_str = "+".join(mode)
+
+            language = self.config.language
+            tables = "aggressive" if self.config.aggressive_table_extraction else "standard"
+            config_summary = f"mode={mode_str}, language={language}, tables={tables}"
+
+        logger.info(f"[LlamaParse] Starting extraction: {os.path.basename(filename)} ({config_summary})")
+        start_time = time.time()
+
         try:
             # Use async method directly to avoid nested event loop issues
             # LlamaParse returns a list of Documents
             documents = await self.parser.aload_data(str(filename))
+
+            # Log successful completion with duration
+            duration = time.time() - start_time
+            logger.info(f"[LlamaParse] Completed extraction: {os.path.basename(filename)} (duration: {duration:.2f}s)")
 
             # Combine all document text
             # Each document represents a page or chunk
@@ -182,8 +206,13 @@ class LlamaParseExtractor:
                 return "\n\n".join(doc.text for doc in documents)
             return ""
         except Exception as e:
-            # Log the full exception with traceback to server logs
-            logger.error(f"LlamaParse extraction failed for {filename}", exc_info=True)
+            # Log error with duration
+            duration = time.time() - start_time
+            logger.error(
+                f"[LlamaParse] Extraction failed: {os.path.basename(filename)} "
+                f"(duration: {duration:.2f}s, error: {type(e).__name__}: {str(e)})",
+                exc_info=True
+            )
 
             # Make error messages more user-friendly
             error_msg = str(e)
@@ -191,17 +220,13 @@ class LlamaParseExtractor:
             # Check for common API errors
             if "language" in error_msg.lower() and "input should be" in error_msg.lower():
                 user_msg = "Invalid language code. Please select a valid language from the dropdown menu. The language field only accepts single language codes (e.g., 'en', 'es', 'fr')."
-                logger.error(f"LlamaParse language validation error: {user_msg}")
                 raise ValueError(user_msg) from e
             elif "api_key" in error_msg.lower() or "authentication" in error_msg.lower():
                 user_msg = "Authentication failed. Please check your LLAMA_CLOUD_API_KEY environment variable."
-                logger.error(f"LlamaParse authentication error: {user_msg}")
                 raise ValueError(user_msg) from e
             elif "quota" in error_msg.lower() or "rate limit" in error_msg.lower():
                 user_msg = "API quota exceeded or rate limit reached. Please check your LlamaParse account."
-                logger.error(f"LlamaParse quota error: {user_msg}")
                 raise ValueError(user_msg) from e
             else:
                 # Re-raise with original error
-                logger.error(f"LlamaParse unexpected error: {type(e).__name__}: {error_msg}")
                 raise

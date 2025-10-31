@@ -7,10 +7,15 @@ MarkdownExtractor protocol using IBM's Docling library.
 
 import os
 import asyncio
+import logging
+import time
 from typing import Optional
 from docling.document_converter import DocumentConverter
 
 from .config import DoclingConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class DoclingExtractor:
@@ -81,11 +86,36 @@ class DoclingExtractor:
         Raises:
             Exception: If extraction fails
         """
+        # Log extraction start with config summary
+        config_summary = "default config"
+        if self.config:
+            ocr_engine = getattr(self.config, 'ocr_engine', 'none')
+            table_mode = getattr(self.config, 'table_structure_mode', 'accurate')
+            threads = getattr(self.config, 'num_threads', 4)
+            config_summary = f"ocr={ocr_engine}, tables={table_mode}, threads={threads}"
+
+        logger.info(f"[Docling] Starting extraction: {os.path.basename(filename)} ({config_summary})")
+        start_time = time.time()
+
         def blocking_extract_markdown(filename: os.PathLike) -> str:
             result = self.converter.convert(str(filename))
             ser_text = result.document.export_to_markdown()
             return ser_text
 
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
-        return result
+        try:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
+
+            # Log successful completion with duration
+            duration = time.time() - start_time
+            logger.info(f"[Docling] Completed extraction: {os.path.basename(filename)} (duration: {duration:.2f}s)")
+
+            return result
+        except Exception as e:
+            # Log error with details
+            duration = time.time() - start_time
+            logger.error(
+                f"[Docling] Extraction failed: {os.path.basename(filename)} "
+                f"(duration: {duration:.2f}s, error: {type(e).__name__}: {str(e)})"
+            )
+            raise

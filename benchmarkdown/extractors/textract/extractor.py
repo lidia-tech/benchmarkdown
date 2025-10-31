@@ -7,6 +7,8 @@ MarkdownExtractor protocol using AWS Textract service.
 
 import os
 import asyncio
+import logging
+import time
 from typing import Optional
 
 from textractor import Textractor
@@ -14,6 +16,9 @@ from textractor.data.constants import TextractFeatures
 from textractor.data.markdown_linearization_config import MarkdownLinearizationConfig
 
 from .config import TextractConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class TextractExtractor:
@@ -127,6 +132,14 @@ class TextractExtractor:
         Raises:
             Exception: If extraction fails
         """
+        # Log extraction start with config summary
+        features_str = ", ".join([f.name if hasattr(f, 'name') else str(f) for f in self.features])
+        s3_bucket = self.s3_upload_path.split('/')[2] if self.s3_upload_path.startswith('s3://') else 'unknown'
+        config_summary = f"features=[{features_str}], s3_bucket={s3_bucket}"
+
+        logger.info(f"[Textract] Starting extraction: {os.path.basename(filename)} ({config_summary})")
+        start_time = time.time()
+
         def blocking_extract_markdown(filename):
             document = self.extractor.start_document_analysis(
                 str(filename),
@@ -134,8 +147,28 @@ class TextractExtractor:
                 s3_upload_path=self.s3_upload_path,
                 save_image=False,
             )
+
+            # Log job ID if available
+            job_id = getattr(document, 'job_id', None) or getattr(document, 'request_id', None)
+            if job_id:
+                logger.info(f"[Textract] Job ID: {job_id} for {os.path.basename(filename)}")
+
             return document.to_markdown(config=self.config)
 
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
-        return result
+        try:
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, blocking_extract_markdown, filename)
+
+            # Log successful completion with duration
+            duration = time.time() - start_time
+            logger.info(f"[Textract] Completed extraction: {os.path.basename(filename)} (duration: {duration:.2f}s)")
+
+            return result
+        except Exception as e:
+            # Log error with details
+            duration = time.time() - start_time
+            logger.error(
+                f"[Textract] Extraction failed: {os.path.basename(filename)} "
+                f"(duration: {duration:.2f}s, error: {type(e).__name__}: {str(e)})"
+            )
+            raise

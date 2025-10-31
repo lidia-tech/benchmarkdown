@@ -1181,3 +1181,115 @@ The GT is compared to the markdown results of each extraction task based on diff
 - Validation triggered post-extraction for flexibility (users may not have GT ready)
 - Clean separation: metrics (compute logic), validation (orchestration), UI (presentation)
 - Async design supports future complex metrics (e.g., LLM-based similarity)
+
+## Operational visibility in logs
+
+Add not-too-much-verbose logging that at least logs the requests of extractors and if they fail, with what error. If the cloud provider returns an asynchronous job identifier or something similar, log also that one.
+
+### Clarifications
+
+- **Log levels**: INFO for requests/success, ERROR for failures
+- **Display**: Console/files only (standard Python logging, not in UI)
+- **Content to log**:
+  - Filename and extractor name
+  - Timestamps and duration
+  - Cloud job IDs and API details (for cloud extractors)
+  - Configuration summary (key settings)
+
+### Thoughts, proposed solution
+
+**Approach**:
+1. Add Python's standard `logging` module to each extractor implementation
+2. Create a logger per extractor with naming convention: `benchmarkdown.extractors.{name}`
+3. Log extraction lifecycle events:
+   - Start: filename, extractor, config summary
+   - Cloud-specific: job IDs, request IDs, API endpoints
+   - Completion: duration, success/failure
+   - Errors: full error details at ERROR level
+
+**Implementation locations**:
+- Each extractor's `extractor.py` file
+- Main extraction handler in `benchmarkdown/ui/core.py` (optional: high-level coordination logs)
+
+**Configuration summary strategy**:
+- For each extractor, log 2-3 most important config options
+- Example: Docling → OCR engine, table mode, threading
+- Example: Textract → features enabled, S3 workspace
+- Example: Azure DI → model ID, features enabled
+
+**Cloud job IDs**:
+- AWS Textract: `JobId` from async API or `RequestId` from sync API
+- Azure Document Intelligence: `operation-location` header with operation ID
+- LlamaParse: job ID from API response
+- TensorLake: job ID from API response
+
+**Logger setup**:
+- Configure at module level: `logger = logging.getLogger(__name__)`
+- No custom formatters needed (use root logger config)
+- Timestamps will be handled by root logger or console output
+
+### What was implemented
+
+Implemented comprehensive logging across all 5 extractors with the following features:
+
+**1. Logging Configuration (app.py)**:
+- Added `logging.basicConfig()` with INFO level
+- Format includes timestamp, logger name, level, and message
+- Timestamp format: `YYYY-MM-DD HH:MM:SS`
+
+**2. All Extractors Enhanced**:
+Each extractor (`benchmarkdown/extractors/{name}/extractor.py`) now logs:
+
+- **Docling** (benchmarkdown/extractors/docling/extractor.py:89-121):
+  - Start: filename, OCR engine, table mode, threads
+  - Completion: duration
+  - Errors: duration, error type and message
+
+- **AWS Textract** (benchmarkdown/extractors/textract/extractor.py:135-174):
+  - Start: filename, features list, S3 bucket
+  - Job ID: AWS job/request ID when available
+  - Completion: duration
+  - Errors: duration, error type and message
+
+- **Azure Document Intelligence** (benchmarkdown/extractors/azure_document_intelligence/extractor.py:140-191):
+  - Start: filename, model ID, endpoint, features
+  - Operation ID: Azure operation ID from poller
+  - Completion: duration
+  - Errors: duration, error type and message
+
+- **LlamaParse** (benchmarkdown/extractors/llamaparse/extractor.py:175-232):
+  - Start: filename, mode (premium/fast/standard), language, table extraction mode
+  - Completion: duration
+  - Errors: duration, error type and message (with user-friendly translations)
+
+- **TensorLake** (benchmarkdown/extractors/tensorlake/extractor.py:88-175):
+  - Start: filename, chunking strategy, table mode, enrichment features
+  - File ID: TensorLake file upload ID
+  - Parse ID: TensorLake parse job ID
+  - Completion: duration
+  - Errors: duration, error type and message (with user-friendly translations)
+
+**3. Log Format**:
+- Extractor name prefixed in brackets: `[Docling]`, `[Textract]`, `[Azure DI]`, `[LlamaParse]`, `[TensorLake]`
+- Start logs (INFO): `[Extractor] Starting extraction: filename (config summary)`
+- Cloud job IDs (INFO): `[Extractor] Job/Operation/Parse ID: {id} for filename`
+- Completion logs (INFO): `[Extractor] Completed extraction: filename (duration: X.XXs)`
+- Error logs (ERROR): `[Extractor] Extraction failed: filename (duration: X.XXs, error: Type: message)`
+
+**4. Testing**:
+- Created `test_logging.py` to verify logging implementation
+- Verified logs appear correctly with timestamps, logger names, and proper formatting
+- Example output:
+  ```
+  2025-10-31 08:29:03 - benchmarkdown.extractors.docling.extractor - INFO - [Docling] Starting extraction: file.docx (ocr=EASYOCR, tables=fast, threads=2)
+  2025-10-31 08:29:03 - benchmarkdown.extractors.docling.extractor - INFO - [Docling] Completed extraction: file.docx (duration: 0.56s)
+  ```
+
+**Configuration Summary Format**:
+- **Docling**: `ocr={engine}, tables={mode}, threads={n}`
+- **Textract**: `features=[LAYOUT, TABLES], s3_bucket={bucket}`
+- **Azure DI**: `model={id}, endpoint={host}, features=[list]`
+- **LlamaParse**: `mode={premium/fast/standard}, language={lang}, tables={aggressive/standard}`
+- **TensorLake**: `chunking={strategy}, tables={mode}, features=[figures+tables+signatures]`
+
+All logs go to console/files (standard Python logging), not the UI.
