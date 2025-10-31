@@ -34,12 +34,6 @@ https://docs.aspose.com/pdf/python-cpp/extract-text/
 
 TBD
 
-## Extraction report improvements
-
-1. in the beginning of the downloadable HTML report, add an initial summary table that lists all documents present in the table
-
-2. use fitz (pymupdf) to open the pdf before the extraction tasks and get the number of pages. Include the number of pages in the beginning of the report.
-
 ## Implement improved valutation metrics
 
 TBD

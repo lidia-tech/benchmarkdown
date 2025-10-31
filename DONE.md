@@ -1293,3 +1293,105 @@ Each extractor (`benchmarkdown/extractors/{name}/extractor.py`) now logs:
 - **TensorLake**: `chunking={strategy}, tables={mode}, features=[figures+tables+signatures]`
 
 All logs go to console/files (standard Python logging), not the UI.
+
+## Extraction report improvements
+
+1. in the beginning of the downloadable HTML report, add an initial summary table that lists all documents present in the table
+
+2. use fitz (pymupdf) to open the pdf before the extraction tasks and get the number of pages. Include the number of pages in the beginning of the report.
+
+3. When the extraction has finished, add the seconds-per-page metrics to the summary table.
+
+### Clarifications
+
+- The summary table should appear at the very top of the HTML report, before individual document sections
+- Page count should be extracted once per document (not per extractor) before any extraction begins
+- Seconds-per-page = execution_time / page_count for each extractor result
+- PyMuPDF (fitz) should be used to get page counts for PDF files
+- For non-PDF files, page count can be N/A or omitted
+
+### Thoughts, proposed solution
+
+**Data Structure Changes:**
+1. Add `page_count: Optional[int]` field to `ExtractionResult` dataclass
+2. Store document page counts in a separate dict: `self.page_counts = {}  # filename -> page_count`
+
+**Implementation Steps:**
+1. Create helper function `get_pdf_page_count(file_path: str) -> Optional[int]` using fitz
+2. In `process_documents()`, extract page counts for all PDFs before processing
+3. Pass page_count to `ExtractionResult` when creating results
+4. In `get_comparison_report()`, add an initial summary table that shows:
+   - Document name
+   - Number of pages
+   - Extractor results with time and seconds-per-page
+5. Keep existing per-document detailed sections below the summary
+
+**Summary Table Structure:**
+```
+Document Summary
+├─ Document 1 (X pages)
+│  ├─ Extractor A: Y.Ys (Z.Z s/page)
+│  └─ Extractor B: Y.Ys (Z.Z s/page)
+├─ Document 2 (X pages)
+   └─ ...
+```
+
+This approach:
+- Minimizes code changes (mostly in core.py)
+- Extracts page count once per document (efficient)
+- Provides clear overview before diving into details
+- Handles non-PDF files gracefully
+
+### What was implemented
+
+**Changes to `benchmarkdown/ui/core.py`:**
+
+1. **ExtractionResult dataclass** (line 28):
+   - Added `page_count: Optional[int] = None` field
+
+2. **BenchmarkUI.__init__** (line 41):
+   - Added `self.page_counts = {}` to store filename → page_count mapping
+
+3. **New method `get_pdf_page_count()`** (lines 55-76):
+   - Static method that uses PyMuPDF (fitz) to extract page count from PDF files
+   - Returns `None` for non-PDF files or if extraction fails
+   - Gracefully handles errors without raising exceptions
+
+4. **Updated `process_document()`** (lines 78-115):
+   - Added `page_count: Optional[int] = None` parameter
+   - Passes page_count to ExtractionResult constructor
+
+5. **Updated `process_documents()`** (lines 117-170):
+   - Extracts page counts for all PDF files before processing begins (lines 133-139)
+   - Stores page counts in `self.page_counts`
+   - Passes page_count to `process_document()` for each extraction (lines 162-163)
+
+6. **Enhanced `get_comparison_report()`** (lines 209-333):
+   - Added CSS styles for summary table (.summary-table, .document-group)
+   - **New initial summary table** (lines 243-288):
+     - Shows all documents with page counts at the top of the report
+     - Displays extractor results grouped by document
+     - Includes seconds-per-page calculation: `execution_time / page_count`
+     - Uses rowspan to group multiple extractors per document
+   - **Updated per-document sections** (lines 291-326):
+     - Added page count to section headers (e.g., "📄 filename.pdf (10 pages)")
+     - Added "Seconds/Page" column to per-document summary tables
+     - Displays calculated seconds-per-page for each extractor
+
+**Testing:**
+- Created test script `/tmp/test_page_count.py`
+- Verified page counting works correctly:
+  - WP248 linee guida.pdf: 27 pages ✅
+  - EDPB Opinion 12-2018.pdf: 10 pages ✅
+  - Facility Agreement + Allegati.pdf: 111 pages ✅
+  - Patto Parasociale JV Sorgenia (Roli).pdf: 26 pages ✅
+  - PATTO PARASOCIALE 020725.DEF clean.pdf: 29 pages ✅
+- Non-PDF files correctly return None ✅
+
+**Key Features:**
+- ✅ Initial summary table lists all documents at the beginning of the report
+- ✅ PyMuPDF extracts page counts before extraction tasks
+- ✅ Seconds-per-page metrics calculated and displayed
+- ✅ Gracefully handles non-PDF files (shows "N/A" for page count)
+- ✅ Minimal performance impact (page count extracted once per document)
+- ✅ HTML report has improved styling with clear visual hierarchy

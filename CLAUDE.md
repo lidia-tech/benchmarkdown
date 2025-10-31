@@ -98,7 +98,7 @@ grep "^## " DONE.md
 
 **Workflow reminder:**
 1. Select task from TODO.md (check priorities)
-2. Add clarifications if needed
+2. Ask the user for clarifications if needed and add their responses
 3. Add thoughts/proposed solution
 4. Implement the task
 5. Document what was implemented

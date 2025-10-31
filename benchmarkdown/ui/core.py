@@ -25,6 +25,7 @@ class ExtractionResult:
     error: Optional[str] = None
     warnings: list[str] = None
     cost_estimate: Optional[float] = None
+    page_count: Optional[int] = None
 
     def __post_init__(self):
         if self.warnings is None:
@@ -37,6 +38,7 @@ class BenchmarkUI:
     def __init__(self):
         self.extractors = {}
         self.results = {}  # filename -> {extractor_name -> ExtractionResult}
+        self.page_counts = {}  # filename -> page_count
         self.temp_dir = tempfile.mkdtemp()
 
     def register_extractor(self, name: str, extractor):
@@ -50,10 +52,34 @@ class BenchmarkUI:
             "instance": extractor
         }
 
+    @staticmethod
+    def get_pdf_page_count(file_path: str) -> Optional[int]:
+        """Get the number of pages in a PDF file using PyMuPDF (fitz).
+
+        Args:
+            file_path: Path to the PDF file
+
+        Returns:
+            Number of pages, or None if not a PDF or if extraction fails
+        """
+        if not file_path.lower().endswith('.pdf'):
+            return None
+
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(file_path)
+            page_count = len(doc)
+            doc.close()
+            return page_count
+        except Exception as e:
+            # Silently return None if we can't read the PDF
+            return None
+
     async def process_document(
         self,
         file_path: str,
         extractor_name: str,
+        page_count: Optional[int] = None,
     ) -> ExtractionResult:
         """Process a single document with a single extractor."""
         extractor_info = self.extractors[extractor_name]
@@ -85,6 +111,7 @@ class BenchmarkUI:
             word_count=word_count,
             error=error,
             warnings=warnings,
+            page_count=page_count,
         )
 
     async def process_documents(
@@ -101,6 +128,15 @@ class BenchmarkUI:
             return ("<p style='color: red;'>❌ No extractors selected.</p>",)
 
         self.results = {}
+        self.page_counts = {}
+
+        # Extract page counts for all PDF files before processing
+        for file_obj in files:
+            file_path = file_obj.name
+            filename = os.path.basename(file_path)
+            page_count = self.get_pdf_page_count(file_path)
+            if page_count is not None:
+                self.page_counts[filename] = page_count
 
         # Build list of all (file, extractor) combinations
         all_tasks = []
@@ -122,7 +158,9 @@ class BenchmarkUI:
             if status_callback:
                 status_callback(f"Processing {filename} with {extractor_name} ({idx}/{total_tasks})...")
 
-            result = await self.process_document(file_path, extractor_name)
+            # Get page count for this file
+            page_count = self.page_counts.get(filename)
+            result = await self.process_document(file_path, extractor_name, page_count)
             self.results[filename][result.extractor_name] = result
 
         # Generate results table
@@ -192,6 +230,9 @@ class BenchmarkUI:
         .markdown-preview { border: 1px solid #ddd; padding: 15px; background: #fafafa; max-height: 400px; overflow-y: auto; }
         .error { color: red; background: #fee; padding: 10px; border-radius: 4px; }
         .timestamp { color: #999; font-size: 0.9em; }
+        .summary-table { background: #f9f9f9; border: 2px solid #ccc; }
+        .summary-table th { background-color: #e0e0e0; font-weight: bold; }
+        .document-group { border-top: 2px solid #aaa; }
     </style>
 </head>
 <body>
@@ -199,17 +240,74 @@ class BenchmarkUI:
     <p class="timestamp">Generated: """ + time.strftime("%Y-%m-%d %H:%M:%S") + """</p>
 """
 
-        for filename, extractors in self.results.items():
-            html += f"<h2>📄 {filename}</h2>"
+        # Add initial summary table
+        html += "<h2>📋 Document Summary</h2>"
+        html += "<table class='summary-table'>"
+        html += "<tr><th>Document</th><th>Pages</th><th>Extractor</th><th>Time (s)</th><th>Seconds/Page</th><th>Characters</th><th>Words</th><th>Status</th></tr>"
 
-            # Summary table
-            html += "<table><tr><th>Extractor</th><th>Time</th><th>Characters</th><th>Words</th><th>Status</th></tr>"
+        for filename, extractors in self.results.items():
+            page_count = self.page_counts.get(filename)
+            first_row = True
+
             for extractor_name, result in extractors.items():
                 status = "✓ OK" if not result.error else "✗ Error"
+
+                # Calculate seconds per page
+                seconds_per_page = ""
+                if result.page_count and result.page_count > 0 and not result.error:
+                    seconds_per_page = f"{result.execution_time / result.page_count:.2f}"
+
+                # For the first row of each document, show the document name and page count
+                if first_row:
+                    page_display = str(page_count) if page_count else "N/A"
+                    html += f"""
+                    <tr class='document-group'>
+                        <td rowspan='{len(extractors)}'><strong>{filename}</strong></td>
+                        <td rowspan='{len(extractors)}'>{page_display}</td>
+                        <td>{extractor_name}</td>
+                        <td>{result.execution_time:.1f}</td>
+                        <td>{seconds_per_page}</td>
+                        <td>{result.character_count:,}</td>
+                        <td>{result.word_count:,}</td>
+                        <td>{status}</td>
+                    </tr>
+                    """
+                    first_row = False
+                else:
+                    html += f"""
+                    <tr>
+                        <td>{extractor_name}</td>
+                        <td>{result.execution_time:.1f}</td>
+                        <td>{seconds_per_page}</td>
+                        <td>{result.character_count:,}</td>
+                        <td>{result.word_count:,}</td>
+                        <td>{status}</td>
+                    </tr>
+                    """
+
+        html += "</table>"
+
+        # Add detailed per-document sections
+        for filename, extractors in self.results.items():
+            page_count = self.page_counts.get(filename)
+            page_info = f" ({page_count} pages)" if page_count else ""
+            html += f"<h2>📄 {filename}{page_info}</h2>"
+
+            # Summary table
+            html += "<table><tr><th>Extractor</th><th>Time</th><th>Seconds/Page</th><th>Characters</th><th>Words</th><th>Status</th></tr>"
+            for extractor_name, result in extractors.items():
+                status = "✓ OK" if not result.error else "✗ Error"
+
+                # Calculate seconds per page
+                seconds_per_page = ""
+                if result.page_count and result.page_count > 0 and not result.error:
+                    seconds_per_page = f"{result.execution_time / result.page_count:.2f}s"
+
                 html += f"""
                 <tr>
                     <td>{extractor_name}</td>
                     <td>{result.execution_time:.1f}s</td>
+                    <td>{seconds_per_page}</td>
                     <td>{result.character_count:,}</td>
                     <td>{result.word_count:,}</td>
                     <td>{status}</td>
