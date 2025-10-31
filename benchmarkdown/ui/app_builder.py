@@ -1093,6 +1093,15 @@ def create_app(registry):
 
             # Process documents with PARALLEL execution and real-time progress updates
             ui.results = {}
+            ui.page_counts = {}
+
+            # Extract page counts for all PDF files before processing
+            for file_obj in files:
+                file_path = file_obj.name
+                filename = os.path.basename(file_path)
+                page_count = ui.get_pdf_page_count(file_path)
+                if page_count is not None:
+                    ui.page_counts[filename] = page_count
 
             # Build list of all (file, extractor) combinations
             all_tasks = []
@@ -1100,10 +1109,12 @@ def create_app(registry):
                 for extractor_name in extractor_names:
                     file_path = file_obj.name
                     filename = os.path.basename(file_path)
+                    page_count = ui.page_counts.get(filename)
                     all_tasks.append({
                         'file_path': file_path,
                         'filename': filename,
-                        'extractor_name': extractor_name
+                        'extractor_name': extractor_name,
+                        'page_count': page_count
                     })
 
             total_tasks = len(all_tasks)
@@ -1117,7 +1128,7 @@ def create_app(registry):
             pending_tasks = {}
             for task in all_tasks:
                 async_task = asyncio.create_task(
-                    ui.process_document(task['file_path'], task['extractor_name'])
+                    ui.process_document(task['file_path'], task['extractor_name'], task['page_count'])
                 )
                 pending_tasks[async_task] = task
 

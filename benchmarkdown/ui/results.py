@@ -20,12 +20,21 @@ def generate_results_table(results: dict) -> str:
     html = "<div style='font-family: monospace;'>"
 
     for filename, extractors in results.items():
-        html += f"<h3>📋 {filename}</h3>"
+        # Get page count from first result (all results for same file have same page count)
+        page_count = None
+        for result in extractors.values():
+            if result.page_count:
+                page_count = result.page_count
+                break
+
+        page_info = f" ({page_count} pages)" if page_count else ""
+        html += f"<h3>📋 {filename}{page_info}</h3>"
         html += "<table style='width:100%; border-collapse: collapse; margin-bottom: 20px;'>"
         html += """
         <tr style='background: var(--background-fill-secondary); border-bottom: 2px solid var(--border-color-primary); color: var(--body-text-color);'>
             <th style='padding: 8px; text-align: left;'>Extractor</th>
             <th style='padding: 8px; text-align: left;'>Time</th>
+            <th style='padding: 8px; text-align: left;'>Sec/Page</th>
             <th style='padding: 8px; text-align: left;'>Chars / Words</th>
             <th style='padding: 8px; text-align: left;'>Status</th>
         </tr>
@@ -35,10 +44,16 @@ def generate_results_table(results: dict) -> str:
             status = "✓ OK" if not result.error else f"✗ Error"
             cost_str = f" (~${result.cost_estimate:.3f})" if result.cost_estimate else ""
 
+            # Calculate seconds per page
+            sec_per_page = ""
+            if result.page_count and result.page_count > 0 and not result.error:
+                sec_per_page = f"{result.execution_time / result.page_count:.2f}"
+
             html += f"""
             <tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color);'>
                 <td style='padding: 8px;'>{result.extractor_name}</td>
                 <td style='padding: 8px;'>{result.execution_time:.1f}s{cost_str}</td>
+                <td style='padding: 8px;'>{sec_per_page}</td>
                 <td style='padding: 8px;'>{result.character_count:,} / {result.word_count:,}</td>
                 <td style='padding: 8px;'>{status}</td>
             </tr>
@@ -119,8 +134,16 @@ def generate_comparison_view_sidebyside(results: dict, filename: str) -> str:
 
     extractor_results = results[filename]
 
+    # Get page count from first result
+    page_count = None
+    for result in extractor_results.values():
+        if result.page_count:
+            page_count = result.page_count
+            break
+
     html = "<div style='font-family: system-ui, -apple-system, sans-serif;'>"
-    html += f"<h3>📊 Side-by-Side Comparison - {filename}</h3>"
+    page_info = f" ({page_count} pages)" if page_count else ""
+    html += f"<h3>📊 Side-by-Side Comparison - {filename}{page_info}</h3>"
 
     # Create columns
     html += "<div style='display: flex; gap: 20px; overflow-x: auto;'>"
@@ -133,7 +156,14 @@ def generate_comparison_view_sidebyside(results: dict, filename: str) -> str:
             html += f"<div style='color: var(--error-text-color, #dc2626); padding: 10px; background: var(--error-background-fill, rgba(239, 68, 68, 0.1)); border: 1px solid var(--error-border-color, rgba(239, 68, 68, 0.3)); border-radius: 4px;'>Error: {result.error}</div>"
         else:
             html += f"<div style='font-size: 0.9em; color: var(--body-text-color-subdued, #666); margin-bottom: 10px;'>"
-            html += f"Time: {result.execution_time:.1f}s | {result.word_count:,} words"
+            html += f"Time: {result.execution_time:.1f}s"
+
+            # Add sec/page if available
+            if result.page_count and result.page_count > 0:
+                sec_per_page = result.execution_time / result.page_count
+                html += f" ({sec_per_page:.2f}s/page)"
+
+            html += f" | {result.word_count:,} words"
             if result.cost_estimate:
                 html += f" | ~${result.cost_estimate:.3f}"
             html += "</div>"
