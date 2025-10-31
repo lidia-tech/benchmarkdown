@@ -4,6 +4,13 @@ Task queue management functions for the Benchmarkdown UI.
 
 import json
 import os
+import logging
+
+logger = logging.getLogger("benchmarkdown.ui.queue")
+
+# Configure logger level from environment variable
+log_level = os.getenv('BENCHMARKDOWN_LOG_LEVEL', 'WARNING').upper()
+logger.setLevel(getattr(logging, log_level, logging.WARNING))
 
 
 QUEUE_FILE = ".task_queue.json"
@@ -62,9 +69,9 @@ def load_queue_from_disk(extractor_queue: list, ui_instance):
                     extractor_queue.append(task)
                     ui_instance.register_extractor(full_name, extractor)
 
-        print(f"✓ Loaded {len(extractor_queue)} tasks from disk")
+        logger.info(f"✓ Loaded {len(extractor_queue)} tasks from disk")
     except Exception as e:
-        print(f"⚠️  Failed to load queue: {e}")
+        logger.warning(f"⚠️  Failed to load queue: {e}")
 
 
 def save_queue_to_disk(extractor_queue: list):

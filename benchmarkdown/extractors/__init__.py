@@ -4,14 +4,22 @@ Extractor plugin registry and discovery system.
 This module provides automatic discovery and registration of extractor plugins.
 """
 
+import os
 import importlib
 import pkgutil
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Type, Any
 from dataclasses import dataclass
 from pydantic import BaseModel
 
 from .base import MarkdownExtractor
+
+logger = logging.getLogger("benchmarkdown.extractors")
+
+# Configure logger level from environment variable
+log_level = os.getenv('BENCHMARKDOWN_LOG_LEVEL', 'WARNING').upper()
+logger.setLevel(getattr(logging, log_level, logging.WARNING))
 
 
 @dataclass
@@ -60,7 +68,7 @@ class ExtractorRegistry:
                 try:
                     self._load_extractor_plugin(module_name)
                 except Exception as e:
-                    print(f"⚠️  Failed to load extractor plugin '{module_name}': {e}")
+                    logger.warning(f"⚠️  Failed to load extractor plugin '{module_name}': {e}")
                     continue
 
         return self._extractors
@@ -145,9 +153,9 @@ class ExtractorRegistry:
         self._extractors[engine_name] = metadata
 
         if is_available:
-            print(f"✓ {display_name} extractor available")
+            logger.info(f"✓ {display_name} extractor available")
         else:
-            print(f"⚠️  {display_name} not available: {availability_message}")
+            logger.info(f"⚠️  {display_name} not available: {availability_message}")
 
     def get_extractor(self, engine_name: str) -> Optional[ExtractorMetadata]:
         """
