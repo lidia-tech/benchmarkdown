@@ -16,10 +16,14 @@ from benchmarkdown.extractors import get_global_registry
 # Configure logging
 # Get log level from environment, default to WARNING
 log_level = os.getenv('BENCHMARKDOWN_LOG_LEVEL', 'WARNING').upper()
-logger = logging.getLogger("benchmarkdown")
 
-# Set level to INFO only for this logger and its descendants
-logger.setLevel(log_level)
+# Configure root logger with handler
+logging.basicConfig(
+    format='%(levelname)s - %(name)s - %(message)s',
+    level=getattr(logging, log_level, logging.WARNING)
+)
+
+logger = logging.getLogger("benchmarkdown")
 
 # Discover all available extractors via plugin system
 logger.info("🔍 Discovering extractor plugins...")
