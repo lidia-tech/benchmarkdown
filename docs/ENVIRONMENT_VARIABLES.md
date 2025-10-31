@@ -70,24 +70,31 @@ Extractors only appear in the UI if their required environment variables are set
 **`BENCHMARKDOWN_LOG_LEVEL`** controls the verbosity of operational logs:
 
 - **`DEBUG`**: Very detailed logs including internal state and API calls
-- **`INFO`**: Extraction start/completion with timing and job IDs
-- **`WARNING`** (default): Only warnings and errors
+- **`INFO`**: Plugin discovery, extractor availability, extraction start/completion with timing and job IDs
+- **`WARNING`** (default): Only warnings and errors (clean output)
 - **`ERROR`**: Only error messages
 - **`CRITICAL`**: Only critical failures
 
 **Examples:**
 ```bash
-# Default: minimal logging
+# Default: minimal logging (WARNING level - clean output)
 uv run python app.py
 
-# Enable info logs to see extraction progress
+# Enable info logs to see plugin discovery and extraction progress
 BENCHMARKDOWN_LOG_LEVEL=INFO uv run python app.py
 
 # Debug mode for troubleshooting
 BENCHMARKDOWN_LOG_LEVEL=DEBUG uv run python app.py
 ```
 
-**Tip:** Use `INFO` level to see extraction timing and cloud job IDs. Use `DEBUG` for troubleshooting API issues.
+**What you'll see at INFO level:**
+- `✓ Docling (Local) extractor available`
+- `⚠️  AWS Textract not available: TEXTRACT_S3_WORKSPACE environment variable not configured`
+- `🔍 Discovering extractor plugins...`
+- `[Extractor] Starting extraction: filename.pdf`
+- `[Extractor] Completed extraction: filename.pdf (duration: 2.34s)`
+
+**Tip:** Use `INFO` level during development to see what's happening. Use `WARNING` (default) in production for clean output.
 
 ## Performance Tuning Guide
 
