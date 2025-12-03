@@ -499,7 +499,7 @@ logging.basicConfig(
 
 **Method 3: Environment variable**
 ```bash
-export PYTHONLOGLEVEL=DEBUG
+export BENCHMARKDOWN_LOG_LEVEL=DEBUG
 uv run python app.py
 ```
 
