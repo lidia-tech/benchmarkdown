@@ -71,17 +71,16 @@ export AZURE_API_VERSION="2024-02-15-preview"
 
 ### Basic Options
 
-- **model**: Vision-capable model to use
-  - `gpt-4o-mini` (default, fastest/cheapest OpenAI option)
-  - `gpt-4o` (best OpenAI quality)
-  - `claude-3-5-sonnet-20241022` (best Anthropic quality)
-  - `claude-3-5-haiku-20241022` (fast Anthropic option)
-  - `gemini-1.5-flash` (fast Google option)
-  - `gemini-1.5-pro` (best Google quality)
-  - `custom` (use custom model identifier)
-
-- **custom_model**: Custom model identifier (required when model='custom')
-  - Example: `"azure/my-deployment"`, `"ollama/llava"`
+- **model**: LiteLLM model identifier (text field)
+  - Default: `gpt-4o-mini`
+  - Enter any vision-capable model supported by LiteLLM
+  - **OpenAI**: `gpt-4o-mini`, `gpt-4o`, `gpt-4-turbo`
+  - **Anthropic**: `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
+  - **Google**: `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash-exp`
+  - **AWS Bedrock**: `bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0`, `bedrock/meta.llama3-2-90b-instruct-v1:0`
+  - **Azure**: `azure/my-gpt4o-deployment`
+  - **Local**: `ollama/llava`, `vllm/llava-v1.6`
+  - See [LiteLLM docs](https://docs.litellm.ai/docs/providers) for complete provider list
 
 - **dpi**: DPI for page rendering (72-600)
   - Default: 300
@@ -166,6 +165,33 @@ config = Config(
     max_tokens=2048,  # Limit token usage
     image_quality="low"
 )
+```
+
+### AWS Bedrock Configuration
+
+```python
+# Using Claude via AWS Bedrock (requires AWS credentials)
+config = Config(
+    model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+    dpi=300,
+    extraction_prompt="Extract all text from this document page in markdown format.",
+    temperature=0.0
+)
+extractor = Extractor(config=config)
+markdown = await extractor.extract_markdown("document.pdf")
+```
+
+### Local Model Configuration
+
+```python
+# Using local Ollama model (no API key needed)
+config = Config(
+    model="ollama/llava",
+    dpi=200,
+    extraction_prompt="Extract the text from this image."
+)
+extractor = Extractor(config=config)
+markdown = await extractor.extract_markdown("document.pdf")
 ```
 
 ### Web UI
