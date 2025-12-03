@@ -442,6 +442,187 @@ Try using well-supported vision models like Claude, Amazon Nova, or Mistral Pixt
 - Some models have stricter image count limits
 - Check provider documentation for multi-image limits
 
+## Logging and Debugging
+
+The LiteLLM extractor provides comprehensive logging for troubleshooting, optimization, and cost tracking.
+
+### Logging Levels
+
+The extractor uses Python's standard `logging` module with four levels:
+
+**INFO** (default):
+- Extraction start/complete with summary
+- Batch/page processing progress
+- Key configuration (model, DPI, batch_size)
+
+**DEBUG** (enable for detailed telemetry):
+- Image rendering details (dimensions, file sizes)
+- Prompt length and preview
+- API call parameters
+- Response metadata
+- Token usage tracking
+- Timing information
+
+**WARNING**:
+- Batch parsing issues (when LLM doesn't follow page marker format)
+- Non-fatal problems
+
+**ERROR**:
+- API failures
+- Extraction errors
+- Critical issues
+
+### Enabling DEBUG Logging
+
+**Method 1: Programmatically**
+```python
+import logging
+
+# Enable DEBUG for LiteLLM extractor only
+logging.getLogger('benchmarkdown.extractors.litellm').setLevel(logging.DEBUG)
+
+# Or enable for all of benchmarkdown
+logging.getLogger('benchmarkdown').setLevel(logging.DEBUG)
+```
+
+**Method 2: Application-wide**
+```python
+# In your script or app.py
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%H:%M:%S'
+)
+```
+
+**Method 3: Environment variable**
+```bash
+export PYTHONLOGLEVEL=DEBUG
+uv run python app.py
+```
+
+### DEBUG Log Output
+
+When DEBUG logging is enabled, you'll see detailed information:
+
+#### Configuration
+```
+[LiteLLM] Config: temperature=0.0, max_tokens=4096, concurrent_pages=2, image_quality=high
+```
+
+#### Image Rendering (per page)
+```
+[LiteLLM] Rendered page 1: 2550x3300 pixels, 1,234,567 bytes (1205.6 KB)
+[LiteLLM] Rendered page 2: 2550x3300 pixels, 1,198,432 bytes (1170.3 KB)
+```
+
+#### Batch Information
+```
+[LiteLLM] Batch total image size: 3,720,653 bytes (3633.4 KB, 3.55 MB)
+[LiteLLM] Batch prompt length: 528 chars, first 200 chars: Extract all text from...
+```
+
+#### API Call Details
+```
+[LiteLLM] API call parameters: model=gpt-4o-mini, max_tokens=8000, temperature=0.0, timeout=120, num_images=3
+[LiteLLM] API call completed in 12.87s, response length: 8234 chars
+```
+
+#### Token Usage (when available)
+```
+[LiteLLM] Token usage: prompt=18456, completion=2456, total=20912
+```
+
+#### Batch Parsing
+```
+[LiteLLM] Successfully parsed 3 pages from batch response
+```
+
+### Example Complete Log
+
+For a 3-page document with batch_size=3:
+
+```
+23:15:42 - INFO - [LiteLLM] Starting extraction: document.pdf (model=gpt-4o-mini, dpi=300, batch_size=3)
+23:15:42 - DEBUG - [LiteLLM] Config: temperature=0.0, max_tokens=8000, concurrent_pages=1, image_quality=high
+23:15:42 - INFO - [LiteLLM] Processing 3 pages
+23:15:42 - INFO - [LiteLLM] Processing batch: pages 1-3/3 (3 pages)
+23:15:43 - DEBUG - [LiteLLM] Rendered page 1: 2550x3300 pixels, 1,234,567 bytes (1205.6 KB)
+23:15:43 - DEBUG - [LiteLLM] Rendered page 2: 2550x3300 pixels, 1,198,432 bytes (1170.3 KB)
+23:15:44 - DEBUG - [LiteLLM] Rendered page 3: 2550x3300 pixels, 1,287,654 bytes (1257.5 KB)
+23:15:44 - DEBUG - [LiteLLM] Batch total image size: 3,720,653 bytes (3633.4 KB, 3.55 MB)
+23:15:44 - DEBUG - [LiteLLM] Batch prompt length: 528 chars, first 200 chars: Extract all text from this document page...
+23:15:44 - DEBUG - [LiteLLM] API call parameters: model=gpt-4o-mini, max_tokens=8000, temperature=0.0, timeout=120, num_images=3
+23:15:57 - DEBUG - [LiteLLM] API call completed in 12.87s, response length: 8234 chars
+23:15:57 - DEBUG - [LiteLLM] Token usage: prompt=18456, completion=2456, total=20912
+23:15:57 - DEBUG - [LiteLLM] Successfully parsed 3 pages from batch response
+23:15:57 - INFO - [LiteLLM] Completed batch: pages 1-3/3 (api_time=12.87s)
+23:15:57 - INFO - [LiteLLM] Completed extraction: document.pdf (duration: 15.12s, pages: 3)
+```
+
+### Using Logs for Optimization
+
+**Cost Tracking:**
+- Monitor `Token usage` to track actual consumption
+- Calculate costs: `total_tokens * price_per_token`
+- Compare batch_size settings to find optimal cost/performance balance
+
+**Performance Profiling:**
+- Check `api_time` to identify slow API calls
+- Compare single-page vs batched processing times
+- Monitor `API call completed in X.XXs` for individual requests
+
+**Image Size Optimization:**
+- Review `Rendered page` sizes to validate DPI settings
+- If images are too large (>5 MB per batch), reduce DPI
+- Compare file sizes at different DPI values (150, 200, 300, 400)
+
+**Troubleshooting Batching:**
+- Watch for `Expected N page sections, got M` warnings
+- If parsing fails frequently, reduce batch_size
+- Check `Successfully parsed N pages` confirmations
+
+**Example optimization workflow:**
+```python
+import logging
+
+# Enable DEBUG logging
+logging.getLogger('benchmarkdown.extractors.litellm').setLevel(logging.DEBUG)
+
+# Test different configurations
+configs = [
+    Config(dpi=150, batch_size=5),
+    Config(dpi=200, batch_size=5),
+    Config(dpi=300, batch_size=5),
+]
+
+for config in configs:
+    extractor = Extractor(config=config)
+    result = await extractor.extract_markdown("test.pdf")
+    # Review logs to compare:
+    # - Image sizes
+    # - API call times
+    # - Token usage
+    # - Total cost
+```
+
+### Privacy and Security
+
+**What is NOT logged:**
+- ✅ Base64-encoded image data (never logged)
+- ✅ Full API responses (only length and metadata)
+- ✅ API keys (handled by environment/config)
+
+**What IS logged:**
+- ✅ Image dimensions and file sizes (metadata only)
+- ✅ Prompt length and preview (first 200 characters)
+- ✅ API parameters (model, tokens, temperature)
+- ✅ Response metadata (timing, length, tokens)
+
+All sensitive data remains secure while providing comprehensive debugging information.
+
 ## References
 
 - [LiteLLM Documentation](https://docs.litellm.ai/)
