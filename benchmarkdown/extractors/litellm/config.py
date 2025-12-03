@@ -85,6 +85,13 @@ class LiteLLMConfig(BaseModel):
         description="Number of pages to process concurrently (be careful with rate limits)"
     )
 
+    batch_size: int = Field(
+        default=1,
+        ge=1,
+        le=20,
+        description="Number of pages to process in a single API call (1=one call per page, >1=batch multiple images). Max 20 for Bedrock Converse."
+    )
+
     # API Keys (loaded from environment)
     # Note: These are intentionally not exposed in UI - users must set environment variables
     openai_api_key: Optional[str] = Field(
@@ -119,4 +126,5 @@ LITELLM_ADVANCED_FIELDS = [
     "max_retries",
     "timeout",
     "concurrent_pages",
+    "batch_size",
 ]

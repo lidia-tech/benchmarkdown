@@ -1,0 +1,16 @@
+{
+  "engine": "LiteLLM Vision (Multi-Provider)",
+  "profile_name": "Bedrock Qwen3-VL-235b",
+  "config_data": {
+    "model": "bedrock/converse/qwen.qwen3-vl-235b-a22b",
+    "dpi": 300,
+    "extraction_prompt": "Extract all text from this document page. Preserve the exact layout, formatting, and structure. Include headings, paragraphs, lists, and tables in markdown format, without backtick fences (MUST NOT use ```). Be thorough and do not skip any text. ",
+    "page_separator": "\n\n---\n\n",
+    "max_tokens": 4096,
+    "temperature": 0,
+    "image_quality": "high",
+    "max_retries": 3,
+    "timeout": 120,
+    "concurrent_pages": 1
+  }
+}

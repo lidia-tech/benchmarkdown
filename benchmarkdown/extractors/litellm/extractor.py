@@ -7,6 +7,7 @@ MarkdownExtractor protocol using vision-capable LLMs via LiteLLM.
 
 import os
 import io
+import re
 import base64
 import asyncio
 import logging
@@ -124,31 +125,214 @@ class LiteLLMExtractor:
             raise
 
     async def _process_pages_sequential(self, doc: fitz.Document) -> List[str]:
-        """Process pages sequentially."""
+        """Process pages sequentially, in batches if batch_size > 1."""
         results = []
-        for page_num in range(len(doc)):
+        total_pages = len(doc)
+
+        # Process in batches
+        for batch_start in range(0, total_pages, self.config.batch_size):
+            batch_end = min(batch_start + self.config.batch_size, total_pages)
+            page_numbers = list(range(batch_start, batch_end))
+
             try:
-                result = await self._process_single_page(doc, page_num)
-                results.append(result)
+                if len(page_numbers) == 1:
+                    # Single page - use existing single-page method
+                    result = await self._process_single_page(doc, page_numbers[0])
+                    results.append(result)
+                else:
+                    # Multiple pages - use batch method
+                    batch_results = await self._process_batch(doc, page_numbers)
+                    results.extend(batch_results)
             except Exception as e:
-                logger.error(f"[LiteLLM] Failed to process page {page_num + 1}: {e}")
-                results.append(f"<!-- Error processing page {page_num + 1}: {str(e)} -->")
+                logger.error(f"[LiteLLM] Failed to process batch {page_numbers}: {e}")
+                # Add error markers for each page in the failed batch
+                for page_num in page_numbers:
+                    results.append(f"<!-- Error processing page {page_num + 1}: {str(e)} -->")
+
         return results
 
     async def _process_pages_concurrent(self, doc: fitz.Document) -> List[str]:
-        """Process pages concurrently with semaphore to limit concurrency."""
+        """Process pages concurrently in batches, with semaphore to limit concurrency."""
         semaphore = asyncio.Semaphore(self.config.concurrent_pages)
+        total_pages = len(doc)
 
-        async def process_with_semaphore(page_num: int):
+        # Create batches
+        batches = []
+        for batch_start in range(0, total_pages, self.config.batch_size):
+            batch_end = min(batch_start + self.config.batch_size, total_pages)
+            batches.append(list(range(batch_start, batch_end)))
+
+        async def process_batch_with_semaphore(page_numbers: List[int]):
             async with semaphore:
                 try:
-                    return await self._process_single_page(doc, page_num)
+                    if len(page_numbers) == 1:
+                        # Single page
+                        result = await self._process_single_page(doc, page_numbers[0])
+                        return [result]
+                    else:
+                        # Multiple pages
+                        return await self._process_batch(doc, page_numbers)
                 except Exception as e:
-                    logger.error(f"[LiteLLM] Failed to process page {page_num + 1}: {e}")
-                    return f"<!-- Error processing page {page_num + 1}: {str(e)} -->"
+                    logger.error(f"[LiteLLM] Failed to process batch {page_numbers}: {e}")
+                    # Return error markers for each page in the failed batch
+                    return [f"<!-- Error processing page {pn + 1}: {str(e)} -->" for pn in page_numbers]
 
-        tasks = [process_with_semaphore(i) for i in range(len(doc))]
-        return await asyncio.gather(*tasks)
+        # Process all batches concurrently
+        tasks = [process_batch_with_semaphore(batch) for batch in batches]
+        batch_results = await asyncio.gather(*tasks)
+
+        # Flatten results (list of lists -> single list)
+        results = []
+        for batch_result in batch_results:
+            results.extend(batch_result)
+
+        return results
+
+    async def _process_batch(self, doc: fitz.Document, page_numbers: List[int]) -> List[str]:
+        """
+        Process multiple pages in a single API call.
+
+        Args:
+            doc: PyMuPDF document
+            page_numbers: List of page indices to process in this batch
+
+        Returns:
+            List of extracted markdown strings, one per page
+        """
+        batch_size = len(page_numbers)
+        logger.info(f"[LiteLLM] Processing batch: pages {page_numbers[0] + 1}-{page_numbers[-1] + 1}/{len(doc)} ({batch_size} pages)")
+
+        # Render all pages to images
+        images = []
+        for page_num in page_numbers:
+            page = doc.load_page(page_num)
+            zoom = self.config.dpi / 72.0
+            matrix = fitz.Matrix(zoom, zoom)
+            pixmap = page.get_pixmap(matrix=matrix)
+            png_bytes = pixmap.tobytes("png")
+            base64_image = base64.b64encode(png_bytes).decode('utf-8')
+            images.append(base64_image)
+
+        # Build content with text prompt and all images
+        content = [
+            {
+                "type": "text",
+                "text": self._build_batch_prompt(page_numbers)
+            }
+        ]
+
+        # Add all images
+        for idx, base64_image in enumerate(images):
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/png;base64,{base64_image}",
+                    "detail": self.config.image_quality
+                }
+            })
+
+        # Prepare messages
+        messages = [{"role": "user", "content": content}]
+
+        # Call LiteLLM
+        response = await acompletion(
+            model=self.config.model,
+            messages=messages,
+            max_tokens=self.config.max_tokens,
+            temperature=self.config.temperature,
+            timeout=self.config.timeout,
+            num_retries=self.config.max_retries
+        )
+
+        # Extract and parse response
+        full_response = response.choices[0].message.content
+
+        # Parse response into individual page results
+        page_results = self._parse_batch_response(full_response, page_numbers)
+
+        logger.info(f"[LiteLLM] Completed batch: pages {page_numbers[0] + 1}-{page_numbers[-1] + 1}/{len(doc)}")
+
+        return page_results
+
+    def _build_batch_prompt(self, page_numbers: List[int]) -> str:
+        """
+        Build a prompt for batch processing that instructs the LLM to separate pages.
+
+        Args:
+            page_numbers: List of page indices being processed
+
+        Returns:
+            Modified extraction prompt with page separation instructions
+        """
+        page_labels = ", ".join([f"Page {pn + 1}" for pn in page_numbers])
+
+        batch_prompt = f"""{self.config.extraction_prompt}
+
+IMPORTANT: You are processing {len(page_numbers)} pages in this batch ({page_labels}).
+
+For each page, start your output with a clear marker:
+- Start with "=== PAGE {page_numbers[0] + 1} ===" for the first image
+- Start with "=== PAGE {page_numbers[1] + 1} ===" for the second image
+{f'- Start with "=== PAGE {page_numbers[2] + 1} ===" for the third image' if len(page_numbers) > 2 else ''}
+{f'- And so on for the remaining {len(page_numbers) - 3} pages' if len(page_numbers) > 3 else ''}
+
+Extract the text from each page separately, maintaining the order of the images provided."""
+
+        return batch_prompt
+
+    def _parse_batch_response(self, response: str, page_numbers: List[int]) -> List[str]:
+        """
+        Parse a batched response into individual page results.
+
+        Args:
+            response: Full response from LLM containing multiple pages
+            page_numbers: List of page indices that were processed
+
+        Returns:
+            List of extracted text for each page
+        """
+        results = []
+
+        # Look for page markers like "=== PAGE N ==="
+
+        # Create a pattern that matches any of our page markers
+        page_markers = [f"=== PAGE {pn + 1} ===" for pn in page_numbers]
+
+        # Split by page markers
+        parts = re.split(r'=== PAGE \d+ ===', response)
+
+        # First part is usually empty or contains preamble - skip it
+        page_contents = [part.strip() for part in parts[1:] if part.strip()]
+
+        # If we got the expected number of results, use them
+        if len(page_contents) == len(page_numbers):
+            results = page_contents
+        else:
+            # Fallback: LLM didn't follow instructions perfectly
+            logger.warning(
+                f"[LiteLLM] Expected {len(page_numbers)} page sections, got {len(page_contents)}. "
+                f"Using fallback parsing."
+            )
+
+            if len(page_contents) == 0:
+                # No markers found - treat entire response as single page or split equally
+                if len(page_numbers) == 1:
+                    results = [response.strip()]
+                else:
+                    # Try to split response equally (rough heuristic)
+                    # Just return the full response for each page with a warning
+                    for pn in page_numbers:
+                        results.append(f"<!-- Warning: Could not parse separate pages -->\n{response}")
+            elif len(page_contents) < len(page_numbers):
+                # Got some markers but not all - use what we have and pad
+                results = page_contents
+                for i in range(len(page_contents), len(page_numbers)):
+                    results.append(f"<!-- Warning: Missing content for page {page_numbers[i] + 1} -->")
+            else:
+                # Got more markers than expected - take first N
+                results = page_contents[:len(page_numbers)]
+
+        return results
 
     async def _process_single_page(self, doc: fitz.Document, page_num: int) -> str:
         """Process a single page: render to image and extract text via LLM."""

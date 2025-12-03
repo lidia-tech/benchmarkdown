@@ -133,6 +133,15 @@ export AZURE_API_VERSION="2024-02-15-preview"
   - Setting > 1 can speed up multi-page documents
   - Monitor API costs and rate limits
 
+- **batch_size**: Number of pages per API call (1-20, default: 1)
+  - **1** = One API call per page (current behavior, most reliable)
+  - **2-20** = Batch multiple pages into single API call (reduces costs and API calls)
+  - **Cost savings**: batch_size=5 → 5x fewer API calls
+  - **Context benefit**: LLM can see multiple pages together (useful for tables/lists spanning pages)
+  - **Max 20 images** for AWS Bedrock Converse API
+  - **Trade-off**: Larger batches use more tokens per call and may hit context limits
+  - **Important**: Set appropriate batch size for your use case - no automatic fallback if batch fails
+
 ## Usage Examples
 
 ### Python API
@@ -159,10 +168,32 @@ config = Config(
     dpi=300,
     extraction_prompt="Extract all text preserving exact formatting. Include tables in markdown format.",
     temperature=0.0,
-    concurrent_pages=2  # Process 2 pages at once
+    concurrent_pages=2,  # Process 2 batches at once
+    batch_size=5          # Send 5 pages per API call (reduces costs 5x)
 )
 extractor = Extractor(config=config)
 markdown = await extractor.extract_markdown("document.pdf")
+```
+
+### Batched Processing (Cost Optimization)
+
+```python
+from benchmarkdown.extractors.litellm import Extractor, Config
+
+# Process 10 pages per API call to reduce costs
+config = Config(
+    model="bedrock/converse/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    dpi=300,
+    batch_size=10,        # 10 pages per API call = 10x cost reduction
+    concurrent_pages=2,   # Process 2 batches in parallel = 20 pages at once
+    max_tokens=8000       # Increase tokens to handle multiple pages
+)
+extractor = Extractor(config=config)
+
+# For a 100-page document:
+# - Without batching: 100 API calls
+# - With batch_size=10: 10 API calls (90% cost reduction!)
+markdown = await extractor.extract_markdown("large_document.pdf")
 ```
 
 ### Cost-Optimized Configuration
@@ -224,11 +255,33 @@ The LiteLLM extractor integrates automatically with the Gradio UI:
 
 ## How It Works
 
+### Single-Page Mode (batch_size=1, default)
+
 1. **Page Rendering**: Each PDF page is rendered to a PNG image at the specified DPI using PyMuPDF
 2. **Image Encoding**: Images are encoded to base64 for transmission to the LLM
-3. **Vision API Call**: The image and extraction prompt are sent to the vision-capable LLM
+3. **Vision API Call**: One image and extraction prompt are sent per API call
 4. **Text Extraction**: The LLM analyzes the image and extracts text in markdown format
 5. **Combination**: Results from all pages are combined with the specified separator
+
+### Batched Mode (batch_size>1)
+
+1. **Batch Creation**: Pages are grouped into batches (e.g., batch_size=5 → groups of 5 pages)
+2. **Page Rendering**: All pages in the batch are rendered to PNG images
+3. **Multi-Image API Call**: All images are sent in a single API call with modified prompt
+4. **LLM Instructions**: Prompt instructs the LLM to label each page (e.g., "=== PAGE 1 ===", "=== PAGE 2 ===")
+5. **Response Parsing**: Response is split by page markers to extract individual page results
+6. **Combination**: All page results are combined with the specified separator
+
+**Batching Benefits**:
+- **Cost reduction**: N pages with batch_size=N → 1 API call instead of N calls
+- **Cross-page context**: LLM can see relationships between pages (useful for tables, lists)
+- **Fewer API calls**: Reduces rate limit pressure
+
+**Batching Considerations**:
+- **Token usage**: Larger batches consume more tokens per call
+- **Context limits**: Very large batches may exceed model context windows
+- **Error handling**: If a batch fails, all pages in that batch fail (user sets appropriate batch_size)
+- **Parsing reliability**: Depends on LLM following page marker instructions
 
 ## Cost Considerations
 
@@ -247,10 +300,12 @@ Costs vary based on:
 - Image quality setting
 
 **Tips to reduce costs:**
+- **Use batching**: Set batch_size=5-10 to reduce API calls by 5-10x
 - Use lower DPI (150-200) for clean text documents
 - Choose cheaper models (gpt-4o-mini, claude-3-5-haiku, gemini-1.5-flash)
 - Set appropriate max_tokens limits
 - Use 'low' image quality for simple documents
+- Combine batching with concurrent_pages for maximum throughput
 
 ## When to Use This Extractor
 
@@ -360,6 +415,32 @@ Try using well-supported vision models like Claude, Amazon Nova, or Mistral Pixt
 - Increase `timeout` value
 - Decrease `dpi` to speed up processing
 - Use a faster model (gpt-4o-mini, claude-3-5-haiku)
+
+### Batching Issues
+
+**Problem**: Pages are missing or duplicated in output
+
+**Solutions**:
+- Check logs for parsing warnings: `"Expected N page sections, got M"`
+- LLM may not be following page marker instructions consistently
+- Try reducing `batch_size` (e.g., from 10 to 5)
+- Use more explicit extraction prompt
+- Consider using single-page mode (`batch_size=1`) for critical documents
+
+**Problem**: Hitting token/context limits with batching
+
+**Solutions**:
+- Reduce `batch_size` (fewer pages per call)
+- Reduce `dpi` (smaller images = fewer tokens)
+- Increase `max_tokens` to accommodate larger responses
+- Use models with larger context windows
+
+**Problem**: Batch fails but individual pages work
+
+**Solutions**:
+- Reduce `batch_size` to find the working limit
+- Some models have stricter image count limits
+- Check provider documentation for multi-image limits
 
 ## References
 
