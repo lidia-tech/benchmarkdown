@@ -78,7 +78,12 @@ class LiteLLMExtractor:
         # Log extraction start
         logger.info(
             f"[LiteLLM] Starting extraction: {filename.name} "
-            f"(model={self.config.model}, dpi={self.config.dpi})"
+            f"(model={self.config.model}, dpi={self.config.dpi}, batch_size={self.config.batch_size})"
+        )
+        logger.debug(
+            f"[LiteLLM] Config: temperature={self.config.temperature}, "
+            f"max_tokens={self.config.max_tokens}, concurrent_pages={self.config.concurrent_pages}, "
+            f"image_quality={self.config.image_quality}"
         )
         start_time = time.time()
 
@@ -204,20 +209,43 @@ class LiteLLMExtractor:
 
         # Render all pages to images
         images = []
+        total_image_bytes = 0
         for page_num in page_numbers:
             page = doc.load_page(page_num)
             zoom = self.config.dpi / 72.0
             matrix = fitz.Matrix(zoom, zoom)
             pixmap = page.get_pixmap(matrix=matrix)
             png_bytes = pixmap.tobytes("png")
+
+            # Log image size
+            image_size_bytes = len(png_bytes)
+            total_image_bytes += image_size_bytes
+            logger.debug(
+                f"[LiteLLM] Rendered page {page_num + 1}: "
+                f"{pixmap.width}x{pixmap.height} pixels, "
+                f"{image_size_bytes:,} bytes ({image_size_bytes / 1024:.1f} KB)"
+            )
+
             base64_image = base64.b64encode(png_bytes).decode('utf-8')
             images.append(base64_image)
 
+        # Log total batch size
+        logger.debug(
+            f"[LiteLLM] Batch total image size: {total_image_bytes:,} bytes "
+            f"({total_image_bytes / 1024:.1f} KB, {total_image_bytes / (1024 * 1024):.2f} MB)"
+        )
+
         # Build content with text prompt and all images
+        batch_prompt_text = self._build_batch_prompt(page_numbers)
+        logger.debug(
+            f"[LiteLLM] Batch prompt length: {len(batch_prompt_text)} chars, "
+            f"first 200 chars: {batch_prompt_text[:200]}..."
+        )
+
         content = [
             {
                 "type": "text",
-                "text": self._build_batch_prompt(page_numbers)
+                "text": batch_prompt_text
             }
         ]
 
@@ -234,7 +262,14 @@ class LiteLLMExtractor:
         # Prepare messages
         messages = [{"role": "user", "content": content}]
 
+        logger.debug(
+            f"[LiteLLM] API call parameters: model={self.config.model}, "
+            f"max_tokens={self.config.max_tokens}, temperature={self.config.temperature}, "
+            f"timeout={self.config.timeout}, num_images={len(images)}"
+        )
+
         # Call LiteLLM
+        api_start = time.time()
         response = await acompletion(
             model=self.config.model,
             messages=messages,
@@ -243,14 +278,33 @@ class LiteLLMExtractor:
             timeout=self.config.timeout,
             num_retries=self.config.max_retries
         )
+        api_duration = time.time() - api_start
 
         # Extract and parse response
         full_response = response.choices[0].message.content
 
+        # Log API response metadata
+        logger.debug(
+            f"[LiteLLM] API call completed in {api_duration:.2f}s, "
+            f"response length: {len(full_response)} chars"
+        )
+
+        # Try to extract token usage if available
+        if hasattr(response, 'usage') and response.usage:
+            logger.debug(
+                f"[LiteLLM] Token usage: "
+                f"prompt={getattr(response.usage, 'prompt_tokens', 'N/A')}, "
+                f"completion={getattr(response.usage, 'completion_tokens', 'N/A')}, "
+                f"total={getattr(response.usage, 'total_tokens', 'N/A')}"
+            )
+
         # Parse response into individual page results
         page_results = self._parse_batch_response(full_response, page_numbers)
 
-        logger.info(f"[LiteLLM] Completed batch: pages {page_numbers[0] + 1}-{page_numbers[-1] + 1}/{len(doc)}")
+        logger.info(
+            f"[LiteLLM] Completed batch: pages {page_numbers[0] + 1}-{page_numbers[-1] + 1}/{len(doc)} "
+            f"(api_time={api_duration:.2f}s)"
+        )
 
         return page_results
 
@@ -307,6 +361,9 @@ Extract the text from each page separately, maintaining the order of the images 
         # If we got the expected number of results, use them
         if len(page_contents) == len(page_numbers):
             results = page_contents
+            logger.debug(
+                f"[LiteLLM] Successfully parsed {len(results)} pages from batch response"
+            )
         else:
             # Fallback: LLM didn't follow instructions perfectly
             logger.warning(
@@ -350,10 +407,24 @@ Extract the text from each page separately, maintaining the order of the images 
         # Convert pixmap to PNG bytes
         png_bytes = pixmap.tobytes("png")
 
+        # Log image details
+        image_size_bytes = len(png_bytes)
+        logger.debug(
+            f"[LiteLLM] Rendered page {page_num + 1}: "
+            f"{pixmap.width}x{pixmap.height} pixels, "
+            f"{image_size_bytes:,} bytes ({image_size_bytes / 1024:.1f} KB)"
+        )
+
         # Encode to base64
         base64_image = base64.b64encode(png_bytes).decode('utf-8')
 
         # Prepare messages for vision API
+        logger.debug(
+            f"[LiteLLM] Prompt for page {page_num + 1}: "
+            f"{len(self.config.extraction_prompt)} chars, "
+            f"preview: {self.config.extraction_prompt[:150]}..."
+        )
+
         messages = [
             {
                 "role": "user",
@@ -373,7 +444,14 @@ Extract the text from each page separately, maintaining the order of the images 
             }
         ]
 
+        logger.debug(
+            f"[LiteLLM] API call for page {page_num + 1}: "
+            f"model={self.config.model}, max_tokens={self.config.max_tokens}, "
+            f"temperature={self.config.temperature}"
+        )
+
         # Call LiteLLM
+        api_start = time.time()
         response = await acompletion(
             model=self.config.model,
             messages=messages,
@@ -382,11 +460,30 @@ Extract the text from each page separately, maintaining the order of the images 
             timeout=self.config.timeout,
             num_retries=self.config.max_retries
         )
+        api_duration = time.time() - api_start
 
         # Extract text from response
         extracted_text = response.choices[0].message.content
 
-        logger.info(f"[LiteLLM] Completed page {page_num + 1}/{len(doc)}")
+        # Log response metadata
+        logger.debug(
+            f"[LiteLLM] API response for page {page_num + 1}: "
+            f"time={api_duration:.2f}s, response_length={len(extracted_text)} chars"
+        )
+
+        # Try to extract token usage if available
+        if hasattr(response, 'usage') and response.usage:
+            logger.debug(
+                f"[LiteLLM] Token usage for page {page_num + 1}: "
+                f"prompt={getattr(response.usage, 'prompt_tokens', 'N/A')}, "
+                f"completion={getattr(response.usage, 'completion_tokens', 'N/A')}, "
+                f"total={getattr(response.usage, 'total_tokens', 'N/A')}"
+            )
+
+        logger.info(
+            f"[LiteLLM] Completed page {page_num + 1}/{len(doc)} "
+            f"(api_time={api_duration:.2f}s)"
+        )
 
         return extracted_text
 
