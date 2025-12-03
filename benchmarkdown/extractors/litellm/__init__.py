@@ -13,8 +13,6 @@ from .config import (
     LiteLLMConfig,
     LITELLM_BASIC_FIELDS,
     LITELLM_ADVANCED_FIELDS,
-    LITELLM_CONDITIONAL_FIELDS,
-    LiteLLMModelEnum,
 )
 
 # Plugin metadata
@@ -40,7 +38,6 @@ Extractor = LiteLLMExtractor
 Config = LiteLLMConfig
 BASIC_FIELDS = LITELLM_BASIC_FIELDS
 ADVANCED_FIELDS = LITELLM_ADVANCED_FIELDS
-CONDITIONAL_FIELDS = LITELLM_CONDITIONAL_FIELDS
 
 
 def is_available() -> Tuple[bool, str]:
@@ -75,12 +72,10 @@ __all__ = [
     'Config',
     'BASIC_FIELDS',
     'ADVANCED_FIELDS',
-    'CONDITIONAL_FIELDS',
     'ENGINE_NAME',
     'ENGINE_DISPLAY_NAME',
     'is_available',
     # Also export the actual classes for direct imports
     'LiteLLMExtractor',
     'LiteLLMConfig',
-    'LiteLLMModelEnum',
 ]

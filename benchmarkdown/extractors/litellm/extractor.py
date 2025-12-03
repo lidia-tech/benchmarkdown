@@ -20,7 +20,7 @@ from litellm import acompletion
 # Import PyMuPDF for PDF rendering
 import fitz  # PyMuPDF
 
-from .config import LiteLLMConfig, LiteLLMModelEnum
+from .config import LiteLLMConfig
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -75,10 +75,9 @@ class LiteLLMExtractor:
         filename = Path(filename)
 
         # Log extraction start
-        model_name = self.config.custom_model if self.config.model == LiteLLMModelEnum.CUSTOM else self.config.model
         logger.info(
             f"[LiteLLM] Starting extraction: {filename.name} "
-            f"(model={model_name}, dpi={self.config.dpi})"
+            f"(model={self.config.model}, dpi={self.config.dpi})"
         )
         start_time = time.time()
 
@@ -170,9 +169,6 @@ class LiteLLMExtractor:
         # Encode to base64
         base64_image = base64.b64encode(png_bytes).decode('utf-8')
 
-        # Prepare model name
-        model_name = self.config.custom_model if self.config.model == LiteLLMModelEnum.CUSTOM else self.config.model
-
         # Prepare messages for vision API
         messages = [
             {
@@ -195,7 +191,7 @@ class LiteLLMExtractor:
 
         # Call LiteLLM
         response = await acompletion(
-            model=model_name,
+            model=self.config.model,
             messages=messages,
             max_tokens=self.config.max_tokens,
             temperature=self.config.temperature,

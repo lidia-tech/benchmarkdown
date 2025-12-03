@@ -6,32 +6,8 @@ that uses vision-capable LLMs to extract text from document page images.
 """
 
 import os
-from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
-
-
-class LiteLLMModelEnum(str, Enum):
-    """Common vision-capable models supported by LiteLLM."""
-    # OpenAI
-    GPT_4O = "gpt-4o"
-    GPT_4O_MINI = "gpt-4o-mini"
-    GPT_4_TURBO = "gpt-4-turbo"
-
-    # Anthropic Claude
-    CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"
-    CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"
-    CLAUDE_3_OPUS = "claude-3-opus-20240229"
-    CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
-    CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
-
-    # Google Gemini
-    GEMINI_1_5_PRO = "gemini-1.5-pro"
-    GEMINI_1_5_FLASH = "gemini-1.5-flash"
-    GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp"
-
-    # Others
-    CUSTOM = "custom"
 
 
 class LiteLLMConfig(BaseModel):
@@ -40,19 +16,14 @@ class LiteLLMConfig(BaseModel):
 
     This extractor converts each PDF page to an image and uses vision-capable
     LLMs (via LiteLLM) to extract text. Supports multiple providers including
-    OpenAI, Anthropic, Google, and more.
+    OpenAI, Anthropic, Google, AWS Bedrock, Azure, local models, and more.
     """
 
     # ========== BASIC OPTIONS ==========
 
-    model: LiteLLMModelEnum = Field(
-        default=LiteLLMModelEnum.GPT_4O_MINI,
-        description="Vision-capable model to use for extraction"
-    )
-
-    custom_model: Optional[str] = Field(
-        default=None,
-        description="Custom model identifier (required when model='custom')"
+    model: str = Field(
+        default="gpt-4o-mini",
+        description="LiteLLM model identifier (e.g., 'gpt-4o-mini', 'claude-3-5-sonnet-20241022', 'bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0', 'ollama/llava')"
     )
 
     dpi: int = Field(
@@ -131,14 +102,11 @@ class LiteLLMConfig(BaseModel):
         description="Google Gemini API key (from GEMINI_API_KEY env var)"
     )
 
-    class Config:
-        use_enum_values = True
 
 
 # Field groupings for UI generation
 LITELLM_BASIC_FIELDS = [
     "model",
-    "custom_model",  # Conditional: shown only when model='custom'
     "dpi",
     "extraction_prompt",
     "page_separator",
@@ -152,10 +120,3 @@ LITELLM_ADVANCED_FIELDS = [
     "timeout",
     "concurrent_pages",
 ]
-
-# Conditional fields
-LITELLM_CONDITIONAL_FIELDS = {
-    "model": {
-        LiteLLMModelEnum.CUSTOM: ["custom_model"]
-    }
-}

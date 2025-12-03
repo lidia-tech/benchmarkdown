@@ -12,6 +12,31 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
 
+def extract_constraints(field_info: FieldInfo) -> Dict[str, Any]:
+    """
+    Extract ge, le, gt, lt constraints from Pydantic v2 FieldInfo metadata.
+
+    Args:
+        field_info: Pydantic FieldInfo object
+
+    Returns:
+        Dictionary with constraint names and values (e.g., {'ge': 0, 'le': 100})
+    """
+    constraints = {}
+
+    if hasattr(field_info, 'metadata') and field_info.metadata:
+        for item in field_info.metadata:
+            # Check for Ge, Le, Gt, Lt constraint objects from annotated_types
+            constraint_type = type(item).__name__.lower()
+            if constraint_type in ['ge', 'le', 'gt', 'lt']:
+                # Extract the constraint value (e.g., Ge(ge=72) -> 72)
+                constraint_value = getattr(item, constraint_type, None)
+                if constraint_value is not None:
+                    constraints[constraint_type] = constraint_value
+
+    return constraints
+
+
 def create_gradio_component_from_field(
     field_name: str,
     field_info: FieldInfo,
@@ -112,9 +137,10 @@ def create_gradio_component_from_field(
         return component, field_name
 
     elif field_type == int:
-        # Check for min/max constraints
-        ge = getattr(field_info, 'ge', None)
-        le = getattr(field_info, 'le', None)
+        # Check for min/max constraints (Pydantic v2 stores in metadata)
+        constraints = extract_constraints(field_info)
+        ge = constraints.get('ge')
+        le = constraints.get('le')
 
         # Ensure default_value is a valid integer
         if default_value is None or default_value == "":
@@ -148,9 +174,10 @@ def create_gradio_component_from_field(
         return component, field_name
 
     elif field_type == float:
-        # Check for min/max constraints
-        ge = getattr(field_info, 'ge', None)
-        le = getattr(field_info, 'le', None)
+        # Check for min/max constraints (Pydantic v2 stores in metadata)
+        constraints = extract_constraints(field_info)
+        ge = constraints.get('ge')
+        le = constraints.get('le')
 
         # Ensure default_value is a valid float
         if default_value is None or default_value == "":
