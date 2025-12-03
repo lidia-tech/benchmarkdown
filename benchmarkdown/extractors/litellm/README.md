@@ -497,11 +497,13 @@ logging.basicConfig(
 )
 ```
 
-**Method 3: Environment variable**
+**Method 3: Environment variable (recommended)**
 ```bash
 export BENCHMARKDOWN_LOG_LEVEL=DEBUG
 uv run python app.py
 ```
+
+**Note**: The app is configured to only apply this log level to `benchmarkdown` code. Third-party libraries (httpx, litellm, boto3, etc.) remain at WARNING level to avoid verbose output and base64 spam in logs.
 
 ### DEBUG Log Output
 
