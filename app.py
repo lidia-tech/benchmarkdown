@@ -14,16 +14,31 @@ from benchmarkdown.ui import create_app
 from benchmarkdown.extractors import get_global_registry
 
 # Configure logging
-# Get log level from environment, default to WARNING
-log_level = os.getenv('BENCHMARKDOWN_LOG_LEVEL', 'WARNING').upper()
+# Get log level from environment, default to INFO for benchmarkdown
+log_level = os.getenv('BENCHMARKDOWN_LOG_LEVEL', 'INFO').upper()
 
-# Configure root logger with handler
+# Configure root logger at WARNING to suppress noisy libraries
 logging.basicConfig(
     format='%(levelname)s - %(name)s - %(message)s',
-    level=getattr(logging, log_level, logging.WARNING)
+    level=logging.WARNING  # Keep libraries quiet
 )
 
-logger = logging.getLogger("benchmarkdown")
+# Set benchmarkdown logger to user-specified level
+benchmarkdown_logger = logging.getLogger("benchmarkdown")
+benchmarkdown_logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+# Keep noisy libraries quiet even when BENCHMARKDOWN_LOG_LEVEL=DEBUG
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("litellm").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+logging.getLogger("anthropic").setLevel(logging.WARNING)
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+
+logger = benchmarkdown_logger
 
 # Discover all available extractors via plugin system
 logger.info("🔍 Discovering extractor plugins...")
