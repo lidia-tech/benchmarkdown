@@ -48,9 +48,14 @@ export GEMINI_API_KEY="..."
 ### AWS Bedrock
 ```bash
 # Uses standard AWS credentials (IAM, ~/.aws/credentials, etc.)
-# Ensure you have bedrock:InvokeModel permissions
+# Ensure you have bedrock:InvokeModel and bedrock:Converse permissions
 export AWS_REGION="us-east-1"  # Optional, defaults to us-east-1
+
+# Verify model availability in your region:
+# aws bedrock list-foundation-models --region us-east-1
 ```
+
+**Important**: For vision models, use the `bedrock/converse/` prefix (e.g., `bedrock/converse/us.anthropic.claude-3-5-sonnet-20241022-v2:0`) instead of just `bedrock/` to ensure proper image support.
 
 ### Azure OpenAI
 ```bash
@@ -77,7 +82,12 @@ export AZURE_API_VERSION="2024-02-15-preview"
   - **OpenAI**: `gpt-4o-mini`, `gpt-4o`, `gpt-4-turbo`
   - **Anthropic**: `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`
   - **Google**: `gemini-1.5-flash`, `gemini-1.5-pro`, `gemini-2.0-flash-exp`
-  - **AWS Bedrock**: `bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0`, `bedrock/meta.llama3-2-90b-instruct-v1:0`
+  - **AWS Bedrock** (use `bedrock/converse/` prefix for vision models):
+    - `bedrock/converse/global.anthropic.claude-sonnet-4-5-20250929-v1:0`
+    - `bedrock/converse/us.anthropic.claude-3-5-sonnet-20241022-v2:0`
+    - `bedrock/converse/us.amazon.nova-pro-v1:0`
+    - `bedrock/converse/mistral.pixtral-large-latest`
+    - `bedrock/converse/qwen.qwen3-vl-235b-a22b` (if available in your region)
   - **Azure**: `azure/my-gpt4o-deployment`
   - **Local**: `ollama/llava`, `vllm/llava-v1.6`
   - See [LiteLLM docs](https://docs.litellm.ai/docs/providers) for complete provider list
@@ -170,9 +180,10 @@ config = Config(
 ### AWS Bedrock Configuration
 
 ```python
-# Using Claude via AWS Bedrock (requires AWS credentials)
+# Using Claude Sonnet 4.5 via AWS Bedrock (requires AWS credentials)
+# IMPORTANT: Use bedrock/converse/ prefix for vision models
 config = Config(
-    model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+    model="bedrock/converse/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
     dpi=300,
     extraction_prompt="Extract all text from this document page in markdown format.",
     temperature=0.0
@@ -180,6 +191,13 @@ config = Config(
 extractor = Extractor(config=config)
 markdown = await extractor.extract_markdown("document.pdf")
 ```
+
+**Common Bedrock vision models**:
+- Claude Sonnet 4.5: `bedrock/converse/global.anthropic.claude-sonnet-4-5-20250929-v1:0`
+- Claude 3.5 Sonnet: `bedrock/converse/us.anthropic.claude-3-5-sonnet-20241022-v2:0`
+- Amazon Nova Pro: `bedrock/converse/us.amazon.nova-pro-v1:0`
+- Mistral Pixtral: `bedrock/converse/mistral.pixtral-large-latest`
+- Qwen VL: `bedrock/converse/qwen.qwen3-vl-235b-a22b` (check regional availability)
 
 ### Local Model Configuration
 
@@ -273,14 +291,55 @@ Authentication errors occur at runtime when extracting documents:
 - **Google**: Verify `GEMINI_API_KEY` is valid
 - **AWS Bedrock**:
   - Verify AWS credentials are configured (`~/.aws/credentials` or IAM role)
-  - Ensure you have `bedrock:InvokeModel` permissions
+  - Ensure you have `bedrock:InvokeModel` and `bedrock:Converse` permissions
   - Check that the model is available in your region
+  - For vision models, use `bedrock/converse/` prefix (see Bedrock Validation Errors below)
 - **Azure OpenAI**:
   - Verify `AZURE_API_KEY`, `AZURE_API_BASE`, and `AZURE_API_VERSION` are set
   - Check that your deployment name matches the model identifier
 - **Local models**:
   - Verify the local endpoint is running and accessible
   - Use correct model format (e.g., `ollama/llava`, `vllm/llava-v1.6`)
+
+### AWS Bedrock Validation Errors
+
+If you get errors like:
+```
+BedrockException - "unknown variant `prompt`", "validation_error"
+```
+
+**Cause**: You're using the legacy InvokeModel API (`bedrock/<model-id>`) instead of the Converse API.
+
+**Solution**: Add `/converse/` to the model identifier:
+- ❌ Wrong: `bedrock/qwen.qwen3-vl-235b-a22b`
+- ✅ Correct: `bedrock/converse/qwen.qwen3-vl-235b-a22b`
+
+**Why**: LiteLLM has two routing modes for Bedrock:
+- `bedrock/<model-id>` → InvokeModel API (legacy, provider-specific formats)
+- `bedrock/converse/<model-id>` → Converse API (modern, unified interface for vision)
+
+The Converse API provides:
+- Better vision support and feature detection
+- Consistent interface across all model providers
+- Support for up to 20 images per request
+- JSON tool calling (vs XML in legacy API)
+
+**Checking model availability**:
+```bash
+# List all available models in your region
+aws bedrock list-foundation-models --region us-east-1
+
+# List only vision-capable models
+aws bedrock list-foundation-models --region us-east-1 \
+  --query 'modelSummaries[?contains(modelName, `vision`) || contains(modelName, `VL`)].modelId'
+```
+
+**Note**: Not all Bedrock models support the Converse API. If a model still fails with the `/converse/` prefix, it may:
+- Only support the legacy InvokeModel API
+- Not support vision/multimodal inputs
+- Not be available in your AWS region
+
+Try using well-supported vision models like Claude, Amazon Nova, or Mistral Pixtral instead.
 
 ### Rate Limit Errors
 
