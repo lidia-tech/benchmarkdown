@@ -47,13 +47,15 @@ def is_available() -> Tuple[bool, str]:
     """
     Check if LiteLLM dependencies are installed and available.
 
+    Note: This only checks if dependencies are installed, not authentication.
+    LiteLLM supports many providers (AWS Bedrock, local models, Azure, etc.)
+    with different auth mechanisms, so authentication is validated at runtime.
+
     Returns:
         Tuple of (is_available, message)
         - is_available: True if litellm and dependencies are installed
         - message: Empty string if available, error message otherwise
     """
-    import os
-
     # Check if library is installed
     if not _extractor_available:
         return False, f"LiteLLM not installed: {_import_error}"
@@ -64,14 +66,6 @@ def is_available() -> Tuple[bool, str]:
         import fitz  # PyMuPDF
     except ImportError as e:
         return False, f"Required dependency not installed: {e}"
-
-    # Check if at least one API key is configured
-    has_openai = bool(os.environ.get("OPENAI_API_KEY"))
-    has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
-    has_gemini = bool(os.environ.get("GEMINI_API_KEY"))
-
-    if not (has_openai or has_anthropic or has_gemini):
-        return False, "No API keys configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY environment variable"
 
     return True, ""
 

@@ -9,6 +9,9 @@ The LiteLLM extractor converts PDF pages to images and uses vision-capable Large
 - **OpenAI**: GPT-4o, GPT-4o-mini, GPT-4-turbo
 - **Anthropic**: Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus/Sonnet/Haiku
 - **Google**: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 2.0 Flash
+- **AWS Bedrock**: Claude, Llama, Stable Diffusion models via AWS
+- **Azure OpenAI**: GPT-4o, GPT-4-turbo via Azure
+- **Local models**: Ollama, vLLM, LM Studio (no API keys needed)
 - **Custom models**: Any vision-capable model supported by LiteLLM
 
 ## Installation
@@ -23,26 +26,46 @@ This installs:
 - `litellm`: Multi-provider LLM framework
 - `pymupdf`: PDF rendering library (also used by Docling)
 
-## Environment Variables
+## Authentication
 
-Set the API key for your chosen provider:
+LiteLLM supports many providers with different authentication mechanisms. Configure the appropriate credentials for your chosen provider:
 
-### OpenAI (GPT-4o, GPT-4-turbo)
+### OpenAI
 ```bash
 export OPENAI_API_KEY="sk-..."
 ```
 
-### Anthropic (Claude)
+### Anthropic
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-### Google (Gemini)
+### Google Gemini
 ```bash
 export GEMINI_API_KEY="..."
 ```
 
-At least one API key must be configured for the extractor to be available.
+### AWS Bedrock
+```bash
+# Uses standard AWS credentials (IAM, ~/.aws/credentials, etc.)
+# Ensure you have bedrock:InvokeModel permissions
+export AWS_REGION="us-east-1"  # Optional, defaults to us-east-1
+```
+
+### Azure OpenAI
+```bash
+export AZURE_API_KEY="..."
+export AZURE_API_BASE="https://your-resource.openai.azure.com"
+export AZURE_API_VERSION="2024-02-15-preview"
+```
+
+### Local Models (Ollama, vLLM, LM Studio)
+```bash
+# No authentication required - just point to your local endpoint
+# Configure the model name in the UI as: ollama/llava or vllm/llava-v1.6
+```
+
+**Note**: The extractor is available as long as dependencies are installed. Authentication is validated at runtime when you extract documents.
 
 ## Configuration Options
 
@@ -213,14 +236,25 @@ Costs vary based on:
 
 Check that:
 1. Dependencies are installed: `uv sync --group litellm`
-2. At least one API key is configured (OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY)
-3. Restart the app after setting environment variables
+2. Restart the app after installing dependencies
 
 ### API Authentication Errors
 
-- **OpenAI**: Verify OPENAI_API_KEY is set correctly
-- **Anthropic**: Verify ANTHROPIC_API_KEY starts with "sk-ant-"
-- **Google**: Verify GEMINI_API_KEY is valid
+Authentication errors occur at runtime when extracting documents:
+
+- **OpenAI**: Verify `OPENAI_API_KEY` is set correctly
+- **Anthropic**: Verify `ANTHROPIC_API_KEY` starts with "sk-ant-"
+- **Google**: Verify `GEMINI_API_KEY` is valid
+- **AWS Bedrock**:
+  - Verify AWS credentials are configured (`~/.aws/credentials` or IAM role)
+  - Ensure you have `bedrock:InvokeModel` permissions
+  - Check that the model is available in your region
+- **Azure OpenAI**:
+  - Verify `AZURE_API_KEY`, `AZURE_API_BASE`, and `AZURE_API_VERSION` are set
+  - Check that your deployment name matches the model identifier
+- **Local models**:
+  - Verify the local endpoint is running and accessible
+  - Use correct model format (e.g., `ollama/llava`, `vllm/llava-v1.6`)
 
 ### Rate Limit Errors
 
