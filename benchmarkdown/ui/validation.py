@@ -154,67 +154,100 @@ class ValidationUI:
                 return (len(METRIC_ORDER), name)
 
         if not self.validation_results:
-            return "<p style='color: var(--body-text-color-subdued, #666);'>No validation results yet. Upload ground truth and run validation.</p>"
+            return (
+                "<p style='color: var(--body-text-color-subdued, #666);'>"
+                "No validation results yet. Upload ground truth and run validation."
+                "</p>"
+            )
 
         html = ["<div style='font-family: monospace;'>"]
 
         # For each document
         for doc_name in sorted(self.validation_results.keys()):
             html.append(f"<h3>📋 {doc_name}</h3>")
+            html.append(
+                "<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>"
+            )
 
-            # Create a table for this document
-            html.append("<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>")
-
-            # Get all unique metrics across all extractors for this document
+            # Collect all metric names for this document
             all_metrics = set()
             for extractor_results in self.validation_results[doc_name].values():
                 all_metrics.update(extractor_results.keys())
 
-            # Table header
-            html.append("<tr style='background: var(--background-fill-secondary); border-bottom: 2px solid var(--border-color-primary); color: var(--body-text-color);'>")
+            # Compute ordered metric list ONCE
+            ordered_metrics = sorted(all_metrics, key=metric_sort_key)
+
+            # ---------------- Header row ----------------
+            html.append(
+                "<tr style='background: var(--background-fill-secondary); "
+                "border-bottom: 2px solid var(--border-color-primary); "
+                "color: var(--body-text-color);'>"
+            )
             html.append("<th style='padding: 8px; text-align: left;'>Extractor</th>")
 
-            for metric_name in sorted(all_metrics):
-                html.append(f"<th style='padding: 8px; text-align: center;'>{metric_name.replace('_', ' ').title()}</th>")
+            for metric_name in ordered_metrics:
+                html.append(
+                    f"<th style='padding: 8px; text-align: center;'>"
+                    f"{metric_name.replace('_', ' ').title()}"
+                    "</th>"
+                )
 
             html.append("</tr>")
 
-            # For each extractor
+            # ---------------- Data rows ----------------
             for extractor_name in sorted(self.validation_results[doc_name].keys()):
                 extractor_results = self.validation_results[doc_name][extractor_name]
 
-                html.append("<tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color);'>")
+                html.append(
+                    "<tr style='border-bottom: 1px solid var(--border-color-primary); "
+                    "color: var(--body-text-color);'>"
+                )
                 html.append(f"<td style='padding: 8px;'>{extractor_name}</td>")
 
-                for metric_name in sorted(all_metrics, key=metric_sort_key):
+                for metric_name in ordered_metrics:
                     if metric_name in extractor_results:
                         result = extractor_results[metric_name]
-                        formatted = result.formatted_value if result.formatted_value else str(result.value)
+                        formatted = (
+                            result.formatted_value
+                            if result.formatted_value
+                            else str(result.value)
+                        )
 
-                        # Color code based on similarity score (higher is better)
-                        # result.value is normalized to [0.0, 1.0] where 1.0 is perfect
                         similarity = result.value
-                        if similarity >= 0.95:  # >= 95%
-                            color = '#27ae60'  # Green
-                        elif similarity >= 0.85:  # >= 85%
-                            color = '#f39c12'  # Orange
-                        else:  # < 85%
-                            color = '#e74c3c'  # Red
+                        if similarity >= 0.95:
+                            color = "#27ae60"
+                        elif similarity >= 0.85:
+                            color = "#f39c12"
+                        else:
+                            color = "#e74c3c"
 
-                        html.append(f"<td style='padding: 8px; text-align: center; color: {color}; font-weight: bold;'>{formatted}</td>")
+                        html.append(
+                            f"<td style='padding: 8px; text-align: center; "
+                            f"color: {color}; font-weight: bold;'>"
+                            f"{formatted}</td>"
+                        )
                     else:
-                        html.append("<td style='padding: 8px; text-align: center; color: var(--body-text-color-subdued, #999);'>—</td>")
+                        html.append(
+                            "<td style='padding: 8px; text-align: center; "
+                            "color: var(--body-text-color-subdued, #999);'>—</td>"
+                        )
 
                 html.append("</tr>")
 
-                # Add a detail row with descriptions
-                html.append("<tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color-subdued, #666);'>")
+                # ---------------- Description row ----------------
+                html.append(
+                    "<tr style='border-bottom: 1px solid var(--border-color-primary); "
+                    "color: var(--body-text-color-subdued, #666);'>"
+                )
                 html.append("<td style='padding: 8px; font-size: 0.85em;'></td>")
 
-                for metric_name in sorted(all_metrics, key=metric_sort_key):
+                for metric_name in ordered_metrics:
                     if metric_name in extractor_results:
                         result = extractor_results[metric_name]
-                        html.append(f"<td style='padding: 8px; font-size: 0.85em; text-align: center;'>{result.description}</td>")
+                        html.append(
+                            f"<td style='padding: 8px; font-size: 0.85em; "
+                            f"text-align: center;'>{result.description}</td>"
+                        )
                     else:
                         html.append("<td style='padding: 8px;'></td>")
 
@@ -223,7 +256,6 @@ class ValidationUI:
             html.append("</table>")
 
         html.append("</div>")
-
         return "".join(html)
 
     def clear_validation_results(self) -> str:
