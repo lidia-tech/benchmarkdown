@@ -127,27 +127,10 @@ class ValidationUI:
                     if metric is None:
                         continue
 
-                    # For text_stats, we need to compute both word and char variants
-                    if metric_name == "text_stats":
-                        # Import the factory functions
-                        from benchmarkdown.metrics.text_stats import (
-                            create_word_count_metric,
-                            create_char_count_metric
-                        )
+                    result = await metric.compute(gt_text, extracted_text)
 
-                        word_metric = create_word_count_metric()
-                        char_metric = create_char_count_metric()
-
-                        word_result = await word_metric.compute(gt_text, extracted_text)
-                        char_result = await char_metric.compute(gt_text, extracted_text)
-
-                        self.validation_results[doc_name][extractor_name]['word_count_diff'] = word_result
-                        self.validation_results[doc_name][extractor_name]['char_count_diff'] = char_result
-                        computed += 2
-                    else:
-                        result = await metric.compute(gt_text, extracted_text)
-                        self.validation_results[doc_name][extractor_name][metric_name] = result
-                        computed += 1
+                    self.validation_results[doc_name][extractor_name][metric_name] = result
+                    computed += 1
 
         return f"✅ Computed {computed} metrics across {len(selected_documents)} documents and {len(selected_extractors)} extractors"
 
@@ -157,6 +140,19 @@ class ValidationUI:
         Returns:
             HTML string with formatted validation results
         """
+        METRIC_ORDER = [
+            "char_count_diff",
+            "word_count_diff",
+            "heading_f1",
+            "structure_similarity",
+        ]
+
+        def metric_sort_key(name: str) -> tuple[int, str]:
+            try:
+                return (METRIC_ORDER.index(name), "")
+            except ValueError:
+                return (len(METRIC_ORDER), name)
+
         if not self.validation_results:
             return "<p style='color: var(--body-text-color-subdued, #666);'>No validation results yet. Upload ground truth and run validation.</p>"
 
@@ -190,7 +186,7 @@ class ValidationUI:
                 html.append("<tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color);'>")
                 html.append(f"<td style='padding: 8px;'>{extractor_name}</td>")
 
-                for metric_name in sorted(all_metrics):
+                for metric_name in sorted(all_metrics, key=metric_sort_key):
                     if metric_name in extractor_results:
                         result = extractor_results[metric_name]
                         formatted = result.formatted_value if result.formatted_value else str(result.value)
@@ -215,7 +211,7 @@ class ValidationUI:
                 html.append("<tr style='border-bottom: 1px solid var(--border-color-primary); color: var(--body-text-color-subdued, #666);'>")
                 html.append("<td style='padding: 8px; font-size: 0.85em;'></td>")
 
-                for metric_name in sorted(all_metrics):
+                for metric_name in sorted(all_metrics, key=metric_sort_key):
                     if metric_name in extractor_results:
                         result = extractor_results[metric_name]
                         html.append(f"<td style='padding: 8px; font-size: 0.85em; text-align: center;'>{result.description}</td>")

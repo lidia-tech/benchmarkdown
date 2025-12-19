@@ -12,6 +12,8 @@ dependencies = [
     "gradio>=4.0.0",
     "markdown>=3.7",
     "python-dotenv>=1.1.1",
+    "rapidfuzz>=3.14.3",
+    "fuzzywuzzy>=0.18.0",
 ]
 
 [build-system]
