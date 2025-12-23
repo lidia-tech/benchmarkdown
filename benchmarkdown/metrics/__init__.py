@@ -76,13 +76,23 @@ class MetricRegistry:
                     unavailable_reason=reason
                 )
 
-                status = "✅" if is_available else "⚠️"
-                print(f"{status} Discovered metric: {metric_name} ({getattr(module, 'METRIC_DISPLAY_NAME')})")
-                if not is_available:
-                    print(f"   Reason: {reason}")
+                status = "[OK]" if is_available else "[WARN]"
+                try:
+                    status_emoji = "✅" if is_available else "⚠️"
+                    print(f"{status_emoji} Discovered metric: {metric_name} ({getattr(module, 'METRIC_DISPLAY_NAME')})")
+                    if not is_available:
+                        print(f"   Reason: {reason}")
+                except UnicodeEncodeError:
+                    # Fallback for Windows console that doesn't support emoji
+                    print(f"{status} Discovered metric: {metric_name} ({getattr(module, 'METRIC_DISPLAY_NAME')})")
+                    if not is_available:
+                        print(f"   Reason: {reason}")
 
             except Exception as e:
-                print(f"❌ Failed to load metric '{name}': {e}")
+                try:
+                    print(f"❌ Failed to load metric '{name}': {e}")
+                except UnicodeEncodeError:
+                    print(f"[ERROR] Failed to load metric '{name}': {e}")
                 import traceback
                 traceback.print_exc()
 
