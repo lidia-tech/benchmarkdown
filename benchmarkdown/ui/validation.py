@@ -27,11 +27,15 @@ class ValidationUI:
         if metric_registry is None:
             self.metric_registry.discover_metrics()
 
-        # Storage for ground truth texts (document_name -> gt_text)
+        # Storage for ground truth texts (gt_id -> gt_text)
+        # gt_id is the uploaded filename (e.g., "ground_truth_v1.txt")
         self.ground_truths: Dict[str, str] = {}
 
         # Storage for validation results (document_name -> extractor_name -> metric_name -> result)
         self.validation_results: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+        # Track which metrics were selected in the last validation run
+        self.last_selected_metrics: List[str] = []
 
     def get_available_metrics(self) -> List[tuple]:
         """Get list of available metrics for UI selection.
@@ -44,31 +48,35 @@ class ValidationUI:
             metrics.append((name, metadata.display_name))
         return metrics
 
-    def upload_ground_truth(self, file_path: str, document_name: str) -> str:
+    def upload_ground_truth(self, file_path: str) -> str:
         """Upload and store ground truth markdown.
 
         Args:
             file_path: Path to the ground truth markdown file
-            document_name: Name of the document this GT corresponds to
 
         Returns:
             Status message
         """
         try:
+            # Extract filename from path
+            from pathlib import Path
+            gt_filename = Path(file_path).name
+
             with open(file_path, 'r', encoding='utf-8') as f:
                 gt_text = f.read()
 
-            self.ground_truths[document_name] = gt_text
+            self.ground_truths[gt_filename] = gt_text
             word_count = len(gt_text.split())
             char_count = len(gt_text)
 
-            return f"✅ Ground truth loaded for '{document_name}' ({word_count} words, {char_count} characters)"
+            return f"✅ Ground truth '{gt_filename}' uploaded ({word_count} words, {char_count} characters)"
         except Exception as e:
             return f"❌ Failed to load ground truth: {str(e)}"
 
     async def run_validation(
         self,
         ui_results: Dict[str, Dict[str, Any]],
+        selected_ground_truth: str,
         selected_documents: List[str],
         selected_extractors: List[str],
         selected_metrics: List[str]
@@ -77,6 +85,7 @@ class ValidationUI:
 
         Args:
             ui_results: The results dict from BenchmarkUI (filename -> extractor_name -> result)
+            selected_ground_truth: The ground truth filename to use for validation
             selected_documents: List of document names to validate
             selected_extractors: List of extractor names to validate
             selected_metrics: List of metric names to apply
@@ -84,6 +93,8 @@ class ValidationUI:
         Returns:
             Status message
         """
+        if not selected_ground_truth:
+            return "⚠️ Please select a ground truth file"
         if not selected_documents:
             return "⚠️ Please select at least one document"
         if not selected_extractors:
@@ -91,20 +102,23 @@ class ValidationUI:
         if not selected_metrics:
             return "⚠️ Please select at least one metric"
 
-        # Check that all selected documents have ground truth
-        missing_gt = [doc for doc in selected_documents if doc not in self.ground_truths]
-        if missing_gt:
-            return f"⚠️ Missing ground truth for: {', '.join(missing_gt)}"
+        # Check that the selected ground truth exists
+        if selected_ground_truth not in self.ground_truths:
+            return f"⚠️ Ground truth '{selected_ground_truth}' not found"
+
+        # Store selected metrics for use in results display
+        self.last_selected_metrics = selected_metrics.copy()
 
         # Run metrics for each combination
         total_computations = len(selected_documents) * len(selected_extractors) * len(selected_metrics)
         computed = 0
 
+        # Get the ground truth text once (it's the same for all documents being validated)
+        gt_text = self.ground_truths[selected_ground_truth]
+
         for doc_name in selected_documents:
             if doc_name not in ui_results:
                 continue
-
-            gt_text = self.ground_truths[doc_name]
 
             for extractor_name in selected_extractors:
                 if extractor_name not in ui_results[doc_name]:
@@ -169,13 +183,24 @@ class ValidationUI:
                 "<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>"
             )
 
-            # Collect all metric names for this document
-            all_metrics = set()
-            for extractor_results in self.validation_results[doc_name].values():
-                all_metrics.update(extractor_results.keys())
+            # Use only the metrics that were selected in the last validation run
+            # This ensures the table only shows chosen metrics, not all computed metrics
+            if self.last_selected_metrics:
+                # Filter to only show metrics that were selected AND actually computed
+                all_metrics = set()
+                for extractor_results in self.validation_results[doc_name].values():
+                    all_metrics.update(extractor_results.keys())
+                # Intersect with selected metrics
+                display_metrics = [m for m in self.last_selected_metrics if m in all_metrics]
+            else:
+                # Fallback: show all computed metrics (for backwards compatibility)
+                all_metrics = set()
+                for extractor_results in self.validation_results[doc_name].values():
+                    all_metrics.update(extractor_results.keys())
+                display_metrics = list(all_metrics)
 
             # Compute ordered metric list ONCE
-            ordered_metrics = sorted(all_metrics, key=metric_sort_key)
+            ordered_metrics = sorted(display_metrics, key=metric_sort_key)
 
             # ---------------- Header row ----------------
             html.append(

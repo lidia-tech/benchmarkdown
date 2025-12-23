@@ -372,11 +372,6 @@ def create_app(registry):
             with gr.Row():
                 with gr.Column(scale=1):
                     gr.Markdown("### 1. Upload Ground Truth")
-                    gt_document_selector = gr.Dropdown(
-                        label="Select Document",
-                        choices=[],
-                        interactive=True
-                    )
                     gt_file_upload = gr.File(
                         label="Upload Ground Truth Markdown",
                         file_types=[".md", ".txt"],
@@ -392,6 +387,12 @@ def create_app(registry):
 
                 with gr.Column(scale=1):
                     gr.Markdown("### 2. Select What to Validate")
+                    gt_selector = gr.Dropdown(
+                        label="Ground Truth to Use",
+                        choices=[],
+                        interactive=True,
+                        info="Select which ground truth file to compare against"
+                    )
                     val_document_selector = gr.CheckboxGroup(
                         label="Documents",
                         choices=[],
@@ -1048,7 +1049,7 @@ def create_app(registry):
                     "",  # comparison_view
                     gr.update(choices=[], value=None),  # document_selector
                     gr.update(visible=False),  # validation_section
-                    gr.update(choices=[]),  # gt_document_selector
+                    gr.update(choices=[]),  # gt_selector
                     gr.update(choices=[]),  # val_document_selector
                     gr.update(choices=[]),  # val_extractor_selector
                     gr.update(choices=[]),  # val_metric_selector
@@ -1075,7 +1076,7 @@ def create_app(registry):
                 "",  # comparison_view
                 gr.update(),  # document_selector
                 gr.update(visible=False),  # validation_section
-                gr.update(),  # gt_document_selector
+                gr.update(),  # gt_selector
                 gr.update(),  # val_document_selector
                 gr.update(),  # val_extractor_selector
                 gr.update(),  # val_metric_selector
@@ -1157,7 +1158,7 @@ def create_app(registry):
                         "",  # comparison_view
                         gr.update(),  # document_selector
                         gr.update(visible=False),  # validation_section
-                        gr.update(),  # gt_document_selector
+                        gr.update(),  # gt_selector
                         gr.update(),  # val_document_selector
                         gr.update(),  # val_extractor_selector
                         gr.update(),  # val_metric_selector
@@ -1189,6 +1190,9 @@ def create_app(registry):
             # Get available metrics
             metric_choices = [m[0] for m in validation_ui.get_available_metrics()]
 
+            # Get available ground truth files
+            gt_choices = sorted(validation_ui.ground_truths.keys())
+
             # Show final completion status
             yield (
                 gr.update(visible=True),  # extraction_results_section
@@ -1197,7 +1201,7 @@ def create_app(registry):
                 comparison,  # comparison_view
                 gr.update(choices=filenames, value=first_filename),  # document_selector
                 gr.update(visible=True),  # validation_section
-                gr.update(choices=filenames, value=first_filename if filenames else None),  # gt_document_selector
+                gr.update(choices=gt_choices, value=gt_choices[0] if gt_choices else None),  # gt_selector
                 gr.update(choices=filenames, value=filenames),  # val_document_selector
                 gr.update(choices=extractor_list, value=extractor_list),  # val_extractor_selector
                 gr.update(choices=metric_choices, value=metric_choices),  # val_metric_selector
@@ -1226,35 +1230,36 @@ def create_app(registry):
                 return "<p style='color: var(--body-text-color-subdued, #666); font-size: 0.9em; font-style: italic;'>No ground truth files uploaded yet.</p>"
 
             html = ["<ul style='list-style: none; padding: 0; margin: 0; font-size: 0.9em;'>"]
-            for doc_name in sorted(validation_ui.ground_truths.keys()):
-                gt_text = validation_ui.ground_truths[doc_name]
+            for gt_filename in sorted(validation_ui.ground_truths.keys()):
+                gt_text = validation_ui.ground_truths[gt_filename]
                 word_count = len(gt_text.split())
                 char_count = len(gt_text)
                 html.append(f"<li style='padding: 4px 0; color: var(--body-text-color);'>")
-                html.append(f"✅ <strong>{doc_name}</strong>")
+                html.append(f"✅ <strong>{gt_filename}</strong>")
                 html.append(f" <span style='color: var(--body-text-color-subdued, #666);'>({word_count} words, {char_count} chars)</span>")
                 html.append("</li>")
             html.append("</ul>")
             return "".join(html)
 
-        def upload_ground_truth_handler(file_path, document_name):
+        def upload_ground_truth_handler(file_path):
             """Handle ground truth file upload."""
             if not file_path:
                 # Don't show error - file control is empty because we cleared it
-                return "", gr.update(), generate_gt_uploaded_list_html()
-            if not document_name:
-                return "⚠️ Please select a document", gr.update(), generate_gt_uploaded_list_html()
+                gt_choices = sorted(validation_ui.ground_truths.keys())
+                return "", gr.update(value=None), generate_gt_uploaded_list_html(), gr.update(choices=gt_choices)
 
-            status = validation_ui.upload_ground_truth(file_path, document_name)
+            status = validation_ui.upload_ground_truth(file_path)
             # Clear the file upload control so user can upload another file
-            # Also update the list of uploaded GTs
-            return status, gr.update(value=None), generate_gt_uploaded_list_html()
+            # Update the list of uploaded GTs and the GT selector dropdown
+            gt_choices = sorted(validation_ui.ground_truths.keys())
+            return status, gr.update(value=None), generate_gt_uploaded_list_html(), gr.update(choices=gt_choices)
 
-        def run_validation_handler(selected_docs, selected_extractors, selected_metrics):
+        def run_validation_handler(selected_gt, selected_docs, selected_extractors, selected_metrics):
             """Handle validation execution."""
             # Run validation
             status = asyncio.run(validation_ui.run_validation(
                 ui_results=ui.results,
+                selected_ground_truth=selected_gt,
                 selected_documents=selected_docs,
                 selected_extractors=selected_extractors,
                 selected_metrics=selected_metrics
@@ -1435,7 +1440,7 @@ def create_app(registry):
                 comparison_view,
                 document_selector,
                 validation_section,
-                gt_document_selector,
+                gt_selector,
                 val_document_selector,
                 val_extractor_selector,
                 val_metric_selector,
@@ -1456,13 +1461,13 @@ def create_app(registry):
         # Validation Events
         gt_file_upload.change(
             fn=upload_ground_truth_handler,
-            inputs=[gt_file_upload, gt_document_selector],
-            outputs=[gt_upload_status, gt_file_upload, gt_uploaded_list]
+            inputs=[gt_file_upload],
+            outputs=[gt_upload_status, gt_file_upload, gt_uploaded_list, gt_selector]
         )
 
         run_validation_btn.click(
             fn=run_validation_handler,
-            inputs=[val_document_selector, val_extractor_selector, val_metric_selector],
+            inputs=[gt_selector, val_document_selector, val_extractor_selector, val_metric_selector],
             outputs=[validation_status, validation_results_view, validation_results_section]
         )
 
