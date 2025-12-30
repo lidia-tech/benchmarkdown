@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(timeout 10 uv run python app.py)"
-    ]
-  }
-}
