@@ -122,4 +122,4 @@ BENCHMARKDOWN_LOG_LEVEL=DEBUG uv run python app.py
 
 - **Detailed setup**: See individual extractor READMEs in `benchmarkdown/extractors/{extractor_name}/README.md`
 - **Template file**: See `.env.template` for a complete example with all variables
-- **User guide**: See `CONFIG_UI_README.md` for UI configuration instructions
+- **User guide**: See `docs/CONFIG_UI_README.md` for UI configuration instructions

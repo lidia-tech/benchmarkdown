@@ -3,7 +3,7 @@
 ## For Users
 
 - **[README.md](../README.md)** — Start here: what Benchmarkdown does, installation, how to use the web interface
-- **[CONFIG_UI_README.md](../CONFIG_UI_README.md)** — Configuration guide: creating profiles, engine-specific settings, performance tips
+- **[CONFIG_UI_README.md](CONFIG_UI_README.md)** — Configuration guide: creating profiles, engine-specific settings, performance tips
 - **[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** — All environment variables: API keys, credentials, performance tuning, logging
 
 Each extractor also has its own detailed README:
@@ -40,7 +40,7 @@ Historical documentation from before the plugin architecture was complete:
 |---|---|
 | Use the app for the first time | [README.md](../README.md) |
 | Set up API credentials | [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md) |
-| Configure an extractor | [CONFIG_UI_README.md](../CONFIG_UI_README.md) |
+| Configure an extractor | [CONFIG_UI_README.md](CONFIG_UI_README.md) |
 | Add a new extractor plugin | [CLAUDE.md](../CLAUDE.md#adding-new-extractors) |
 | Run tests | [tests/README.md](../tests/README.md) |
 | Understand the architecture | [CLAUDE.md](../CLAUDE.md#architecture) |
