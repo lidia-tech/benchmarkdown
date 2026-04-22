@@ -17,6 +17,24 @@ Amazon's cloud-based document analysis service for extracting text, tables, and 
 uv sync --group textract
 ```
 
+## Getting Your Credentials
+
+AWS Textract requires an AWS account, an S3 bucket, and AWS credentials:
+
+1. **Create an AWS account** (if you don't have one): go to [aws.amazon.com](https://aws.amazon.com/) and click "Create an AWS Account". A free tier is available but Textract itself is a paid service.
+
+2. **Create an S3 bucket** for Textract's temporary storage:
+   - Go to the [S3 Console](https://s3.console.aws.amazon.com/s3/buckets)
+   - Click "Create bucket", pick a name and region
+   - Note the bucket name — you'll use it as `s3://your-bucket-name/textract-workspace/`
+
+3. **Get your AWS credentials** (one of these methods):
+   - **AWS CLI** (recommended): [Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html), then run `aws configure` to set up your credentials
+   - **Access keys**: Go to [IAM Console](https://console.aws.amazon.com/iam/) → Users → your user → Security Credentials → Create Access Key
+   - **IAM Identity Center (SSO)**: If your organization uses SSO, follow your admin's instructions
+
+4. **Set the IAM permissions** listed in the [IAM Permissions](#iam-permissions) section below.
+
 ## Environment Variables
 
 ### Required

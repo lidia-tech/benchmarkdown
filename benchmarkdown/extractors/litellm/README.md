@@ -31,21 +31,25 @@ This installs:
 LiteLLM supports many providers with different authentication mechanisms. Configure the appropriate credentials for your chosen provider:
 
 ### OpenAI
+Sign up at [platform.openai.com](https://platform.openai.com/) and create an API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys). Billing must be enabled.
 ```bash
 export OPENAI_API_KEY="sk-..."
 ```
 
 ### Anthropic
+Sign up at [console.anthropic.com](https://console.anthropic.com/) and create an API key under Settings → API Keys. Billing must be enabled.
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 ### Google Gemini
+Get an API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free tier available with usage limits).
 ```bash
 export GEMINI_API_KEY="..."
 ```
 
 ### AWS Bedrock
+Requires an AWS account with Bedrock model access enabled. Go to the [Bedrock Console](https://console.aws.amazon.com/bedrock/) → Model access → Request access to the models you want to use. Uses standard AWS credentials (see [Textract README](../textract/README.md#getting-your-credentials) for AWS setup).
 ```bash
 # Uses standard AWS credentials (IAM, ~/.aws/credentials, etc.)
 # Ensure you have bedrock:InvokeModel and bedrock:Converse permissions
@@ -58,6 +62,7 @@ export AWS_REGION="us-east-1"  # Optional, defaults to us-east-1
 **Important**: For vision models, use the `bedrock/converse/` prefix (e.g., `bedrock/converse/us.anthropic.claude-3-5-sonnet-20241022-v2:0`) instead of just `bedrock/` to ensure proper image support.
 
 ### Azure OpenAI
+Requires an Azure account with an OpenAI resource deployed. See [Azure OpenAI quickstart](https://learn.microsoft.com/en-us/azure/ai-services/openai/quickstart) for setup instructions.
 ```bash
 export AZURE_API_KEY="..."
 export AZURE_API_BASE="https://your-resource.openai.azure.com"

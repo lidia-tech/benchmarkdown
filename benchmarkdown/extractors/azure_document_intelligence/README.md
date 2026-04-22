@@ -17,6 +17,23 @@ Microsoft's cloud-based document processing service with native markdown output 
 uv sync --group azure-document-intelligence
 ```
 
+## Getting Your Credentials
+
+You need an Azure account and a Document Intelligence resource:
+
+1. **Create an Azure account** (if you don't have one): go to [azure.microsoft.com](https://azure.microsoft.com/) and click "Start free". A free tier with limited pages is available.
+
+2. **Create a Document Intelligence resource**:
+   - Go to the [Azure Portal](https://portal.azure.com/)
+   - Click **"Create a resource"** and search for **"Document Intelligence"**
+   - Click **Create**, choose a subscription, resource group, region, and pricing tier (Free F0 tier available)
+   - Wait for deployment to complete
+
+3. **Get your endpoint and key**:
+   - Go to your new Document Intelligence resource in the Azure Portal
+   - Click **"Keys and Endpoint"** in the left sidebar
+   - Copy **Endpoint** (the URL) and **Key 1** (either key works)
+
 ## Environment Variables
 
 ### Required

@@ -18,6 +18,12 @@ TensorLake's cloud-based document parsing service powered by advanced AI models.
 uv sync --group tensorlake
 ```
 
+## Getting Your API Key
+
+1. Go to [cloud.tensorlake.ai](https://cloud.tensorlake.ai/) and create an account
+2. Once logged in, navigate to **API Keys**
+3. Create a new key and copy it
+
 ## Environment Variables
 
 ### Required

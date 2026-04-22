@@ -18,6 +18,15 @@ LlamaIndex's cloud-based document parsing service with advanced OCR and layout u
 uv sync --group llamaparse
 ```
 
+## Getting Your API Key
+
+1. Go to [cloud.llamaindex.ai](https://cloud.llamaindex.ai/) and sign up for a free account
+2. Once logged in, go to **API Keys** in the left sidebar
+3. Click **"Create new key"** and copy the key (starts with `llx-`)
+4. A free tier is included — no credit card required to start
+
+For GPT-4o enhanced mode (optional): get an OpenAI API key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) (requires OpenAI account with billing enabled).
+
 ## Environment Variables
 
 ### Required
