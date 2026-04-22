@@ -92,13 +92,9 @@ Browser/API tests (`test_browser.py`, `test_workflow_api.py`) require the app ru
 
 When implementing significant features or architectural patterns, create implementation notes in `docs/implementation_notes/` and update its README. See existing notes for format. This is for developer reference, not user-facing docs.
 
-## TODO/DONE Workflow
+## Task Management
 
-Tasks are managed via `TODO.md` and `DONE.md`. Each task has sections: `### Clarifications`, `### Thoughts, proposed solution`, `### What was implemented`.
-
-**Important**: Never read the entire `DONE.md` — it grows large. Use `grep "^## " DONE.md` to check completed tasks. Append new entries with `cat >>` rather than Read + Edit.
-
-Workflow: select from TODO.md (check priorities) → clarify with user → implement → document → append to DONE.md → remove from TODO.md.
+Uses GitHub Issues workflow (skill: `github-issues-workflow`). Repo: [lidia-tech/benchmarkdown](https://github.com/lidia-tech/benchmarkdown). Do not use `TODO.md` / `DONE.md`.
 
 ## Runtime Artifacts (gitignored)
 

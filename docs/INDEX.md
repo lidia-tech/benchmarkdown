@@ -22,13 +22,13 @@ Each extractor also has its own detailed README:
 
 ## Task Management
 
-- **[TODO.md](../TODO.md)** — Planned features and known issues
-- **[DONE.md](../DONE.md)** — Completed tasks and implementation history
+Tasks are tracked as [GitHub Issues](https://github.com/lidia-tech/benchmarkdown/issues).
 
 ## Archive
 
-Historical documentation from before the plugin architecture was complete:
+Historical documentation:
 
+- `archive/DONE.md` — Completed tasks and implementation history (pre-GitHub Issues)
 - `archive/IMPLEMENTATION_GAPS.md` — Pre-plugin analysis
 - `archive/PLUGIN_IMPLEMENTATION_SUMMARY.md` — Plugin infrastructure summary
 - `archive/UI_REFACTORING_GUIDE.md` — UI refactoring guide
