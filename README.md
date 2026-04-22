@@ -18,12 +18,12 @@ There are many services that convert documents (PDF, DOCX) to Markdown: some run
 
 | Extractor | Type | Cost | Notes |
 |-----------|------|------|-------|
-| **Docling** | Local | Free | IBM's open-source library, no API key needed |
-| **AWS Textract** | Cloud | Paid | Amazon's OCR service, requires AWS account |
-| **LlamaParse** | Cloud | Free tier + paid | LlamaIndex's parsing service |
-| **TensorLake** | Cloud | Paid | Advanced OCR with table and signature detection |
-| **Azure Document Intelligence** | Cloud | Paid | Microsoft's document analysis service |
-| **LiteLLM** | Cloud | Varies | Uses vision LLMs (GPT-4o, Claude, Gemini, etc.) to extract text |
+| **[Docling](benchmarkdown/extractors/docling/README.md)** | Local | Free | IBM's open-source library, no API key needed |
+| **[AWS Textract](benchmarkdown/extractors/textract/README.md)** | Cloud | Paid | Amazon's OCR service, requires AWS account |
+| **[LlamaParse](benchmarkdown/extractors/llamaparse/README.md)** | Cloud | Free tier + paid | LlamaIndex's parsing service |
+| **[TensorLake](benchmarkdown/extractors/tensorlake/README.md)** | Cloud | Paid | Advanced OCR with table and signature detection |
+| **[Azure Document Intelligence](benchmarkdown/extractors/azure_document_intelligence/README.md)** | Cloud | Paid | Microsoft's document analysis service |
+| **[LiteLLM](benchmarkdown/extractors/litellm/README.md)** | Cloud | Varies | Uses vision LLMs (GPT-4o, Claude, Gemini, etc.) to extract text |
 
 Only extractors with valid credentials appear in the UI. You can start with just Docling (free, no setup) and add cloud services later.
 
