@@ -1,7 +1,9 @@
-"""Test ROUGE-2 bigram overlap metric."""
+"""Test ROUGE-2 bigram overlap metric (F1, Recall, Precision)."""
 
 import asyncio
-from benchmarkdown.metrics.rouge2.metric import Rouge2Metric, normalize_for_comparison
+from benchmarkdown.metrics.rouge2.metric import (
+    Rouge2Metric, Rouge2RecallMetric, Rouge2PrecisionMetric, normalize_for_comparison,
+)
 
 
 async def test_identical_text():
@@ -170,6 +172,77 @@ async def test_details_accuracy():
     print("\n✅ Details report accurate bigram counts")
 
 
+async def test_recall_metric():
+    """Recall metric returns recall as primary value."""
+    print("\n" + "="*60)
+    print("Test 10: Recall Metric")
+    print("="*60)
+
+    metric = Rouge2RecallMetric()
+
+    # Truncated extraction: all extracted bigrams match, but many ref bigrams missing
+    ground_truth = "The quick brown fox jumps over the lazy dog near the river bank."
+    extracted = "The quick brown fox"
+    result = await metric.compute(ground_truth, extracted)
+
+    print(f"Recall: {result.formatted_value}")
+    assert result.value == 0.25, f"Expected recall 0.25, got {result.value}"
+
+    # Full content: recall should be 1.0
+    result2 = await metric.compute(ground_truth, ground_truth)
+    assert result2.value == 1.0
+    print("\n✅ Recall metric works correctly")
+
+
+async def test_precision_metric():
+    """Precision metric returns precision as primary value."""
+    print("\n" + "="*60)
+    print("Test 11: Precision Metric")
+    print("="*60)
+
+    metric = Rouge2PrecisionMetric()
+
+    # Truncated extraction: all extracted bigrams match ref → precision = 1.0
+    ground_truth = "The quick brown fox jumps over the lazy dog near the river bank."
+    extracted = "The quick brown fox"
+    result = await metric.compute(ground_truth, extracted)
+
+    print(f"Precision: {result.formatted_value}")
+    assert result.value == 1.0, f"Expected precision 1.0, got {result.value}"
+
+    # Boilerplate prepended: precision < 1.0
+    extracted_junk = "Cookie policy accept all terms. The quick brown fox jumps over the lazy dog near the river bank."
+    result2 = await metric.compute(ground_truth, extracted_junk)
+
+    print(f"Precision with junk: {result2.formatted_value}")
+    assert result2.value < 1.0, "Boilerplate should reduce precision"
+    print("\n✅ Precision metric works correctly")
+
+
+async def test_recall_precision_empty():
+    """Recall and precision handle empty inputs correctly."""
+    print("\n" + "="*60)
+    print("Test 12: Recall/Precision Empty Inputs")
+    print("="*60)
+
+    recall = Rouge2RecallMetric()
+    precision = Rouge2PrecisionMetric()
+
+    # Both empty → 1.0
+    r = await recall.compute("", "")
+    p = await precision.compute("", "")
+    assert r.value == 1.0, f"Recall for both empty should be 1.0, got {r.value}"
+    assert p.value == 1.0, f"Precision for both empty should be 1.0, got {p.value}"
+
+    # Empty extraction → recall = 0, precision = 0
+    r2 = await recall.compute("some ground truth text here", "")
+    p2 = await precision.compute("some ground truth text here", "")
+    assert r2.value == 0.0
+    assert p2.value == 0.0
+
+    print("\n✅ Recall/Precision handle empty inputs correctly")
+
+
 async def main():
     """Run all tests."""
     print("\n🧪 Testing ROUGE-2 Bigram Overlap Metric\n")
@@ -184,6 +257,9 @@ async def main():
         await test_fenced_code_blocks_stripped()
         await test_single_token()
         await test_details_accuracy()
+        await test_recall_metric()
+        await test_precision_metric()
+        await test_recall_precision_empty()
 
         print("\n" + "="*60)
         print("✅ All tests passed!")
