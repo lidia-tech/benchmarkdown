@@ -15,6 +15,8 @@ from benchmarkdown.metrics.base import MetricResult
 
 def normalize_for_comparison(text: str) -> str:
     """Strip markdown formatting, URLs, and normalize whitespace."""
+    # Fenced code blocks (``` ... ```)
+    text = re.sub(r"```[^\n]*\n.*?```", "", text, flags=re.DOTALL)
     # Headings
     text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
     # Bold / italic markers
@@ -59,12 +61,24 @@ class Rouge2Metric:
         ext_bg = _bigrams(ext_tokens)
         ref_bg = _bigrams(ref_tokens)
 
-        overlap = sum((ext_bg & ref_bg).values())
-        ref_total = sum(ref_bg.values()) or 1
-        ext_total = sum(ext_bg.values()) or 1
+        ref_total = sum(ref_bg.values())
+        ext_total = sum(ext_bg.values())
 
-        recall = overlap / ref_total
-        precision = overlap / ext_total
+        # Both texts empty or single-token → identical, perfect match
+        if ref_total == 0 and ext_total == 0:
+            return MetricResult(
+                value=1.0,
+                description="ROUGE-2 F1 (both texts empty or single-token)",
+                details={
+                    "recall": 1.0, "precision": 1.0, "f1": 1.0,
+                    "ref_bigrams": 0, "ext_bigrams": 0, "overlap": 0,
+                },
+                formatted_value="100.0%",
+            )
+
+        overlap = sum((ext_bg & ref_bg).values())
+        recall = overlap / ref_total if ref_total > 0 else 0.0
+        precision = overlap / ext_total if ext_total > 0 else 0.0
         f1 = (
             2 * precision * recall / (precision + recall)
             if (precision + recall) > 0
