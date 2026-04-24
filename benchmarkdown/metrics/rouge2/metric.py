@@ -53,48 +53,73 @@ def _bigrams(tokens: list[str]) -> Counter:
     return Counter(zip(tokens, tokens[1:]))
 
 
+def compute_bigram_overlap(ground_truth: str, extracted: str) -> dict:
+    """Compute bigram overlap scores between ground truth and extracted text.
+
+    Returns dict with recall, precision, f1, ref_bigrams, ext_bigrams, overlap.
+    """
+    ext_tokens = normalize_for_comparison(extracted).split()
+    ref_tokens = normalize_for_comparison(ground_truth).split()
+
+    ext_bg = _bigrams(ext_tokens)
+    ref_bg = _bigrams(ref_tokens)
+
+    ref_total = sum(ref_bg.values())
+    ext_total = sum(ext_bg.values())
+
+    if ref_total == 0 and ext_total == 0:
+        return {
+            "recall": 1.0, "precision": 1.0, "f1": 1.0,
+            "ref_bigrams": 0, "ext_bigrams": 0, "overlap": 0,
+        }
+
+    overlap = sum((ext_bg & ref_bg).values())
+    recall = overlap / ref_total if ref_total > 0 else 0.0
+    precision = overlap / ext_total if ext_total > 0 else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall) > 0
+        else 0.0
+    )
+
+    return {
+        "recall": round(recall, 4),
+        "precision": round(precision, 4),
+        "f1": round(f1, 4),
+        "ref_bigrams": ref_total,
+        "ext_bigrams": ext_total,
+        "overlap": overlap,
+    }
+
+
 class Rouge2Metric:
     async def compute(self, ground_truth: str, extracted: str) -> MetricResult:
-        ext_tokens = normalize_for_comparison(extracted).split()
-        ref_tokens = normalize_for_comparison(ground_truth).split()
-
-        ext_bg = _bigrams(ext_tokens)
-        ref_bg = _bigrams(ref_tokens)
-
-        ref_total = sum(ref_bg.values())
-        ext_total = sum(ext_bg.values())
-
-        # Both texts empty or single-token → identical, perfect match
-        if ref_total == 0 and ext_total == 0:
-            return MetricResult(
-                value=1.0,
-                description="ROUGE-2 F1 (both texts empty or single-token)",
-                details={
-                    "recall": 1.0, "precision": 1.0, "f1": 1.0,
-                    "ref_bigrams": 0, "ext_bigrams": 0, "overlap": 0,
-                },
-                formatted_value="100.0%",
-            )
-
-        overlap = sum((ext_bg & ref_bg).values())
-        recall = overlap / ref_total if ref_total > 0 else 0.0
-        precision = overlap / ext_total if ext_total > 0 else 0.0
-        f1 = (
-            2 * precision * recall / (precision + recall)
-            if (precision + recall) > 0
-            else 0.0
+        scores = compute_bigram_overlap(ground_truth, extracted)
+        return MetricResult(
+            value=scores["f1"],
+            description=f"ROUGE-2 F1 (bigram overlap: {scores['overlap']} / ref:{scores['ref_bigrams']} ext:{scores['ext_bigrams']})",
+            details=scores,
+            formatted_value=f"{scores['f1'] * 100:.1f}%",
         )
 
+
+class Rouge2RecallMetric:
+    async def compute(self, ground_truth: str, extracted: str) -> MetricResult:
+        scores = compute_bigram_overlap(ground_truth, extracted)
         return MetricResult(
-            value=round(f1, 4),
-            description=f"ROUGE-2 F1 (bigram overlap: {overlap} / ref:{ref_total} ext:{ext_total})",
-            details={
-                "recall": round(recall, 4),
-                "precision": round(precision, 4),
-                "f1": round(f1, 4),
-                "ref_bigrams": ref_total,
-                "ext_bigrams": ext_total,
-                "overlap": overlap,
-            },
-            formatted_value=f"{f1 * 100:.1f}%",
+            value=scores["recall"],
+            description=f"ROUGE-2 Recall (content completeness: {scores['overlap']}/{scores['ref_bigrams']} ref bigrams found)",
+            details=scores,
+            formatted_value=f"{scores['recall'] * 100:.1f}%",
+        )
+
+
+class Rouge2PrecisionMetric:
+    async def compute(self, ground_truth: str, extracted: str) -> MetricResult:
+        scores = compute_bigram_overlap(ground_truth, extracted)
+        return MetricResult(
+            value=scores["precision"],
+            description=f"ROUGE-2 Precision (content cleanliness: {scores['overlap']}/{scores['ext_bigrams']} ext bigrams matched)",
+            details=scores,
+            formatted_value=f"{scores['precision'] * 100:.1f}%",
         )
