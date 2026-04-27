@@ -52,6 +52,15 @@ Implements dynamic show/hide of dependent configuration fields based on parent f
 - Commits: f9d930a, f2c6be4, 925eb7f
 - Use case: Any extractor with field dependencies
 
+### [rouge2_metric.md](./rouge2_metric.md)
+**ROUGE-2 Bigram Overlap Metric**
+
+Word bigram multiset overlap (ROUGE-2 style) for measuring content recall, precision, and F1 between extracted markdown and ground truth. No external dependencies.
+
+- Status: ✅ Complete
+- Issue: #6
+- Use case: Evaluating content fidelity of document extraction
+
 ---
 
 ## Contributing
