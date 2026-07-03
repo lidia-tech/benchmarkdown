@@ -28,7 +28,7 @@ def test_save_and_load_tensorlake_profile():
     # Clean up any existing test profile
     try:
         pm.delete_profile(profile_name)
-    except:
+    except Exception:
         pass
 
     # Simulate UI values (what Gradio would return)
@@ -50,114 +50,71 @@ def test_save_and_load_tensorlake_profile():
         'include_full_page_image': False,
     }
 
-    # Step 1: Build config from UI values
-    print("\n1. Building config from UI values...")
     try:
+        # Step 1: Build config from UI values
+        print("\n1. Building config from UI values...")
         config = build_config_from_ui_values(Config, ui_values)
         print(f"   ✅ Config built successfully")
         print(f"   chunking_strategy: {config.chunking_strategy} (type: {type(config.chunking_strategy).__name__})")
         print(f"   table_parsing_format: {config.table_parsing_format} (type: {type(config.table_parsing_format).__name__})")
         print(f"   ocr_model: {config.ocr_model} (type: {type(config.ocr_model).__name__})")
-    except Exception as e:
-        print(f"   ❌ FAIL: Config build failed: {e}")
-        return False
 
-    # Step 2: Save profile
-    print("\n2. Saving profile...")
-    try:
+        # Step 2: Save profile
+        print("\n2. Saving profile...")
         pm.save_profile(engine_name, profile_name, ui_values)
         print(f"   ✅ Profile saved")
-    except Exception as e:
-        print(f"   ❌ FAIL: Profile save failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
-    # Step 3: Verify profile file exists and contains correct values
-    print("\n3. Verifying profile file...")
-    profile_path = Path("config") / f"{profile_name}.json"
-    if not profile_path.exists():
-        print(f"   ❌ FAIL: Profile file not found at {profile_path}")
-        return False
+        # Step 3: Verify profile file exists and contains correct values
+        print("\n3. Verifying profile file...")
+        profile_path = Path("config") / f"{profile_name}.json"
+        assert profile_path.exists(), f"Profile file not found at {profile_path}"
 
-    with open(profile_path, 'r') as f:
-        profile_data = json.load(f)
+        with open(profile_path, 'r') as f:
+            profile_data = json.load(f)
 
-    print(f"   ✅ Profile file exists")
-    print(f"   Engine: {profile_data.get('engine')}")
-    print(f"   chunking_strategy: {profile_data['config_data'].get('chunking_strategy')}")
-    print(f"   table_parsing_format: {profile_data['config_data'].get('table_parsing_format')}")
-    print(f"   ocr_model: {profile_data['config_data'].get('ocr_model')}")
+        print(f"   ✅ Profile file exists")
+        print(f"   Engine: {profile_data.get('engine')}")
+        print(f"   chunking_strategy: {profile_data['config_data'].get('chunking_strategy')}")
+        print(f"   table_parsing_format: {profile_data['config_data'].get('table_parsing_format')}")
+        print(f"   ocr_model: {profile_data['config_data'].get('ocr_model')}")
 
-    # Verify values are strings, not enum representations
-    if profile_data['config_data']['chunking_strategy'] == 'section':
+        # Verify values are strings, not enum representations
+        assert profile_data['config_data']['chunking_strategy'] == 'section', (
+            f"chunking_strategy is {profile_data['config_data']['chunking_strategy']}"
+        )
         print(f"   ✅ chunking_strategy is correct string value")
-    else:
-        print(f"   ❌ FAIL: chunking_strategy is {profile_data['config_data']['chunking_strategy']}")
-        return False
 
-    # Step 4: Load profile
-    print("\n4. Loading profile...")
-    try:
+        # Step 4: Load profile
+        print("\n4. Loading profile...")
         loaded_profile = pm.load_profile(profile_name)
         loaded_engine = loaded_profile['engine']
         loaded_values = loaded_profile['config_data']
         print(f"   ✅ Profile loaded")
         print(f"   Engine: {loaded_engine}")
         print(f"   chunking_strategy: {loaded_values.get('chunking_strategy')}")
-    except Exception as e:
-        print(f"   ❌ FAIL: Profile load failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
-    # Step 5: Build config from loaded values (simulate UI reload)
-    print("\n5. Building config from loaded values...")
-    try:
+        # Step 5: Build config from loaded values (simulate UI reload)
+        print("\n5. Building config from loaded values...")
         reloaded_config = build_config_from_ui_values(Config, loaded_values)
         print(f"   ✅ Config rebuilt from loaded values")
         print(f"   chunking_strategy: {reloaded_config.chunking_strategy}")
         print(f"   table_parsing_format: {reloaded_config.table_parsing_format}")
         print(f"   ocr_model: {reloaded_config.ocr_model}")
-    except Exception as e:
-        print(f"   ❌ FAIL: Config rebuild failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
-    # Step 6: Verify values match original
-    print("\n6. Verifying values match original...")
-    if (reloaded_config.chunking_strategy == config.chunking_strategy and
-        reloaded_config.table_parsing_format == config.table_parsing_format and
-        reloaded_config.ocr_model == config.ocr_model):
+        # Step 6: Verify values match original
+        print("\n6. Verifying values match original...")
+        assert reloaded_config.chunking_strategy == config.chunking_strategy, (
+            f"chunking_strategy mismatch: original {config.chunking_strategy}, "
+            f"reloaded {reloaded_config.chunking_strategy}"
+        )
+        assert reloaded_config.table_parsing_format == config.table_parsing_format
+        assert reloaded_config.ocr_model == config.ocr_model
         print(f"   ✅ All enum values match original config")
-    else:
-        print(f"   ❌ FAIL: Values don't match")
-        print(f"      Original chunking: {config.chunking_strategy}")
-        print(f"      Reloaded chunking: {reloaded_config.chunking_strategy}")
-        return False
-
-    # Clean up
-    print("\n7. Cleaning up...")
-    try:
-        pm.delete_profile(profile_name)
-        print(f"   ✅ Test profile deleted")
-    except Exception as e:
-        print(f"   ⚠️  Warning: Could not delete test profile: {e}")
-
-    return True
-
-
-if __name__ == '__main__':
-    print("Testing TensorLake Profile Save/Load Bug Fix")
-    print("="*60)
-
-    success = test_save_and_load_tensorlake_profile()
-
-    print("\n" + "="*60)
-    if success:
-        print("✅ All profile save/load tests passed!")
-        sys.exit(0)
-    else:
-        print("❌ Profile save/load test failed")
-        sys.exit(1)
+    finally:
+        # Clean up
+        print("\n7. Cleaning up...")
+        try:
+            pm.delete_profile(profile_name)
+            print(f"   ✅ Test profile deleted")
+        except Exception as e:
+            print(f"   ⚠️  Warning: Could not delete test profile: {e}")

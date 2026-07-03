@@ -24,7 +24,6 @@ def test_azure_config_basic():
     print(f"  ✓ Default model: {config.model_id}")
     print(f"  ✓ Default output format: {config.output_content_format}")
     print("  ✅ Basic config created successfully")
-    return True
 
 
 def test_azure_config_advanced():
@@ -61,7 +60,6 @@ def test_azure_config_advanced():
     print(f"  ✓ Output: {config.output}")
     print(f"  ✓ String index type: {config.string_index_type}")
     print("  ✅ Advanced config created successfully")
-    return True
 
 
 def test_azure_config_conversion():
@@ -98,20 +96,12 @@ def test_azure_config_conversion():
     print(f"  ✓ String index type: {kwargs.get('string_index_type')}")
 
     # Verify all enum values are converted to strings
-    all_strings = all([
-        isinstance(model_id, str),
-        isinstance(kwargs['output_content_format'], str),
-        all(isinstance(f, str) for f in kwargs['features']),
-        all(isinstance(o, str) for o in kwargs['output']),
-        isinstance(kwargs['string_index_type'], str)
-    ])
-
-    if all_strings:
-        print("  ✅ All enum values correctly converted to strings")
-        return True
-    else:
-        print("  ❌ Some enum values are not strings")
-        return False
+    assert isinstance(model_id, str)
+    assert isinstance(kwargs['output_content_format'], str)
+    assert all(isinstance(f, str) for f in kwargs['features'])
+    assert all(isinstance(o, str) for o in kwargs['output'])
+    assert isinstance(kwargs['string_index_type'], str)
+    print("  ✅ All enum values correctly converted to strings")
 
 
 def test_azure_extractor_integration():
@@ -152,7 +142,6 @@ def test_azure_extractor_integration():
     print(f"  ✓ Output: {extractor_advanced.analyze_kwargs.get('output')}")
 
     print("  ✅ Extractor integration successful")
-    return True
 
 
 def test_azure_ui_generation():
@@ -169,27 +158,17 @@ def test_azure_ui_generation():
     azure_metadata = registry.get_extractor('azure_document_intelligence')
     if not azure_metadata:
         print("  ⚠️  Azure Document Intelligence not in registry (expected if env vars not set)")
-        return True
+        return
 
     config_class = azure_metadata.config_class
 
     print("  Testing UI component generation for all fields:")
-    all_success = True
     for field_name, field_info in config_class.model_fields.items():
-        try:
-            field_type = field_info.annotation
-            component, name = create_gradio_component_from_field(field_name, field_info, field_type)
-            print(f"    ✓ {field_name}: {type(component).__name__}")
-        except Exception as e:
-            print(f"    ❌ {field_name}: {e}")
-            all_success = False
+        field_type = field_info.annotation
+        component, name = create_gradio_component_from_field(field_name, field_info, field_type)
+        print(f"    ✓ {field_name}: {type(component).__name__}")
 
-    if all_success:
-        print("  ✅ All UI components generated successfully")
-        return True
-    else:
-        print("  ❌ Some UI components failed to generate")
-        return False
+    print("  ✅ All UI components generated successfully")
 
 
 def test_azure_field_groupings():
@@ -204,59 +183,6 @@ def test_azure_field_groupings():
 
     # Verify new fields are in advanced
     expected_new_fields = ['features', 'query_fields', 'output', 'string_index_type']
-    all_present = all(field in ADVANCED_FIELDS for field in expected_new_fields)
-
-    if all_present:
-        print("  ✅ All new fields present in ADVANCED_FIELDS")
-        return True
-    else:
-        missing = [f for f in expected_new_fields if f not in ADVANCED_FIELDS]
-        print(f"  ❌ Missing fields in ADVANCED_FIELDS: {missing}")
-        return False
-
-
-def main():
-    """Run all tests."""
-    print("=" * 60)
-    print("Azure Document Intelligence Configuration Tests")
-    print("API Version: 2024-11-30")
-    print("=" * 60)
-
-    tests = [
-        test_azure_config_basic,
-        test_azure_config_advanced,
-        test_azure_config_conversion,
-        test_azure_extractor_integration,
-        test_azure_ui_generation,
-        test_azure_field_groupings,
-    ]
-
-    results = []
-    for test_func in tests:
-        try:
-            result = test_func()
-            results.append(result)
-        except Exception as e:
-            print(f"\n  ❌ Test failed with exception: {e}")
-            import traceback
-            traceback.print_exc()
-            results.append(False)
-
-    # Summary
-    print("\n" + "=" * 60)
-    print("Test Summary")
-    print("=" * 60)
-    passed = sum(results)
-    total = len(results)
-    print(f"Passed: {passed}/{total}")
-
-    if passed == total:
-        print("✅ All tests passed!")
-        return 0
-    else:
-        print(f"❌ {total - passed} test(s) failed")
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    missing = [f for f in expected_new_fields if f not in ADVANCED_FIELDS]
+    assert not missing, f"Missing fields in ADVANCED_FIELDS: {missing}"
+    print("  ✅ All new fields present in ADVANCED_FIELDS")

@@ -28,47 +28,9 @@ jobs:
       - name: Install dependencies (all extractor + metric groups)
         run: uv sync --all-groups
 
-      # The suite is a set of standalone scripts (no pytest runner). We run the
-      # subset that passes without external API keys, a running app, a browser,
-      # or a saved config/ profile. Each script is run individually; the job
-      # fails if any fail.
+      # The suite runs under pytest. Integration tests (@pytest.mark.integration)
+      # need live API credentials, a running app, or a browser; they are
+      # deselected by default via `addopts = "-m 'not integration'"` in
+      # pyproject.toml, so a bare `pytest` run is the offline unit suite.
       - name: Run tests
-        run: |
-          set -u
-          tests=(
-            tests/test_rouge2_metric.py
-            tests/test_metrics_basic.py
-            tests/test_env_vars.py
-            tests/test_gt_upload_list.py
-            tests/test_validation_workflow.py
-            tests/test_persistence.py
-            tests/test_textract_config.py
-            tests/test_config_extraction.py
-            tests/test_config_ui.py
-            tests/test_multiple_configs.py
-            tests/test_ocr_engines.py
-            tests/test_profile_manager.py
-            tests/test_redesigned_workflow.py
-            tests/test_ui.py
-            tests/test_app_simple.py
-            tests/test_app_with_validation.py
-            tests/test_integrated_app.py
-            tests/test_azure_config_refactoring.py
-            tests/test_azure_component_count.py
-          )
-          failed=()
-          for t in "${tests[@]}"; do
-            echo "::group::$t"
-            if uv run python "$t"; then
-              echo "PASS: $t"
-            else
-              echo "FAIL: $t"
-              failed+=("$t")
-            fi
-            echo "::endgroup::"
-          done
-          if [ ${#failed[@]} -ne 0 ]; then
-            echo "Failed tests: ${failed[*]}"
-            exit 1
-          fi
-          echo "All ${#tests[@]} tests passed."
+        run: uv run pytest

@@ -19,8 +19,17 @@ uv sync --group docling       # or: textract, llamaparse, tensorlake, azure-docu
 # Launch the Gradio web UI
 uv run python app.py
 
-# Run a single test
-uv run python tests/test_config_ui.py
+# Run the test suite (integration tests deselected by default)
+uv run pytest
+
+# Run a single test file or test
+uv run pytest tests/test_config_ui.py
+uv run pytest tests/test_config_ui.py::test_name
+
+# Run integration tests (need live API credentials / a running app / a browser)
+uv run pytest -m integration
+# ...including tests that hit real billable services
+uv run pytest -m integration --live
 
 # Update all dependencies
 uv sync --all-extras --all-groups
@@ -85,9 +94,14 @@ For nested configs (like Docling's OCR engines), export `NESTED_CONFIGS` dict �
 
 ## Testing
 
-Tests are standalone scripts in `tests/` (not pytest). Run individually with `uv run python tests/test_*.py`. Tests use documents from `data/input/lidia-anon/` and skip gracefully if missing.
+Tests run under **pytest** (config in `pyproject.toml` `[tool.pytest.ini_options]`; markers and the `--live` flag in `tests/conftest.py`). Test functions use plain `assert` — do not wrap assertions in `try/except` that swallows failures, and test functions must return `None`. `async def test_*` are supported directly (`asyncio_mode = "auto"`).
 
-Browser/API tests (`test_browser.py`, `test_workflow_api.py`) require the app running first.
+Two markers gate tests that reach beyond an offline unit run:
+
+- `@pytest.mark.integration` — needs live API credentials, a running app, or a browser. **Deselected by default** via `addopts = "-m 'not integration'"`, so a bare `uv run pytest` is the offline unit suite (this is what CI runs). Run them with `uv run pytest -m integration`.
+- `@pytest.mark.live` — hits real, billable external services. **Collected but skipped** unless `--live` is passed. A live integration test needs both: `uv run pytest -m integration --live`.
+
+Browser/API tests (`test_browser.py`, `test_workflow_api.py`) require the app running first and are marked `integration`. Tests use documents from `data/input/lidia-anon/` and skip gracefully (`pytest.skip`) if missing.
 
 ## Documentation Guidelines
 
