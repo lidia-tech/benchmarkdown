@@ -10,6 +10,7 @@ Quick reference for all environment variables used by Benchmarkdown extractors.
 |----------|-----------|-----------|-------------|
 | **Authentication** |
 | `TENSORLAKE_API_KEY` | TensorLake | ✅ Required | TensorLake API key ([Get key](https://cloud.tensorlake.ai/)) |
+| `MISTRAL_API_KEY` | Mistral OCR | ✅ Required | Mistral API key ([Get key](https://console.mistral.ai/)) |
 | `LLAMA_CLOUD_API_KEY` | LlamaParse | ✅ Required | LlamaIndex LlamaParse API key ([Get key](https://cloud.llamaindex.ai/)) |
 | `OPENAI_API_KEY` | LlamaParse | ⚙️ Optional | OpenAI API key for GPT-4o enhanced parsing mode |
 | `TEXTRACT_S3_WORKSPACE` | AWS Textract | ✅ Required | S3 URI for workspace (e.g., `s3://bucket/path/`) |
@@ -63,6 +64,7 @@ Extractors only appear in the UI if their required environment variables are set
 - ✅ **AWS Textract**: Available when `TEXTRACT_S3_WORKSPACE` and AWS credentials are set
 - ✅ **LlamaParse**: Available when `LLAMA_CLOUD_API_KEY` is set
 - ✅ **TensorLake**: Available when `TENSORLAKE_API_KEY` is set
+- ✅ **Mistral OCR**: Available when `MISTRAL_API_KEY` is set
 - ✅ **Azure Document Intelligence**: Available when both `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY` are set
 
 ## Logging Configuration
@@ -116,6 +118,7 @@ BENCHMARKDOWN_LOG_LEVEL=DEBUG uv run python app.py
 | AWS Textract | 💰 Paid | Per-page pricing ([pricing](https://aws.amazon.com/textract/pricing/)) |
 | LlamaParse | 💰 Paid | Free tier available ([pricing](https://cloud.llamaindex.ai/pricing)) |
 | TensorLake | 💰 Paid | Contact for pricing ([website](https://cloud.tensorlake.ai/)) |
+| Mistral OCR | 💰 Paid | Per-page pricing ([pricing](https://mistral.ai/pricing)) |
 | Azure Document Intelligence | 💰 Paid | Per-page pricing ([pricing](https://azure.microsoft.com/pricing/details/form-recognizer/)) |
 
 ## See Also
