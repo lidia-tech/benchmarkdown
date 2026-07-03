@@ -85,6 +85,17 @@ class MistralOCRConfig(BaseModel):
         description="Minimum height and width (px) for an image to be extracted (leave empty for no minimum)"
     )
 
+    # ========== ROBUSTNESS ==========
+
+    max_retries: int = Field(
+        default=3,
+        ge=0,
+        description=(
+            "Number of times to retry the upload/OCR sequence on transient API "
+            "failures (post-upload 404 race, 5xx, 429, connection errors)"
+        )
+    )
+
     class Config:
         use_enum_values = True
 

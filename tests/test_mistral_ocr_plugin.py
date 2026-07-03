@@ -11,7 +11,10 @@ gracefully unless ``MISTRAL_API_KEY`` and a test document are available.
 
 import os
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
+import httpx
 import pytest
 
 from benchmarkdown.extractors.mistral_ocr import (
@@ -24,6 +27,7 @@ from benchmarkdown.extractors.mistral_ocr import (
     is_available,
 )
 from benchmarkdown.extractors.mistral_ocr.config import TableFormatEnum
+from benchmarkdown.extractors.mistral_ocr import extractor as extractor_module
 
 
 def test_config_defaults():
@@ -37,6 +41,7 @@ def test_config_defaults():
     assert config.pages is None
     assert config.image_limit is None
     assert config.image_min_size is None
+    assert config.max_retries == 3
 
 
 def test_config_custom_values():
@@ -115,6 +120,103 @@ def test_plugin_interface():
     config_fields = set(MistralOCRConfig.model_fields.keys())
     for field in BASIC_FIELDS + ADVANCED_FIELDS:
         assert field in config_fields, f"UI field {field} missing from config model"
+
+    # max_retries is a robustness setting, not a benchmark knob: kept out of the UI.
+    assert "max_retries" not in BASIC_FIELDS
+    assert "max_retries" not in ADVANCED_FIELDS
+
+
+def _fake_page(markdown):
+    return SimpleNamespace(markdown=markdown)
+
+
+def _make_extractor_with_fake_client(process_side_effect, max_retries=3):
+    """Build an extractor whose client is a fake with the given ocr.process behavior."""
+    extractor = MistralOCRExtractor(config=MistralOCRConfig(max_retries=max_retries))
+
+    client = MagicMock()
+    client.files.upload.return_value = SimpleNamespace(id="file-123")
+    client.files.get_signed_url.return_value = SimpleNamespace(url="https://signed.example/doc")
+    client.files.delete.return_value = None
+    client.ocr.process.side_effect = process_side_effect
+
+    extractor.client = client
+    return extractor, client
+
+
+def _make_doc(tmp_path):
+    doc = tmp_path / "doc.pdf"
+    doc.write_bytes(b"%PDF-1.4 fake test bytes")
+    return str(doc)
+
+
+async def test_retry_then_succeeds(monkeypatch, tmp_path):
+    """A transient error is retried and the subsequent success is returned."""
+    monkeypatch.setattr(extractor_module.time, "sleep", lambda _s: None)
+
+    success = SimpleNamespace(pages=[_fake_page("hello"), _fake_page("world")])
+    extractor, client = _make_extractor_with_fake_client(
+        process_side_effect=[
+            httpx.RemoteProtocolError("Server disconnected without sending a response."),
+            success,
+        ],
+        max_retries=3,
+    )
+
+    result = await extractor.extract_markdown(_make_doc(tmp_path))
+
+    assert result == "hello\n\nworld"
+    assert client.ocr.process.call_count == 2
+    # Each attempt re-uploads, so upload is called once per attempt.
+    assert client.files.upload.call_count == 2
+    # The uploaded file is cleaned up on every attempt.
+    assert client.files.delete.call_count == 2
+
+
+async def test_fail_fast_on_auth_error(monkeypatch, tmp_path):
+    """A 401 is permanent: no retries, mapped to the auth-friendly message."""
+    sleep_calls = []
+    monkeypatch.setattr(extractor_module.time, "sleep", lambda s: sleep_calls.append(s))
+
+    extractor, client = _make_extractor_with_fake_client(
+        process_side_effect=Exception("API error occurred: Status 401. Body: unauthorized"),
+        max_retries=3,
+    )
+
+    with pytest.raises(ValueError, match="Authentication failed"):
+        await extractor.extract_markdown(_make_doc(tmp_path))
+
+    assert client.ocr.process.call_count == 1  # no retries on a permanent error
+    assert sleep_calls == []  # never backed off
+
+
+async def test_retries_exhausted(monkeypatch, tmp_path):
+    """A persistently transient error raises after exactly 1 + max_retries attempts."""
+    monkeypatch.setattr(extractor_module.time, "sleep", lambda _s: None)
+
+    extractor, client = _make_extractor_with_fake_client(
+        process_side_effect=httpx.RemoteProtocolError("Server disconnected."),
+        max_retries=2,
+    )
+
+    with pytest.raises(ValueError, match="Mistral OCR extraction failed"):
+        await extractor.extract_markdown(_make_doc(tmp_path))
+
+    assert client.ocr.process.call_count == 3  # 1 initial + 2 retries
+
+
+async def test_transient_classification():
+    """_is_transient retries races/5xx/connection errors and fails fast on auth/bad-request."""
+    is_transient = extractor_module._is_transient
+
+    assert is_transient(httpx.RemoteProtocolError("disconnected")) is True
+    assert is_transient(Exception("Status 404. Body: No file matches the given query.")) is True
+    assert is_transient(Exception("Status 500. Body: internal error")) is True
+    assert is_transient(Exception("Status 429. Body: rate limited")) is True
+
+    assert is_transient(Exception("Status 401. Body: unauthorized")) is False
+    assert is_transient(Exception("Status 400. Body: bad request")) is False
+    assert is_transient(Exception("something unclassifiable")) is False
 
 
 def test_extractor_registry_discovery(monkeypatch):
