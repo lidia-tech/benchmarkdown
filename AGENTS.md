@@ -31,6 +31,9 @@ uv run pytest -m integration
 # ...including tests that hit real billable services
 uv run pytest -m integration --live
 
+# Run with coverage (CI posts this as a PR comment)
+uv run pytest --cov=benchmarkdown --cov-report=term-missing
+
 # Update all dependencies
 uv sync --all-extras --all-groups
 ```
