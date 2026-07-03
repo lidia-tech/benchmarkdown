@@ -2,7 +2,8 @@
 
 import asyncio
 from benchmarkdown.metrics import MetricRegistry
-from benchmarkdown.metrics.text_stats import create_word_count_metric, create_char_count_metric
+from benchmarkdown.metrics.word_count.metric import WordCountMetric
+from benchmarkdown.metrics.char_count.metric import CharCountMetric
 
 
 async def test_metric_registry():
@@ -30,7 +31,7 @@ async def test_word_count_metric():
     print("Test 2: Word Count Metric")
     print("="*60)
 
-    metric = create_word_count_metric()
+    metric = WordCountMetric()
 
     ground_truth = "This is a test document with ten words in it."
     extracted = "This is a test with five words."
@@ -56,7 +57,7 @@ async def test_char_count_metric():
     print("Test 3: Character Count Metric")
     print("="*60)
 
-    metric = create_char_count_metric()
+    metric = CharCountMetric()
 
     ground_truth = "This is a test document."
     extracted = "This is a test."
@@ -84,8 +85,8 @@ async def test_perfect_match():
 
     text = "This is exactly the same text."
 
-    word_metric = create_word_count_metric()
-    char_metric = create_char_count_metric()
+    word_metric = WordCountMetric()
+    char_metric = CharCountMetric()
 
     word_result = await word_metric.compute(text, text)
     char_result = await char_metric.compute(text, text)
@@ -105,7 +106,7 @@ async def test_empty_ground_truth():
     print("Test 5: Empty Ground Truth")
     print("="*60)
 
-    word_metric = create_word_count_metric()
+    word_metric = WordCountMetric()
 
     ground_truth = ""
     extracted = "Some extracted text here."

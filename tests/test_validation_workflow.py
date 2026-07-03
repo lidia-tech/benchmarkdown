@@ -9,6 +9,9 @@ from typing import Optional
 from benchmarkdown.ui.validation import ValidationUI
 from benchmarkdown.metrics import MetricRegistry
 
+# Real metric plugin names (basic text-similarity metrics that need no API keys).
+METRICS = ["word_count_diff", "char_count_diff"]
+
 
 @dataclass
 class MockExtractionResult:
@@ -16,6 +19,20 @@ class MockExtractionResult:
     markdown: str
     error: Optional[str] = None
     timing: float = 0.0
+
+
+def _upload_gt(validation_ui: ValidationUI, name: str, text: str) -> str:
+    """Write a ground truth file with a controlled name, upload it, return its key.
+
+    ``upload_ground_truth`` takes only a file path and keys the stored ground
+    truth by the file's basename, which is also what ``run_validation`` expects
+    as ``selected_ground_truth``.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        gt_path = Path(tmp) / name
+        gt_path.write_text(text, encoding="utf-8")
+        status = validation_ui.upload_ground_truth(str(gt_path))
+    return status
 
 
 async def test_validation_ui_basic():
@@ -45,27 +62,16 @@ async def test_ground_truth_upload():
 
     validation_ui = ValidationUI()
 
-    # Create a temp file with ground truth
     gt_text = "This is the ground truth markdown text with exactly ten words here."
+    gt_name = "test_doc.md"
+    status = _upload_gt(validation_ui, gt_name, gt_text)
+    print(f"\n{status}")
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(gt_text)
-        gt_file = f.name
+    assert "✅" in status, "Upload should succeed"
+    assert gt_name in validation_ui.ground_truths, "GT should be stored under its filename"
+    assert validation_ui.ground_truths[gt_name] == gt_text, "GT text should match"
 
-    try:
-        # Upload ground truth
-        doc_name = "test_doc.pdf"
-        status = validation_ui.upload_ground_truth(gt_file, doc_name)
-        print(f"\n{status}")
-
-        assert "✅" in status, "Upload should succeed"
-        assert doc_name in validation_ui.ground_truths, "GT should be stored"
-        assert validation_ui.ground_truths[doc_name] == gt_text, "GT text should match"
-
-        print("\n✅ Ground truth upload works correctly")
-
-    finally:
-        Path(gt_file).unlink()
+    print("\n✅ Ground truth upload works correctly")
 
 
 async def test_validation_execution():
@@ -78,14 +84,10 @@ async def test_validation_execution():
 
     # Setup ground truth
     gt_text = "This is the ground truth text with ten words total."
+    gt_name = "gt.md"
+    _upload_gt(validation_ui, gt_name, gt_text)
+
     doc_name = "test_doc.pdf"
-
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(gt_text)
-        gt_file = f.name
-
-    validation_ui.upload_ground_truth(gt_file, doc_name)
-    Path(gt_file).unlink()
 
     # Setup mock extraction results
     ui_results = {
@@ -104,9 +106,10 @@ async def test_validation_execution():
     # Run validation
     status = await validation_ui.run_validation(
         ui_results=ui_results,
+        selected_ground_truth=gt_name,
         selected_documents=[doc_name],
         selected_extractors=["Docling", "AWS Textract"],
-        selected_metrics=["text_stats"]
+        selected_metrics=METRICS,
     )
 
     print(f"\n{status}")
@@ -138,15 +141,10 @@ async def test_validation_html_generation():
 
     # Setup and run validation
     gt_text = "This is the ground truth text."
+    gt_name = "gt.md"
+    _upload_gt(validation_ui, gt_name, gt_text)
+
     doc_name = "test_doc.pdf"
-
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(gt_text)
-        gt_file = f.name
-
-    validation_ui.upload_ground_truth(gt_file, doc_name)
-    Path(gt_file).unlink()
-
     ui_results = {
         doc_name: {
             "Docling": MockExtractionResult(markdown="This is extracted text."),
@@ -156,9 +154,10 @@ async def test_validation_html_generation():
 
     await validation_ui.run_validation(
         ui_results=ui_results,
+        selected_ground_truth=gt_name,
         selected_documents=[doc_name],
         selected_extractors=["Docling", "AWS Textract"],
-        selected_metrics=["text_stats"]
+        selected_metrics=METRICS,
     )
 
     # Generate HTML
@@ -169,6 +168,7 @@ async def test_validation_html_generation():
     assert doc_name in html, "Should include document name"
     assert "Docling" in html, "Should include Docling"
     assert "AWS Textract" in html, "Should include Textract"
+    # Metric names are rendered as title-cased labels ("word_count_diff" -> "Word Count Diff")
     assert "word_count_diff" in html or "Word Count Diff" in html, "Should include word count metric"
 
     print("\n✅ HTML generation works correctly")
@@ -182,91 +182,95 @@ async def test_validation_error_handling():
 
     validation_ui = ValidationUI()
 
-    # Try validation without ground truth
+    # Try validation without a selected ground truth
     status = await validation_ui.run_validation(
         ui_results={},
+        selected_ground_truth="",
         selected_documents=["missing_doc.pdf"],
         selected_extractors=["Docling"],
-        selected_metrics=["text_stats"]
+        selected_metrics=METRICS,
     )
-
     print(f"\n{status}")
-    assert "⚠️" in status and "Missing ground truth" in status, "Should warn about missing GT"
+    assert "⚠️" in status and "ground truth" in status.lower(), "Should warn about missing ground truth"
 
     # Try validation with no documents selected
     status = await validation_ui.run_validation(
         ui_results={},
+        selected_ground_truth="gt.md",
         selected_documents=[],
         selected_extractors=["Docling"],
-        selected_metrics=["text_stats"]
+        selected_metrics=METRICS,
     )
-
     print(f"{status}")
     assert "⚠️" in status and "document" in status.lower(), "Should warn about no documents"
 
     # Try validation with no extractors selected
     status = await validation_ui.run_validation(
         ui_results={},
+        selected_ground_truth="gt.md",
         selected_documents=["doc.pdf"],
         selected_extractors=[],
-        selected_metrics=["text_stats"]
+        selected_metrics=METRICS,
     )
-
     print(f"{status}")
     assert "⚠️" in status and "extractor" in status.lower(), "Should warn about no extractors"
+
+    # Try validation referencing a ground truth that was never uploaded
+    status = await validation_ui.run_validation(
+        ui_results={},
+        selected_ground_truth="never_uploaded.md",
+        selected_documents=["doc.pdf"],
+        selected_extractors=["Docling"],
+        selected_metrics=METRICS,
+    )
+    print(f"{status}")
+    assert "⚠️" in status and "not found" in status.lower(), "Should warn about unknown ground truth"
 
     print("\n✅ Error handling works correctly")
 
 
 async def test_multiple_documents():
-    """Test validation with multiple documents."""
+    """Test validation with multiple documents against a single ground truth."""
     print("\n" + "="*60)
     print("Test 6: Multiple Documents Validation")
     print("="*60)
 
     validation_ui = ValidationUI()
 
-    # Setup ground truths for multiple documents
-    documents = {
-        "doc1.pdf": "First document ground truth text.",
-        "doc2.pdf": "Second document has different content here.",
-        "doc3.pdf": "Third document with even more text content."
-    }
+    # A single ground truth is compared against every selected document's extraction.
+    gt_name = "gt.md"
+    _upload_gt(validation_ui, gt_name, "Shared ground truth text used for every document.")
 
-    for doc_name, gt_text in documents.items():
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-            f.write(gt_text)
-            gt_file = f.name
-        validation_ui.upload_ground_truth(gt_file, doc_name)
-        Path(gt_file).unlink()
+    doc_names = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
 
     # Setup extraction results for all documents
     ui_results = {
         doc_name: {
             "Docling": MockExtractionResult(markdown=f"Extracted text for {doc_name}")
         }
-        for doc_name in documents.keys()
+        for doc_name in doc_names
     }
 
     # Run validation for all documents
     status = await validation_ui.run_validation(
         ui_results=ui_results,
-        selected_documents=list(documents.keys()),
+        selected_ground_truth=gt_name,
+        selected_documents=doc_names,
         selected_extractors=["Docling"],
-        selected_metrics=["text_stats"]
+        selected_metrics=METRICS,
     )
 
     print(f"\n{status}")
     assert "✅" in status, "Validation should succeed"
 
     # Verify results for all documents
-    for doc_name in documents.keys():
+    for doc_name in doc_names:
         assert doc_name in validation_ui.validation_results, f"Should have results for {doc_name}"
         assert "Docling" in validation_ui.validation_results[doc_name], f"Should have Docling results for {doc_name}"
 
     # Generate HTML and check it includes all documents
     html = validation_ui.generate_validation_results_html()
-    for doc_name in documents.keys():
+    for doc_name in doc_names:
         assert doc_name in html, f"HTML should include {doc_name}"
 
     print(f"\n✅ Multiple documents validation works correctly")
