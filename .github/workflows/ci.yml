@@ -31,12 +31,12 @@ jobs:
       # The suite is a set of standalone scripts (no pytest runner). We run the
       # subset that passes without external API keys, a running app, a browser,
       # or a saved config/ profile. Each script is run individually; the job
-      # fails if any fail. (test_rouge2_metric is added once the ROUGE-2 metric
-      # lands on main.)
+      # fails if any fail.
       - name: Run tests
         run: |
           set -u
           tests=(
+            tests/test_rouge2_metric.py
             tests/test_config_extraction.py
             tests/test_config_ui.py
             tests/test_multiple_configs.py
