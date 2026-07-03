@@ -14,7 +14,7 @@ Benchmarkdown is a benchmark suite for comparing document-to-markdown extraction
 uv sync --all-groups
 
 # Install specific extractor only
-uv sync --group docling       # or: textract, llamaparse, tensorlake, azure-document-intelligence
+uv sync --group docling       # or: textract, llamaparse, tensorlake, mistral, azure-document-intelligence
 
 # Launch the Gradio web UI
 uv run python app.py

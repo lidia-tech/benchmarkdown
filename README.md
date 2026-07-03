@@ -22,6 +22,7 @@ There are many services that convert documents (PDF, DOCX) to Markdown: some run
 | **[AWS Textract](benchmarkdown/extractors/textract/README.md)** | Cloud | Paid | Amazon's OCR service, requires AWS account |
 | **[LlamaParse](benchmarkdown/extractors/llamaparse/README.md)** | Cloud | Free tier + paid | LlamaIndex's parsing service |
 | **[TensorLake](benchmarkdown/extractors/tensorlake/README.md)** | Cloud | Paid | Advanced OCR with table and signature detection |
+| **[Mistral OCR](benchmarkdown/extractors/mistral_ocr/README.md)** | Cloud | Paid | Mistral's dedicated OCR endpoint, markdown per page |
 | **[Azure Document Intelligence](benchmarkdown/extractors/azure_document_intelligence/README.md)** | Cloud | Paid | Microsoft's document analysis service |
 | **[LiteLLM](benchmarkdown/extractors/litellm/README.md)** | Cloud | Varies | Uses vision LLMs (GPT-4o, Claude, Gemini, etc.) to extract text |
 
@@ -45,6 +46,7 @@ uv sync                        # Core + Docling (free, local)
 uv sync --group textract       # + AWS Textract
 uv sync --group llamaparse     # + LlamaParse
 uv sync --group tensorlake     # + TensorLake
+uv sync --group mistral        # + Mistral OCR
 uv sync --group azure-document-intelligence  # + Azure
 uv sync --group litellm        # + LiteLLM (vision LLMs)
 ```
@@ -66,6 +68,9 @@ export LLAMA_CLOUD_API_KEY="your-key"
 
 # TensorLake
 export TENSORLAKE_API_KEY="your-key"
+
+# Mistral OCR
+export MISTRAL_API_KEY="your-key"
 
 # AWS Textract
 export TEXTRACT_S3_WORKSPACE="s3://your-bucket/workspace/"
@@ -144,6 +149,7 @@ Each extractor has its own set of configuration options. For detailed documentat
 - **AWS Textract**: [benchmarkdown/extractors/textract/README.md](benchmarkdown/extractors/textract/README.md) — features, markdown formatting options
 - **LlamaParse**: [benchmarkdown/extractors/llamaparse/README.md](benchmarkdown/extractors/llamaparse/README.md) — result types, GPT-4o mode, language settings
 - **TensorLake**: [benchmarkdown/extractors/tensorlake/README.md](benchmarkdown/extractors/tensorlake/README.md) — chunking, table output, signature detection
+- **Mistral OCR**: [benchmarkdown/extractors/mistral_ocr/README.md](benchmarkdown/extractors/mistral_ocr/README.md) — page selection, table format, header/footer, image controls
 - **Azure Document Intelligence**: [benchmarkdown/extractors/azure_document_intelligence/README.md](benchmarkdown/extractors/azure_document_intelligence/README.md) — model selection, page ranges, locale
 - **LiteLLM**: [benchmarkdown/extractors/litellm/README.md](benchmarkdown/extractors/litellm/README.md) — model selection, DPI, prompt customization, batching
 
