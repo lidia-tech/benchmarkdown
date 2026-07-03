@@ -1,61 +1,35 @@
 #!/usr/bin/env python3
 """
-Quick test script for the Benchmarkdown UI components.
+Test the Benchmarkdown UI extraction pipeline with a sample document.
+
+Requires a sample .docx in data/input/lidia-anon/ (gitignored); skips otherwise.
+Docling runs locally (no credentials), so this is not marked integration.
 """
 
-import asyncio
-import os
 from pathlib import Path
+
+import pytest
+
 from benchmarkdown.extractors.docling import Extractor as DoclingExtractor
 from benchmarkdown.ui import BenchmarkUI
 
+
 async def test_extraction():
     """Test the extraction pipeline with a sample document."""
-
-    # Find a sample document
     input_dir = Path("data/input/lidia-anon")
-    sample_docs = list(input_dir.glob("*.docx"))[:1]  # Get first docx file
-
+    sample_docs = list(input_dir.glob("*.docx"))[:1]
     if not sample_docs:
-        print("❌ No sample documents found in data/input/lidia-anon/")
-        return
+        pytest.skip("No .docx sample document in data/input/lidia-anon/")
 
     sample_doc = sample_docs[0]
-    print(f"📄 Testing with: {sample_doc.name}")
 
-    # Create UI instance
     ui = BenchmarkUI()
-
-    # Register Docling extractor
     ui.register_extractor("Docling (Local)", DoclingExtractor())
-    print("✓ Registered Docling extractor")
 
-    # Process the document
-    print("⏳ Processing document...")
     result = await ui.process_document(str(sample_doc), "Docling (Local)")
 
-    # Print results
-    print("\n📊 Results:")
-    print(f"  Extractor: {result.extractor_name}")
-    print(f"  Filename: {result.filename}")
-    print(f"  Execution time: {result.execution_time:.2f}s")
-    print(f"  Characters: {result.character_count:,}")
-    print(f"  Words: {result.word_count:,}")
-
-    if result.error:
-        print(f"  ❌ Error: {result.error}")
-    else:
-        print(f"  ✓ Success!")
-        print(f"\n📝 First 200 chars of markdown:")
-        print(f"  {result.markdown[:200]}...")
-
-    return result
-
-if __name__ == "__main__":
-    print("🧪 Testing Benchmarkdown UI components\n")
-    result = asyncio.run(test_extraction())
-
-    if result and not result.error:
-        print("\n✅ All tests passed!")
-    else:
-        print("\n❌ Tests failed!")
+    assert result.error is None, f"Extraction failed: {result.error}"
+    assert result.extractor_name == "Docling (Local)"
+    assert result.character_count > 0
+    assert result.word_count > 0
+    assert isinstance(result.markdown, str) and len(result.markdown) > 0
