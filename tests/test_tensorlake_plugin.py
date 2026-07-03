@@ -48,12 +48,16 @@ def test_tensorlake_config_creation():
         signature_detection=True,
         figure_summarization=True,
         table_summarization=True,
-        max_timeout=600
     )
     print(f"   ✓ Custom config created with:")
     print(f"     - chunking_strategy: {config.chunking_strategy}")
     print(f"     - table_output_mode: {config.table_output_mode}")
     print(f"     - figure_summarization: {config.figure_summarization}")
+    assert config.chunking_strategy == "page"
+    assert config.table_output_mode == "html"
+    assert config.signature_detection is True
+    assert config.figure_summarization is True
+    assert config.table_summarization is True
 
 
 def test_tensorlake_plugin_interface():
@@ -121,9 +125,8 @@ def test_field_groupings():
     basic_set = set(BASIC_FIELDS)
     advanced_set = set(ADVANCED_FIELDS)
 
-    # api_key and max_timeout are intentionally excluded from UI fields
+    # api_key is intentionally excluded from UI fields (loaded from env var)
     config_fields.discard('api_key')
-    config_fields.discard('max_timeout')
 
     print(f"   ✓ Config fields: {len(config_fields)}")
     print(f"   ✓ Basic fields: {len(BASIC_FIELDS)}")

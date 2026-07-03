@@ -1,179 +1,70 @@
 # Tests Directory
 
-This directory contains all functional and integration tests for Benchmarkdown.
+This directory contains the functional and integration tests for Benchmarkdown. They run under **pytest** (configured in `pyproject.toml`; markers and the `--live` flag live in `conftest.py`).
 
-## Test Categories
+## Running tests
 
-### Configuration System Tests
-
-**test_config_ui.py** - Configuration UI Generation
-- Tests Pydantic field → Gradio component mapping
-- Verifies config building from UI values
-- Validates field groupings (basic/advanced)
 ```bash
-uv run python tests/test_config_ui.py
+uv run pytest                          # offline unit suite (integration deselected)
+uv run pytest tests/test_config_ui.py  # a single file
+uv run pytest tests/test_config_ui.py::test_name   # a single test
+uv run pytest --cov=benchmarkdown --cov-report=term-missing   # with coverage
 ```
 
-**test_config_extraction.py** - End-to-End Config Extraction
-- Tests configuration-based extraction workflow
-- Compares default vs custom configurations
-- Validates performance differences
+### Markers
+
+- `@pytest.mark.integration` — needs live API credentials, a running app, or a browser. **Deselected by default** via `addopts = "-m 'not integration'"`, so a bare `pytest` run is the offline unit suite (this is what CI runs). Run them with `uv run pytest -m integration`.
+- `@pytest.mark.live` — hits real, billable external services. **Collected but skipped** unless `--live` is passed. A live integration test needs both: `uv run pytest -m integration --live`.
+
+Integration tests that drive a running app (`test_browser.py`, `test_workflow_api.py`) require the app started first:
+
 ```bash
-uv run python tests/test_config_extraction.py
-```
-
-**test_multiple_configs.py** - Multiple Instance Management
-- Tests creating multiple extractor instances
-- Verifies different configurations side-by-side
-- Validates instance isolation
-```bash
-uv run python tests/test_multiple_configs.py
-```
-
-### Application Integration Tests
-
-**test_ui.py** - Basic UI Components
-- Tests BenchmarkUI with single Docling extractor
-- Validates document processing
-- Checks extraction metrics (timing, character/word counts)
-```bash
-uv run python tests/test_ui.py
-```
-
-**test_integrated_app.py** - Integrated App Workflow
-- Tests dynamic extractor registration
-- Validates configuration storage
-- Tests multiple configuration scenarios
-```bash
-uv run python tests/test_integrated_app.py
-```
-
-**test_redesigned_workflow.py** - Redesigned UI Workflow
-- Tests new workflow: select → configure → queue → extract
-- Validates queue management (add/clear)
-- Tests multi-configuration queue
-```bash
-uv run python tests/test_redesigned_workflow.py
-```
-
-### Browser/API Tests
-
-**test_browser.py** - Browser Testing Guide
-- Gradio client connectivity test
-- Manual browser test checklist (13 visual checks)
-- Interaction test guide (11 tests)
-- Screenshot documentation guide
-```bash
-uv run python tests/test_browser.py
-```
-
-**test_workflow_api.py** - Automated Workflow Test
-- Complete workflow automation via Gradio API
-- Tests adding configurations programmatically
-- Validates queue state management
-- Tests document processing (if test files available)
-```bash
-uv run python tests/test_workflow_api.py
-```
-**Note:** Requires app to be running (`uv run python app.py`)
-
-## Running All Tests
-
-Run all tests in sequence:
-```bash
-# Configuration tests
-uv run python tests/test_config_ui.py
-uv run python tests/test_config_extraction.py
-uv run python tests/test_multiple_configs.py
-
-# Application tests
-uv run python tests/test_ui.py
-uv run python tests/test_integrated_app.py
-uv run python tests/test_redesigned_workflow.py
-
-# Browser/API tests (requires app running)
-uv run python app.py &  # Start in background
+uv run python app.py &   # start in background
 sleep 5
-uv run python tests/test_browser.py
-uv run python tests/test_workflow_api.py
-kill %1  # Stop background app
+uv run pytest -m integration
+kill %1
 ```
 
-## Test Data
+## Test categories
 
-Tests use documents from:
-- `data/input/lidia-anon/*.docx` - Anonymized Italian legal documents
-- Tests gracefully skip if no test documents are found
+### Configuration system
+- **test_config_ui.py** — Pydantic field → Gradio component mapping, config building, field groupings.
+- **test_config_extraction.py** — end-to-end config-based extraction (default vs custom); skips without sample docs.
+- **test_multiple_configs.py** — multiple extractor instances side-by-side; skips without sample docs.
+- **test_env_vars.py** — env-var-backed config fields across extractors.
 
-## Expected Output
+### Application integration
+- **test_ui.py** — `BenchmarkUI` document processing and metrics; skips without sample docs.
+- **test_integrated_app.py** — dynamic extractor registration and config storage.
+- **test_redesigned_workflow.py** — select → configure → queue → extract; queue add/clear.
+- **test_app_simple.py** — the app object builds from a discovered registry.
+- **test_persistence.py** — task-queue save/load schema (self-contained, temp file).
 
-All tests should output:
-- ✅ Success indicators for passing tests
-- Clear descriptions of what's being tested
-- Summary of results at the end
+### Metrics
+- **test_metrics_basic.py**, **test_rouge2_metric.py**, **test_gt_upload_list.py**, **test_validation_workflow.py**.
 
-Example output:
-```
-🧪 Testing Configuration UI Generation
-============================================================
-✓ Boolean field 'do_ocr': Checkbox
-✓ Enum field 'table_structure_mode': Dropdown
-✓ Integer field 'num_threads': Slider
-✓ Float field 'images_scale': Slider
-============================================================
-✅ All tests passed!
-============================================================
-```
+### Extractor plugins
+- **test_tensorlake_plugin.py**, **test_tensorlake_profile_save.py**, **test_tensorlake_ui_bug.py**, **test_azure_config_refactoring.py**, **test_azure_component_count.py**.
+- **test_textract_config.py** — Textract config unit tests; extractor instantiation is `integration`, real extraction is `integration` + `live`.
+- **test_azure_document_intelligence.py** — plugin/config/registry unit tests; extractor instantiation is `integration`.
 
-## Test Coverage
+### Running app / browser (integration)
+- **test_browser.py** — smoke test via Gradio's Python HTTP client (`gradio_client`), marked `integration`.
+- **test_workflow_api.py** — complete workflow automation via the Gradio API, marked `integration`.
 
-| Component | Test File | Coverage |
-|-----------|-----------|----------|
-| Pydantic Config Models | test_config_ui.py | ✅ |
-| UI Component Generation | test_config_ui.py | ✅ |
-| Config → Extractor Flow | test_config_extraction.py | ✅ |
-| Multiple Instances | test_multiple_configs.py | ✅ |
-| Basic Extraction | test_ui.py | ✅ |
-| Dynamic Registration | test_integrated_app.py | ✅ |
-| Queue Management | test_redesigned_workflow.py | ✅ |
-| Workflow API | test_workflow_api.py | ✅ |
-| Browser UI | test_browser.py | 📋 Manual |
+## Test data
 
-## Troubleshooting
+Tests use documents from `data/input/lidia-anon/*.docx` (anonymized Italian legal documents, gitignored). Tests that need them call `pytest.skip(...)` when absent, so they show as *skipped* rather than passing vacuously.
 
-**Import errors:**
-```bash
-# Install all dependencies
-uv sync --all-groups
-```
+## Adding new tests
 
-**No test documents found:**
-- Tests will skip extraction and show warning
-- Add .docx files to `data/input/lidia-anon/` to enable full tests
+1. Name the file `test_<feature>.py` and the functions `test_*`.
+2. Use plain `assert` — do **not** wrap assertions in `try/except` that swallows failures, and do not `return` a value from a test.
+3. `async def test_*` is supported directly (`asyncio_mode = "auto"`).
+4. Mark tests that need credentials / a running app / a browser with `@pytest.mark.integration`; mark real billable calls `@pytest.mark.live`.
+5. Use `pytest.skip("reason")` for missing optional fixtures (test documents, credentials).
+6. Update the category list above.
 
-**API test fails:**
-- Ensure app is running: `uv run python app.py`
-- Check port 7860 is not in use: `lsof -i:7860`
-- Wait a few seconds for app to fully start
+## Continuous integration
 
-**Gradio client errors:**
-- Install: `uv pip install gradio-client`
-- Ensure app is accessible at http://localhost:7860
-
-## Adding New Tests
-
-When adding new tests:
-1. Name file `test_<feature>.py`
-2. Include clear docstring explaining what's tested
-3. Use emoji indicators (✅ ❌ ⏳ ⚠️) for output
-4. Print summary at end with test count
-5. Return exit code 0 for success, non-zero for failure
-6. Update this README with test description
-
-## Continuous Integration
-
-These tests are designed to be run in CI/CD pipelines:
-- All tests are self-contained
-- No external dependencies beyond requirements
-- Clear pass/fail indicators
-- Suitable for automated testing
+CI (`.github/workflows/ci.yml`) runs `uv run pytest` (integration deselected) with coverage and posts a coverage summary as a PR comment.

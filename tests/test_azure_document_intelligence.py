@@ -44,13 +44,15 @@ def test_plugin_availability():
 
     available, message = is_available()
 
-    if available:
-        print("✅ Plugin is available")
-        print("   - Azure SDK installed")
-        print("   - Environment variables configured")
+    # Contract: is_available() returns (bool, str); when unavailable it must
+    # explain why so the UI can surface a reason.
+    assert isinstance(available, bool)
+    assert isinstance(message, str)
+    if not available:
+        assert message, "is_available() must give a reason when the plugin is unavailable"
+        print(f"⚠️  Plugin not available (expected without setup): {message}")
     else:
-        print("⚠️  Plugin not available (expected without setup)")
-        print(f"   - Reason: {message}")
+        print("✅ Plugin is available")
 
 
 def test_config_creation():
@@ -125,14 +127,13 @@ def test_registry_discovery():
     extractors = registry.get_all_extractors()
 
     print(f"✅ Registry initialized with {len(extractors)} extractors")
+    assert len(extractors) > 0, "Registry discovered no extractors"
 
-    # Check if Azure Document Intelligence is in the list
-    if "azure_document_intelligence" in extractors:
-        print("✅ Azure Document Intelligence discovered by registry")
-        metadata = extractors["azure_document_intelligence"]
-        print(f"   - Display name: {metadata.display_name}")
-        print(f"   - Available: {metadata.is_available}")
-        if not metadata.is_available:
-            print(f"   - Reason: {metadata.availability_message}")
-    else:
-        print("⚠️  Azure Document Intelligence not in registry (check dependencies)")
+    # The plugin is a package under benchmarkdown/extractors/, so the registry
+    # should always discover it (with is_available reflecting whether the Azure
+    # SDK / credentials are present).
+    assert "azure_document_intelligence" in extractors, \
+        "Azure Document Intelligence plugin was not discovered by the registry"
+    metadata = extractors["azure_document_intelligence"]
+    print(f"✅ Azure Document Intelligence discovered: {metadata.display_name} "
+          f"(available={metadata.is_available})")

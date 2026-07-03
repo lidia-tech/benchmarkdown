@@ -110,29 +110,23 @@ def test_all_extractors_component_count():
             (config_area, components, field_names, nested_groups, parent_components,
              conditional_groups, conditional_parent_components) = dynamic_config.generate_config_ui_for_extractor(metadata)
 
-            expected = len(metadata.basic_fields) + len(metadata.advanced_fields)
+            # Every declared top-level field must produce at least one component.
+            # The actual count is >= this: nested config groups and conditional
+            # fields add more, and exactly how many is extractor-specific (that
+            # tight per-extractor count is asserted in test_azure_component_count
+            # and the per-plugin tests), so we assert the reliable lower bound here.
+            top_level = len(metadata.basic_fields) + len(metadata.advanced_fields)
 
-            # Count nested config components
-            nested_count = 0
-            if metadata.nested_configs:
-                for parent_field, options in metadata.nested_configs.items():
-                    for option_value, option_meta in options.items():
-                        nested_basic = len(option_meta.get("basic_fields", []))
-                        nested_advanced = len(option_meta.get("advanced_fields", []))
-                        nested_count += nested_basic + nested_advanced + 1  # +1 for label
-                        if nested_advanced > 0:
-                            nested_count += 1  # +1 for accordion
+            print(f"\n  {metadata.display_name}: {len(components)} components "
+                  f"(>= {top_level} top-level fields)")
 
-            expected_with_nested = expected + nested_count
-
-            status = "✅" if len(components) == expected_with_nested else "❌"
-            print(f"\n  {status} {metadata.display_name}:")
-            print(f"     Basic fields: {len(metadata.basic_fields)}")
-            print(f"     Advanced fields: {len(metadata.advanced_fields)}")
-            print(f"     Nested components: {nested_count}")
-            print(f"     Expected components: {expected_with_nested}")
-            print(f"     Actual components: {len(components)}")
+            assert len(components) >= top_level, (
+                f"{metadata.display_name}: generated only {len(components)} components "
+                f"for {top_level} top-level fields"
+            )
+            assert len(components) > 0, f"{metadata.display_name}: generated no components"
 
             total_components += len(components)
 
         print(f"\n  Total components across all extractors: {total_components}")
+        assert total_components > 0
