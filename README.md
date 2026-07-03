@@ -180,10 +180,13 @@ The plugin architecture makes this simple: create a directory `benchmarkdown/ext
 
 ### Running Tests
 
+The suite runs under pytest. Integration tests (live credentials / a running app / a browser) are deselected by default.
+
 ```bash
-uv run python tests/test_config_ui.py           # Configuration UI
-uv run python tests/test_integrated_app.py      # Plugin integration
-uv run python tests/test_redesigned_workflow.py  # Queue workflow
+uv run pytest                          # offline unit suite
+uv run pytest tests/test_config_ui.py  # a single file
+uv run pytest -m integration           # integration tests (need credentials/app)
+uv run pytest -m integration --live    # ...including real billable API calls
 ```
 
 See [tests/README.md](tests/README.md) for the full test list.

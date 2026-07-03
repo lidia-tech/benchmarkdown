@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Browser-based smoke test for the redesigned UI.
+Smoke test for the redesigned UI against a running app.
 
-This script tests the complete workflow by interacting with the actual
-Gradio interface through browser automation.
+Exercises the workflow through Gradio's Python HTTP client (`gradio_client`),
+not a real browser. Marked `integration` because it needs the app running.
 """
 
 import time

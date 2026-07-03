@@ -46,12 +46,8 @@ def test_complete_workflow():
     )
     status, queue_html = result
     print(f"   Status: {status}")
-    print(f"   Queue updated: {len(queue_html) > 100} (HTML length: {len(queue_html)})")
-
-    if "Added: Docling (Fast Mode)" in status:
-        print("   ✓ Configuration added successfully")
-    else:
-        print(f"   ⚠️  Unexpected status: {status}")
+    assert "Added: Docling (Fast Mode)" in status, f"Unexpected status: {status}"
+    assert len(queue_html) > 100, "Queue HTML did not update after adding a task"
 
     # Step 2: Add second configuration
     print("\n3. Adding configuration: 'Accurate Mode'")
@@ -77,17 +73,11 @@ def test_complete_workflow():
     )
     status, queue_html = result
     print(f"   Status: {status}")
-
-    if "Added: Docling (Accurate Mode)" in status:
-        print("   ✓ Second configuration added successfully")
-    else:
-        print(f"   ⚠️  Unexpected status: {status}")
+    assert "Added: Docling (Accurate Mode)" in status, f"Unexpected status: {status}"
 
     # Verify queue has both items
-    if "Docling (Fast Mode)" in queue_html and "Docling (Accurate Mode)" in queue_html:
-        print("   ✓ Queue shows both configurations")
-    else:
-        print("   ⚠️  Queue might not show both configurations")
+    assert "Docling (Fast Mode)" in queue_html and "Docling (Accurate Mode)" in queue_html, \
+        "Queue does not show both configurations"
 
     # Step 3: Test document extraction (if test file exists)
     test_files = list(Path("data/input/lidia-anon").glob("*.docx"))
@@ -102,18 +92,11 @@ def test_complete_workflow():
         )
         results_html, comparison_html = result
 
-        if "✓ OK" in results_html or "Success" in results_html:
-            print("   ✓ Extraction completed successfully")
-
-            # Check if both extractors ran
-            if "Fast Mode" in results_html and "Accurate Mode" in results_html:
-                print("   ✓ Both configurations processed the document")
-
-            # Check results metrics
-            if "Time:" in results_html and "Chars" in results_html:
-                print("   ✓ Results include timing and metrics")
-        else:
-            print(f"   ⚠️  Results: {results_html[:200]}")
+        assert "✓ OK" in results_html or "Success" in results_html, \
+            f"Extraction did not succeed: {results_html[:200]}"
+        # Both configurations should have processed the document
+        assert "Fast Mode" in results_html and "Accurate Mode" in results_html, \
+            "Not both configurations processed the document"
     else:
         print("\n4. No test documents found in data/input/lidia-anon/")
         print("   ⏭️  Skipping extraction test")
@@ -122,11 +105,8 @@ def test_complete_workflow():
     print("\n5. Testing queue clear...")
     result = client.predict(api_name="/clear_queue")
     queue_html, status = result
-
-    if "No extractors configured" in queue_html:
-        print("   ✓ Queue cleared successfully")
-    else:
-        print(f"   ⚠️  Queue might not be empty: {queue_html[:100]}")
+    assert "No extractors configured" in queue_html, \
+        f"Queue not empty after clear: {queue_html[:100]}"
 
     print("\n" + "=" * 60)
     print("✅ Workflow test completed!")
