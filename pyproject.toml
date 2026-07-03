@@ -16,6 +16,15 @@ dependencies = [
     "fuzzywuzzy>=0.18.0",
 ]
 
+[tool.pytest.ini_options]
+# Integration tests (marked @pytest.mark.integration) need live API credentials,
+# a running app, or a browser, so they are deselected from a bare `pytest` run.
+# Run them with `uv run pytest -m integration`. Markers and the --live flag are
+# registered in tests/conftest.py.
+addopts = "-m 'not integration'"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
 [build-system]
 requires = ["uv_build~=0.7.3"]
 build-backend = "uv_build"
@@ -24,6 +33,10 @@ build-backend = "uv_build"
 module-root = ""
 
 [dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
 docling = [
     "docling>=2.42.2",
 ]

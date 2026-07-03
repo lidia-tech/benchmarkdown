@@ -73,26 +73,17 @@ def test_azure_component_count():
 
         # Check for discrepancies
         expected_field_count = len(azure_metadata.basic_fields) + len(azure_metadata.advanced_fields)
-        if len(components) == expected_field_count:
-            print(f"\n  ✅ Component count matches expected: {len(components)} == {expected_field_count}")
-            return True
-        else:
-            print(f"\n  ❌ Component count mismatch!")
-            print(f"     Expected: {expected_field_count}")
-            print(f"     Got: {len(components)}")
-            print(f"     Difference: {expected_field_count - len(components)}")
 
-            # Find missing fields
-            basic_and_advanced = azure_metadata.basic_fields + azure_metadata.advanced_fields
-            missing = [f for f in basic_and_advanced if f not in field_names]
-            extra = [f for f in field_names if f not in basic_and_advanced]
+        # Find missing/extra fields for a helpful failure message
+        basic_and_advanced = azure_metadata.basic_fields + azure_metadata.advanced_fields
+        missing = [f for f in basic_and_advanced if f not in field_names]
+        extra = [f for f in field_names if f not in basic_and_advanced]
 
-            if missing:
-                print(f"     Missing from UI: {missing}")
-            if extra:
-                print(f"     Extra in UI: {extra}")
-
-            return False
+        assert len(components) == expected_field_count, (
+            f"Component count mismatch! Expected {expected_field_count}, "
+            f"got {len(components)}. Missing from UI: {missing}. Extra in UI: {extra}"
+        )
+        print(f"\n  ✅ Component count matches expected: {len(components)} == {expected_field_count}")
 
 
 def test_all_extractors_component_count():
@@ -145,29 +136,3 @@ def test_all_extractors_component_count():
             total_components += len(components)
 
         print(f"\n  Total components across all extractors: {total_components}")
-
-
-def main():
-    """Run all tests."""
-    print("=" * 60)
-    print("Azure Component Count Debug Tests")
-    print("=" * 60)
-    print()
-
-    result1 = test_azure_component_count()
-    test_all_extractors_component_count()
-
-    print("\n" + "=" * 60)
-    print("Test Summary")
-    print("=" * 60)
-
-    if result1:
-        print("✅ Azure component count test passed!")
-        return 0
-    else:
-        print("❌ Azure component count test failed")
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

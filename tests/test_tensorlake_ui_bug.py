@@ -29,33 +29,26 @@ def test_optional_enum_creates_dropdown():
     print(f'Component type: {type(component).__name__}')
     print(f'Expected: Dropdown')
 
-    if isinstance(component, gr.Dropdown):
-        print('✅ PASS: Optional enum creates Dropdown')
-        print(f'Choices: {component.choices}')
-        print(f'Default value: {component.value}')
-    else:
-        print(f'❌ FAIL: Got {type(component).__name__} instead of Dropdown')
-        return False
+    assert isinstance(component, gr.Dropdown), (
+        f'Got {type(component).__name__} instead of Dropdown'
+    )
+    print('✅ PASS: Optional enum creates Dropdown')
+    print(f'Choices: {component.choices}')
+    print(f'Default value: {component.value}')
 
     # Verify choices are enum values, not string representations
     # Gradio formats choices as tuples (label, value)
     expected_values = ['fragment', 'none', 'page', 'section']
     actual_values = [choice[1] if isinstance(choice, tuple) else choice for choice in component.choices]
 
-    if actual_values == expected_values:
-        print(f'✅ PASS: Choices are enum values: {actual_values}')
-    else:
-        print(f'❌ FAIL: Expected {expected_values}, got {actual_values}')
-        return False
+    assert actual_values == expected_values, (
+        f'Expected {expected_values}, got {actual_values}'
+    )
+    print(f'✅ PASS: Choices are enum values: {actual_values}')
 
     # Verify default value is an enum value
-    if component.value == 'section':
-        print(f'✅ PASS: Default value is enum value: {component.value}')
-    else:
-        print(f'❌ FAIL: Expected "section", got {component.value}')
-        return False
-
-    return True
+    assert component.value == 'section', f'Expected "section", got {component.value}'
+    print(f'✅ PASS: Default value is enum value: {component.value}')
 
 
 def test_all_optional_enums():
@@ -67,19 +60,15 @@ def test_all_optional_enums():
     config_class = Config
     optional_enum_fields = ['chunking_strategy', 'table_parsing_format', 'ocr_model']
 
-    all_passed = True
     for field_name in optional_enum_fields:
         field_info = config_class.model_fields[field_name]
         field_type = field_info.annotation
         component, _ = create_gradio_component_from_field(field_name, field_info, field_type)
 
-        if isinstance(component, gr.Dropdown):
-            print(f'✅ {field_name}: Dropdown with choices {component.choices}')
-        else:
-            print(f'❌ {field_name}: {type(component).__name__} (expected Dropdown)')
-            all_passed = False
-
-    return all_passed
+        assert isinstance(component, gr.Dropdown), (
+            f'{field_name}: {type(component).__name__} (expected Dropdown)'
+        )
+        print(f'✅ {field_name}: Dropdown with choices {component.choices}')
 
 
 def test_config_build_from_ui_values():
@@ -107,17 +96,11 @@ def test_config_build_from_ui_values():
         'include_full_page_image': False,
     }
 
-    try:
-        config = build_config_from_ui_values(Config, ui_values)
-        print(f'✅ PASS: Config built successfully')
-        print(f'   chunking_strategy: {config.chunking_strategy}')
-        print(f'   table_output_mode: {config.table_output_mode}')
-        print(f'   table_parsing_format: {config.table_parsing_format}')
-        return True
-    except Exception as e:
-        print(f'❌ FAIL: Config build failed with error:')
-        print(f'   {type(e).__name__}: {e}')
-        return False
+    config = build_config_from_ui_values(Config, ui_values)
+    print(f'✅ PASS: Config built successfully')
+    print(f'   chunking_strategy: {config.chunking_strategy}')
+    print(f'   table_output_mode: {config.table_output_mode}')
+    print(f'   table_parsing_format: {config.table_parsing_format}')
 
 
 def test_enum_string_representation_bug():
@@ -140,39 +123,8 @@ def test_enum_string_representation_bug():
         for choice in component.choices
     )
 
-    if has_bad_value:
-        print(f'❌ FAIL: Found enum string representation in choices: {component.choices}')
-        return False
-    else:
-        print(f'✅ PASS: No enum string representations found')
-        print(f'   Choices are clean values: {component.choices}')
-        return True
-
-
-if __name__ == '__main__':
-    print("Testing TensorLake UI Bug Fixes")
-    print("="*60)
-
-    results = []
-    results.append(("Optional enum creates dropdown", test_optional_enum_creates_dropdown()))
-    results.append(("All optional enums", test_all_optional_enums()))
-    results.append(("Config build from UI", test_config_build_from_ui_values()))
-    results.append(("No enum string representations", test_enum_string_representation_bug()))
-
-    print("\n" + "="*60)
-    print("TEST SUMMARY")
-    print("="*60)
-
-    all_passed = True
-    for test_name, passed in results:
-        status = "✅ PASS" if passed else "❌ FAIL"
-        print(f"{status}: {test_name}")
-        if not passed:
-            all_passed = False
-
-    if all_passed:
-        print("\n✅ All tests passed!")
-        sys.exit(0)
-    else:
-        print("\n❌ Some tests failed")
-        sys.exit(1)
+    assert not has_bad_value, (
+        f'Found enum string representation in choices: {component.choices}'
+    )
+    print(f'✅ PASS: No enum string representations found')
+    print(f'   Choices are clean values: {component.choices}')

@@ -29,38 +29,6 @@ def test_app_initialization():
     print(f"  ✓ Available: {len(registry.get_available_extractors())} extractors")
 
     print("  ✓ Creating app...")
-    try:
-        demo = create_app(registry=registry)
-        print("  ✅ App created successfully!")
-        return True
-    except Exception as e:
-        print(f"  ❌ Error creating app: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-def main():
-    """Run the test."""
-    print("=" * 60)
-    print("App Initialization Test")
-    print("=" * 60)
-    print()
-
-    result = test_app_initialization()
-
-    print()
-    print("=" * 60)
-    print("Test Summary")
-    print("=" * 60)
-
-    if result:
-        print("✅ Test passed!")
-        return 0
-    else:
-        print("❌ Test failed")
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    demo = create_app(registry=registry)
+    assert demo is not None
+    print("  ✅ App created successfully!")
