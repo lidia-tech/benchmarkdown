@@ -157,6 +157,9 @@ class ValidationUI:
         METRIC_ORDER = [
             "char_count_diff",
             "word_count_diff",
+            "rouge2",
+            "rouge2_recall",
+            "rouge2_precision",
             "heading_f1",
             "structure_similarity",
         ]

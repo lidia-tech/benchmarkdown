@@ -1,5 +1,5 @@
 from typing import Tuple
-from .metric import Rouge2Metric
+from benchmarkdown.metrics.rouge2_common import Rouge2Metric
 
 METRIC_NAME = "rouge2"
 METRIC_DISPLAY_NAME = "ROUGE-2 (Bigram Overlap)"

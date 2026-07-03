@@ -18,7 +18,9 @@ Word bigram (consecutive word pair) multiset overlap, following the ROUGE-2 meth
 
 - **Recall** = fraction of reference bigrams found in extraction (content completeness)
 - **Precision** = fraction of extraction bigrams found in reference (content cleanliness)
-- **F1** = harmonic mean (single summary score, used as MetricResult.value)
+- **F1** = harmonic mean (single summary score)
+
+These are exposed as **three separate metric plugins** (`rouge2` for F1, `rouge2_recall`, and `rouge2_precision`) so each can be selected and displayed independently in the validation UI. All three share a single computation (`compute_bigram_overlap`) and differ only in which score they surface as `MetricResult.value`.
 
 ### Why Bigrams Over Alternatives
 
@@ -40,7 +42,7 @@ Word bigram (consecutive word pair) multiset overlap, following the ROUGE-2 meth
    └─> Tokenize (split on whitespace)
    └─> Build bigram multiset (Counter of consecutive pairs)
    └─> Compute intersection, recall, precision, F1
-   └─> Return MetricResult(value=F1, details={recall, precision, ...})
+   └─> Each plugin returns MetricResult(value=<its score>, details={recall, precision, ...})
 ```
 
 ### Key Design Decisions
@@ -52,8 +54,11 @@ Word bigram (consecutive word pair) multiset overlap, following the ROUGE-2 meth
 
 ## Related Files
 
-- `benchmarkdown/metrics/rouge2/__init__.py` — plugin exports
-- `benchmarkdown/metrics/rouge2/metric.py` — implementation
+- `benchmarkdown/metrics/rouge2_common.py` — shared implementation (normalization, bigram overlap, the three metric classes)
+- `benchmarkdown/metrics/rouge2/__init__.py` — F1 plugin exports
+- `benchmarkdown/metrics/rouge2_recall/__init__.py` — recall plugin exports
+- `benchmarkdown/metrics/rouge2_precision/__init__.py` — precision plugin exports
+- `benchmarkdown/ui/validation.py` — `METRIC_ORDER` controls display order in the validation table
 - `tests/test_rouge2_metric.py` — test suite
 - `benchmarkdown/metrics/base.py` — Metric protocol and MetricResult
 

@@ -1,5 +1,5 @@
 from typing import Tuple
-from benchmarkdown.metrics.rouge2.metric import Rouge2PrecisionMetric
+from benchmarkdown.metrics.rouge2_common import Rouge2PrecisionMetric
 
 METRIC_NAME = "rouge2_precision"
 METRIC_DISPLAY_NAME = "ROUGE-2 Precision"

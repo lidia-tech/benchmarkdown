@@ -1,7 +1,7 @@
 """Test ROUGE-2 bigram overlap metric (F1, Recall, Precision)."""
 
 import asyncio
-from benchmarkdown.metrics.rouge2.metric import (
+from benchmarkdown.metrics.rouge2_common import (
     Rouge2Metric, Rouge2RecallMetric, Rouge2PrecisionMetric, normalize_for_comparison,
 )
 
