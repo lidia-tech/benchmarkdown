@@ -109,7 +109,9 @@ upload → call → join per-chunk markdown).
 
 ## Dependencies & docs
 
-- `pyproject.toml`: new group `mistral = ["mistralai>=1.0.0"]`.
+- `pyproject.toml`: new group `mistral = ["mistralai>=2.0.0"]` (the `>=2.0.0`
+  pin matches the `from mistralai.client import Mistral` namespace layout; the
+  1.x SDK used top-level `from mistralai import Mistral`).
 - Plugin `README.md` (mirror `tensorlake/README.md`): features, install
   (`uv sync --group mistral`), `MISTRAL_API_KEY` setup, config options, usage.
 - `docs/ENVIRONMENT_VARIABLES.md`: add `MISTRAL_API_KEY` (Required) row, an

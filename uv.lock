@@ -454,7 +454,7 @@ litellm = [
     { name = "pymupdf", specifier = ">=1.26.5" },
 ]
 llamaparse = [{ name = "llama-parse", specifier = ">=0.5.0" }]
-mistral = [{ name = "mistralai", specifier = ">=1.0.0" }]
+mistral = [{ name = "mistralai", specifier = ">=2.0.0" }]
 pymupdf = [{ name = "pymupdf", specifier = ">=1.26.5" }]
 tensorlake = [{ name = "tensorlake", specifier = ">=0.2.0" }]
 textract = [
