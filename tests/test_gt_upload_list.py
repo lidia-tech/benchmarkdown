@@ -5,6 +5,17 @@ from pathlib import Path
 from benchmarkdown.ui.validation import ValidationUI
 
 
+def _write_gt(dir_path: Path, name: str, text: str) -> str:
+    """Write a ground truth file with a controlled name and return its path.
+
+    ``upload_ground_truth`` keys stored ground truths by the file's basename,
+    so the test controls the filename rather than relying on a random temp name.
+    """
+    gt_path = dir_path / name
+    gt_path.write_text(text, encoding="utf-8")
+    return str(gt_path)
+
+
 def test_gt_upload_list():
     """Test that uploaded GT files are tracked correctly."""
     print("\n" + "="*60)
@@ -17,47 +28,38 @@ def test_gt_upload_list():
     assert len(validation_ui.ground_truths) == 0
     print("\n✅ Initially empty")
 
-    # Upload first GT
-    gt_text_1 = "First ground truth document with some content here."
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(gt_text_1)
-        gt_file_1 = f.name
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
 
-    status = validation_ui.upload_ground_truth(gt_file_1, "doc1.pdf")
-    Path(gt_file_1).unlink()
+        # Upload first GT
+        gt_file_1 = _write_gt(tmp_path, "doc1.md", "First ground truth document with some content here.")
+        status = validation_ui.upload_ground_truth(gt_file_1)
 
-    assert "doc1.pdf" in validation_ui.ground_truths
-    assert len(validation_ui.ground_truths) == 1
-    print(f"\n{status}")
-    print("✅ First GT uploaded")
+        assert "doc1.md" in validation_ui.ground_truths
+        assert len(validation_ui.ground_truths) == 1
+        print(f"\n{status}")
+        print("✅ First GT uploaded")
 
-    # Upload second GT
-    gt_text_2 = "Second ground truth document with different content and more words to test counting."
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(gt_text_2)
-        gt_file_2 = f.name
+        # Upload second GT
+        gt_file_2 = _write_gt(
+            tmp_path, "doc2.md",
+            "Second ground truth document with different content and more words to test counting.",
+        )
+        status = validation_ui.upload_ground_truth(gt_file_2)
 
-    status = validation_ui.upload_ground_truth(gt_file_2, "doc2.pdf")
-    Path(gt_file_2).unlink()
+        assert "doc2.md" in validation_ui.ground_truths
+        assert len(validation_ui.ground_truths) == 2
+        print(f"\n{status}")
+        print("✅ Second GT uploaded")
 
-    assert "doc2.pdf" in validation_ui.ground_truths
-    assert len(validation_ui.ground_truths) == 2
-    print(f"\n{status}")
-    print("✅ Second GT uploaded")
+        # Upload third GT
+        gt_file_3 = _write_gt(tmp_path, "doc3.md", "Third document.")
+        status = validation_ui.upload_ground_truth(gt_file_3)
 
-    # Upload third GT
-    gt_text_3 = "Third document."
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-        f.write(gt_text_3)
-        gt_file_3 = f.name
-
-    status = validation_ui.upload_ground_truth(gt_file_3, "doc3.pdf")
-    Path(gt_file_3).unlink()
-
-    assert "doc3.pdf" in validation_ui.ground_truths
-    assert len(validation_ui.ground_truths) == 3
-    print(f"\n{status}")
-    print("✅ Third GT uploaded")
+        assert "doc3.md" in validation_ui.ground_truths
+        assert len(validation_ui.ground_truths) == 3
+        print(f"\n{status}")
+        print("✅ Third GT uploaded")
 
     # Verify all are tracked
     print(f"\n✅ All {len(validation_ui.ground_truths)} GT files tracked:")

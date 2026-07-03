@@ -37,6 +37,12 @@ jobs:
           set -u
           tests=(
             tests/test_rouge2_metric.py
+            tests/test_metrics_basic.py
+            tests/test_env_vars.py
+            tests/test_gt_upload_list.py
+            tests/test_validation_workflow.py
+            tests/test_persistence.py
+            tests/test_textract_config.py
             tests/test_config_extraction.py
             tests/test_config_ui.py
             tests/test_multiple_configs.py

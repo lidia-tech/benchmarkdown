@@ -16,23 +16,23 @@ def test_tensorlake_env_vars():
     """Test TensorLake environment variable configuration."""
     print("✅ Test 1: TensorLake environment variables")
 
-    # Set environment variable
-    os.environ['TENSORLAKE_MAX_TIMEOUT'] = '600'
+    # Set environment variable (api_key is the env-var-backed field on this config)
+    os.environ['TENSORLAKE_API_KEY'] = 'test-key-from-env'
 
     try:
         from benchmarkdown.extractors.tensorlake.config import TensorLakeConfig
 
         config = TensorLakeConfig()
-        print(f"   ✓ max_timeout from env var: {config.max_timeout} (expected: 600)")
-        assert config.max_timeout == 600, f"Expected 600, got {config.max_timeout}"
+        print(f"   ✓ api_key from env var: {config.api_key} (expected: test-key-from-env)")
+        assert config.api_key == 'test-key-from-env', f"Expected 'test-key-from-env', got {config.api_key}"
 
         # Clean up
-        del os.environ['TENSORLAKE_MAX_TIMEOUT']
+        del os.environ['TENSORLAKE_API_KEY']
 
-        # Test default value
+        # Test default value (empty string when env var is unset)
         config_default = TensorLakeConfig()
-        print(f"   ✓ max_timeout default: {config_default.max_timeout} (expected: 300)")
-        assert config_default.max_timeout == 300, f"Expected 300, got {config_default.max_timeout}"
+        print(f"   ✓ api_key default: '{config_default.api_key}' (expected: '')")
+        assert config_default.api_key == '', f"Expected '', got {config_default.api_key}"
 
         return True
     except Exception as e:
@@ -140,12 +140,12 @@ def test_env_var_precedence():
 
     try:
         # TensorLake: env var should override default
-        os.environ['TENSORLAKE_MAX_TIMEOUT'] = '450'
+        os.environ['TENSORLAKE_API_KEY'] = 'precedence-key'
         from benchmarkdown.extractors.tensorlake.config import TensorLakeConfig
         config = TensorLakeConfig()
-        print(f"   ✓ TensorLake max_timeout: {config.max_timeout} (env var overrides default)")
-        assert config.max_timeout == 450
-        del os.environ['TENSORLAKE_MAX_TIMEOUT']
+        print(f"   ✓ TensorLake api_key: {config.api_key} (env var overrides default)")
+        assert config.api_key == 'precedence-key'
+        del os.environ['TENSORLAKE_API_KEY']
 
         # LlamaParse: explicit value in constructor should override env var
         os.environ['LLAMAPARSE_NUM_WORKERS'] = '10'
