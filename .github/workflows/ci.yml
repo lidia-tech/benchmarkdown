@@ -14,6 +14,9 @@ jobs:
   test:
     name: Tests (Python 3.11)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -32,5 +35,35 @@ jobs:
       # need live API credentials, a running app, or a browser; they are
       # deselected by default via `addopts = "-m 'not integration'"` in
       # pyproject.toml, so a bare `pytest` run is the offline unit suite.
-      - name: Run tests
-        run: uv run pytest
+      # pipefail so the pytest exit code survives the tee into the coverage log.
+      - name: Run tests with coverage
+        run: |
+          set -o pipefail
+          uv run pytest tests/ \
+            --cov=benchmarkdown \
+            --cov-report=term-missing \
+            --cov-report=html:htmlcov \
+            --junitxml=pytest.xml \
+            | tee pytest-coverage.txt
+
+      - name: Upload coverage report
+        if: always()
+        # Best-effort: the HTML report is an optional human download that no other
+        # step consumes, so a failed upload must never red the build.
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7
+
+      - name: Coverage PR comment
+        if: github.event_name == 'pull_request'
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: pytest-coverage.txt
+          junitxml-path: pytest.xml
+          # Scope the term-missing table to files the PR touches and drop
+          # per-line links, keeping the comment under GitHub's 65536-char cap.
+          report-only-changed-files: true
+          remove-links-to-lines: true
