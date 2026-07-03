@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Python 3.11)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies (all extractor + metric groups)
+        run: uv sync --all-groups
+
+      # The suite is a set of standalone scripts (no pytest runner). We run the
+      # subset that passes without external API keys, a running app, or a
+      # browser. Each script is run individually; the job fails if any fail.
+      - name: Run tests
+        run: |
+          set -u
+          tests=(
+            tests/test_rouge2_metric.py
+            tests/test_config_extraction.py
+            tests/test_config_ui.py
+            tests/test_multiple_configs.py
+            tests/test_ocr_engines.py
+            tests/test_profile_manager.py
+            tests/test_redesigned_workflow.py
+            tests/test_ui.py
+            tests/test_app_simple.py
+            tests/test_app_with_validation.py
+            tests/test_integrated_app.py
+            tests/test_azure_config_refactoring.py
+            tests/test_azure_component_count.py
+            tests/test_textract_config.py
+          )
+          failed=()
+          for t in "${tests[@]}"; do
+            echo "::group::$t"
+            if uv run python "$t"; then
+              echo "PASS: $t"
+            else
+              echo "FAIL: $t"
+              failed+=("$t")
+            fi
+            echo "::endgroup::"
+          done
+          if [ ${#failed[@]} -ne 0 ]; then
+            echo "Failed tests: ${failed[*]}"
+            exit 1
+          fi
+          echo "All ${#tests[@]} tests passed."
