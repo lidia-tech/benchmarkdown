@@ -1,7 +1,7 @@
 """Shared bigram overlap (ROUGE-2 style) computation and metric classes.
 
 This is a top-level shared module (a sibling of the metric plugin
-directories, like ``textstruct.py``), so that the ``rouge2``,
+directories, like ``s_score.py``), so that the ``rouge2``,
 ``rouge2_recall`` and ``rouge2_precision`` plugins can each stay
 self-contained without importing from one another's package.
 

@@ -4,8 +4,11 @@ version = "0.1.0"
 description = "Benchmark for text extracion from documents to Markdown format"
 readme = "README.md"
 authors = [
+    { name = "Vasilii Tregubov", email = "tregubov@lidiatech.ai" },
     { name = "Janos Tolgyesi", email = "janos.tolgyesi@gmail.com" }
 ]
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = "~=3.11"
 dependencies = [
     "ipykernel>=6.29.5",
@@ -13,7 +16,9 @@ dependencies = [
     "markdown>=3.7",
     "python-dotenv>=1.1.1",
     "rapidfuzz>=3.14.3",
-    "fuzzywuzzy>=0.18.0",
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "scipy>=1.11",
 ]
 
 [tool.pytest.ini_options]

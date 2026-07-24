@@ -61,6 +61,24 @@ Word bigram multiset overlap (ROUGE-2 style) for measuring content recall, preci
 - Issue: #6
 - Use case: Evaluating content fidelity of document extraction
 
+### [s_score_metric.md](./s_score_metric.md)
+**Structural S-Score Metric**
+
+Generalized Jaccard (Ruzicka) similarity over document heading-tree "bush" matrices, with a provable upper-bound normaliser (bounded, symmetric [0, 1]). Fuses adjacency + heading-level channels; shares a unified rapidfuzz heading matcher with heading_f1.
+
+- Status: ✅ Complete
+- Branch: metrics-update
+- Use case: Evaluating structural/heading fidelity of document extraction
+
+### [heading_f1_metric.md](./heading_f1_metric.md)
+**Heading F1 Metric**
+
+Flat-structure check: precision/recall/F1 over fuzzy-matched heading sets, ignoring hierarchy. Shares the rapidfuzz heading matcher with heading_s. Use as a supportive detection signal alongside the S-score, or standalone when nesting doesn't matter.
+
+- Status: ✅ Complete
+- Branch: metrics-update
+- Use case: Checking heading/section detection independent of nesting depth
+
 ---
 
 ## Contributing

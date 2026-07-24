@@ -1,13 +1,23 @@
-import asyncio
-from difflib import SequenceMatcher
 from benchmarkdown.metrics.base import MetricResult
-from benchmarkdown.metrics.textstruct import toc_extract
+from benchmarkdown.metrics.s_score import toc_extract, heading_similarity
+
 
 def compute_header_f1(
     text1: str,
     text2: str,
-    similarity_threshold: float = 0.8
+    similarity_threshold: float = 80.0,
 ) -> float:
+    """Heading F1 between two documents using fuzzy heading matching.
+
+    Uses the shared `heading_similarity` (rapidfuzz WRatio, 0–100), the same
+    matcher the structural metric uses, so both metrics agree on what counts
+    as a heading match.
+
+    Args:
+        similarity_threshold: match cutoff on the 0–100 scale (default 80).
+            Headings match when their similarity is strictly greater than this
+            cutoff (same comparison the structural metric's unifier uses).
+    """
     toc1 = toc_extract(text1)
     toc2 = toc_extract(text2)
 
@@ -19,7 +29,7 @@ def compute_header_f1(
 
     for i, a in enumerate(h1):
         for j, b in enumerate(h2):
-            if SequenceMatcher(None, a, b).ratio() >= similarity_threshold:
+            if heading_similarity(a, b) > similarity_threshold:
                 matched_1.add(i)
                 matched_2.add(j)
                 break
@@ -33,8 +43,14 @@ def compute_header_f1(
 
     return (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
 
+
 class HeadingF1Metric:
-    def __init__(self, similarity_threshold: float = 0.8):
+    def __init__(self, similarity_threshold: float = 80.0):
+        """
+        Args:
+            similarity_threshold: heading match cutoff on the 0–100 scale
+                (default 80), consistent with `heading_s`.
+        """
         self.similarity_threshold = similarity_threshold
 
     async def compute(self, ground_truth: str, extracted: str) -> MetricResult:
