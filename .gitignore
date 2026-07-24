@@ -167,3 +167,6 @@ data/*
 .DS_Store
 .task_queue.json
 .playwright-mcp
+
+# Local scratch folder
+/tsh/
